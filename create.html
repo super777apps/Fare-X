@@ -2,19 +2,24 @@
 <html>
 <head>
   <title>Create Fare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="header">Create Fare</div>
+<div class="container">
 
-<div style="max-width:500px;margin:auto;padding:20px">
+  <div class="header">Create Fare</div>
 
   <input id="pickup" placeholder="Pickup location">
   <input id="drop" placeholder="Drop location">
   <input id="time" type="datetime-local">
   <input id="price" placeholder="Price / Meter + $">
-  <textarea id="note" placeholder="Notes" style="width:100%;height:80px"></textarea>
+
+  <textarea id="note" placeholder="Notes"></textarea>
+
+  <label>Send to specific drivers (optional)</label>
+  <select id="friends" multiple></select>
 
   <button id="createFareBtn">Broadcast Fare</button>
 
