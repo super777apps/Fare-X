@@ -1,18 +1,45 @@
-body {
-  margin:0;
-  background: radial-gradient(circle, #0b0b0b, #000);
-  font-family: 'Segoe UI', sans-serif;
-  color: gold;
+* {
+  box-sizing: border-box;
 }
 
-input, button, textarea, select {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid gold;
-  background: black;
+body {
+  margin: 0;
+  background: radial-gradient(circle, #0b0b0b, #000);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: gold;
-  margin-top: 10px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+  padding: 16px;
+}
+
+.header {
+  text-align: center;
+  font-size: 32px;
+  font-weight: bold;
+  margin: 18px 0 25px;
+  text-shadow: 0 0 12px gold;
+}
+
+input, textarea, select, button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid gold;
+  background: #000;
+  color: gold;
+  margin-top: 12px;
+  font-size: 16px;
+}
+
+textarea {
+  resize: none;
+  height: 90px;
 }
 
 button {
@@ -20,25 +47,32 @@ button {
   color: black;
   font-weight: bold;
   cursor: pointer;
+  border: none;
+}
+
+button:active {
+  transform: scale(0.97);
 }
 
 .card {
   border: 2px solid gold;
   border-radius: 18px;
   padding: 15px;
-  margin: 12px 0;
-  background: rgba(255,215,0,0.05);
+  margin: 14px 0;
+  background: rgba(255,215,0,0.06);
   box-shadow: 0 0 20px rgba(255,215,0,.25);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-.header {
-  text-align: center;
-  font-size: 32px;
-  font-weight: bold;
-  margin: 20px 0;
-  text-shadow: 0 0 12px gold;
+@media (min-width: 768px) {
+  .container {
+    max-width: 600px;
+  }
 }
 
-.btn {
-  margin-top: 10px;
+@media (min-width: 1024px) {
+  .container {
+    max-width: 720px;
+  }
 }
