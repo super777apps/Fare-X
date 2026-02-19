@@ -1,23 +1,28 @@
-import { auth } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const emailInput = document.getElementById("emailInput");
 const passwordInput = document.getElementById("passwordInput");
 
-document.getElementById("loginBtn").onclick = async () => {
+loginBtn.onclick = async () => {
   try {
     await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
     window.location.href = "dashboard.html";
-  } catch(e) {
+  } catch (e) {
     alert(e.message);
   }
 };
 
-document.getElementById("registerBtn").onclick = async () => {
+registerBtn.onclick = async () => {
   try {
-    await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    const userCred = await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      email: emailInput.value,
+      createdAt: Date.now()
+    });
     window.location.href = "dashboard.html";
-  } catch(e) {
+  } catch (e) {
     alert(e.message);
   }
 };
