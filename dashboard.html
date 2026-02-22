@@ -1,27 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Fare-X Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Dashboard</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="container">
+<header class="lux-header">
+  <h1 class="logo">Fare<span class="gold">-X</span></h1>
+  <a href="create.html" class="lux-btn">+ Create Fare</a>
+</header>
 
-  <div class="header">Fare-X</div>
+<main class="lux-main">
 
-  <button onclick="location.href='create.html'">+ Create Fare</button>
+  <div style="display:flex;gap:10px;margin-bottom:20px;">
+    <button class="lux-btn" onclick="showTab('pool')">Broadcast Pool</button>
+    <button class="lux-btn" onclick="showTab('posted')">My Posted</button>
+    <button class="lux-btn" onclick="showTab('accepted')">My Accepted</button>
+  </div>
 
-  <div id="fareList"></div>
+  <div id="poolTab">
+    <h2 class="section-title">Live Broadcast Pool</h2>
+    <div id="poolList" class="fare-list"></div>
+  </div>
 
-</div>
+  <div id="postedTab" style="display:none">
+    <h2 class="section-title">My Posted Jobs</h2>
+    <div id="postedList" class="fare-list"></div>
+  </div>
 
-<script type="module" src="js/dashboard.js"></script>
+  <div id="acceptedTab" style="display:none">
+    <h2 class="section-title">My Accepted Jobs</h2>
+    <div id="acceptedList" class="fare-list"></div>
+  </div>
+
+</main>
 
 <audio id="acceptSound" src="assets/accept.mp3"></audio>
 <audio id="declineSound" src="assets/decline.mp3"></audio>
 <audio id="notifySound" src="assets/notification.mp3"></audio>
+
+<script type="module" src="js/dashboard.js"></script>
 
 </body>
 </html>

@@ -1,29 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Create Fare</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Fare | Fare-X</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="lux-body">
 
-<div class="container">
+<header class="lux-header">
+  <h1 class="logo">Fare<span class="gold">-X</span></h1>
+</header>
 
-  <div class="header">Create Fare</div>
+<main class="lux-main">
 
-  <input id="pickup" placeholder="Pickup location">
-  <input id="drop" placeholder="Drop location">
-  <input id="time" type="datetime-local">
-  <input id="price" placeholder="Price / Meter + $">
+<h2>Create Broadcast Fare</h2>
 
-  <textarea id="note" placeholder="Notes"></textarea>
+<input id="pickup" placeholder="Pickup location">
+<input id="drop" placeholder="Drop location">
 
-  <label>Send to specific drivers (optional)</label>
-  <select id="friends" multiple></select>
+<input id="date" type="date">
+<input id="time" type="time">
 
-  <button id="createFareBtn">Broadcast Fare</button>
+<select id="priceType">
+  <option value="fixed">Fixed Price</option>
+  <option value="meter">Meter + Extra</option>
+</select>
 
-</div>
+<input id="price" placeholder="Fare or extra amount">
+
+<textarea id="note" placeholder="Important notes (optional)"></textarea>
+
+<button id="createFareBtn" class="lux-btn full">Broadcast Fare</button>
+
+</main>
 
 <script type="module" src="js/create.js"></script>
 
