@@ -1,78 +1,278 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
 * {
   box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(circle, #0b0b0b, #000);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: gold;
   min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(212,175,55,.08), transparent 60%),
+    linear-gradient(180deg, #050505, #000 70%);
+  color: #fff;
+  overflow-x: hidden;
+}
+
+/* ---------- GOLD ANIMATION ---------- */
+
+@keyframes goldPulse {
+  0% { text-shadow: 0 0 5px rgba(212,175,55,.5); }
+  50% { text-shadow: 0 0 15px rgba(212,175,55,.9); }
+  100% { text-shadow: 0 0 5px rgba(212,175,55,.5); }
+}
+
+/* ---------- HEADER ---------- */
+
+.lux-header {
+  padding: 18px 20px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(180deg, #020202, #090909);
+  border-bottom: 1px solid rgba(212,175,55,.35);
+  box-shadow: 0 0 18px rgba(212,175,55,.2);
 }
 
-.container {
-  width: 100%;
-  max-width: 480px;
-  padding: 16px;
+.logo {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
-.header {
+.gold {
+  color: #d4af37;
+  animation: goldPulse 2.5s infinite;
+}
+
+/* ---------- MAIN ---------- */
+
+.lux-main {
+  max-width: 520px;
+  margin: auto;
+  padding: 24px 16px 90px;
+}
+
+.section-title {
   text-align: center;
-  font-size: 32px;
-  font-weight: bold;
-  margin: 18px 0 25px;
-  text-shadow: 0 0 12px gold;
+  font-size: 22px;
+  margin-bottom: 22px;
+  color: #d4af37;
+  letter-spacing: 1.5px;
 }
 
-input, textarea, select, button {
+/* ---------- INPUTS ---------- */
+
+input, textarea, select {
   width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid gold;
-  background: #000;
-  color: gold;
-  margin-top: 12px;
+  background: linear-gradient(145deg,#060606,#121212);
+  border: 1.5px solid rgba(212,175,55,.45);
+  border-radius: 16px;
+  padding: 15px 16px;
+  margin-bottom: 15px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 16px rgba(212,175,55,.55);
+}
+
+/* ---------- BUTTONS ---------- */
+
+.lux-btn {
+  background: linear-gradient(135deg,#b18c2c,#f5d76e,#b18c2c);
+  color: #000;
+  border: none;
+  border-radius: 30px;
+  padding: 14px 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow:
+    0 0 18px rgba(212,175,55,.55),
+    inset 0 0 6px rgba(255,255,255,.45);
+  transition: all .25s ease;
+}
+
+.lux-btn.full {
+  width: 100%;
   font-size: 16px;
 }
 
-textarea {
-  resize: none;
-  height: 90px;
+.lux-btn:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 25px rgba(212,175,55,.85);
 }
 
-button {
-  background: linear-gradient(45deg, #b8860b, gold);
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
+/* ---------- AUTH ---------- */
+
+.auth-box {
+  background: linear-gradient(145deg,#050505,#111);
+  border-radius: 24px;
+  padding: 30px 22px 28px;
+  margin-top: 14vh;
+  border: 1.5px solid rgba(212,175,55,.45);
+  box-shadow:
+    0 0 32px rgba(212,175,55,.35),
+    inset 0 0 8px rgba(212,175,55,.15);
+}
+
+.auth-title {
+  text-align: center;
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.auth-sub {
+  text-align: center;
+  color: #d4af37;
+  margin-bottom: 24px;
+  letter-spacing: 1px;
+}
+
+/* ---------- FARE CARDS ---------- */
+
+.fare-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fare-card {
+  background:
+    radial-gradient(circle at top, rgba(212,175,55,.12), transparent 55%),
+    linear-gradient(145deg,#050505,#0e0e0e);
+  border-radius: 20px;
+  padding: 18px 18px 15px;
+  border: 1.5px solid rgba(212,175,55,.6);
+  box-shadow:
+    0 0 28px rgba(212,175,55,.35),
+    inset 0 0 10px rgba(212,175,55,.12);
+  position: relative;
+}
+
+.fare-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+
+.fare-row span {
+  color: #d4af37;
+  font-weight: 600;
+}
+
+.fare-row b {
+  color: #fff;
+  font-weight: 500;
+  max-width: 62%;
+  text-align: right;
+}
+
+/* ---------- ACTION BUTTONS ---------- */
+
+.fare-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.accept-btn {
+  flex: 1;
+  background: linear-gradient(135deg,#d4af37,#fff1a8,#d4af37);
+  color: #000;
   border: none;
+  border-radius: 16px;
+  padding: 13px;
+  font-weight: 800;
+  box-shadow: 0 0 20px rgba(212,175,55,.7);
 }
 
-button:active {
-  transform: scale(0.97);
+.cancel-btn {
+  flex: 1;
+  background: linear-gradient(135deg,#6a0000,#c00000);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 13px;
+  font-weight: 800;
+  box-shadow: 0 0 18px rgba(255,0,0,.4);
 }
 
-.card {
-  border: 2px solid gold;
-  border-radius: 18px;
-  padding: 15px;
-  margin: 14px 0;
-  background: rgba(255,215,0,0.06);
-  box-shadow: 0 0 20px rgba(255,215,0,.25);
-  font-size: 15px;
-  line-height: 1.6;
+/* ---------- FLOATING PARTICLES ---------- */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(212,175,55,.6), transparent),
+    radial-gradient(1px 1px at 80% 70%, rgba(212,175,55,.6), transparent),
+    radial-gradient(1px 1px at 40% 80%, rgba(212,175,55,.4), transparent),
+    radial-gradient(1px 1px at 60% 20%, rgba(212,175,55,.5), transparent);
+  animation: floatGold 18s linear infinite;
+  pointer-events: none;
 }
 
-@media (min-width: 768px) {
-  .container {
-    max-width: 600px;
+@keyframes floatGold {
+  from { transform: translateY(0px); }
+  to { transform: translateY(-120px); }
+}
+/* ---------- MOBILE FIX ---------- */
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.lux-main {
+  max-width: 100%;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.fare-card {
+  width: 100%;
+}
+
+.fare-row {
+  gap: 8px;
+}
+
+.fare-row b {
+  max-width: 58%;
+  word-break: break-word;
+}
+
+@media (max-width: 600px) {
+  .lux-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lux-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .fare-actions {
+    flex-direction: column;
   }
 }
+/* ----- DASHBOARD TAB BUTTON FIX ----- */
 
-@media (min-width: 1024px) {
-  .container {
-    max-width: 720px;
+@media (max-width: 600px) {
+  .lux-main > div:first-child {
+    flex-wrap: wrap;
+  }
+
+  .lux-main > div:first-child .lux-btn {
+    flex: 1 1 30%;
+    padding: 10px 6px;
+    font-size: 13px;
   }
 }
