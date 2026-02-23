@@ -276,3 +276,36 @@ html, body {
     font-size: 13px;
   }
 }
+.private-popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:99999;
+}
+
+.popup-card{
+  background:#000;
+  border:2px solid gold;
+  border-radius:16px;
+  padding:20px;
+  width:90%;
+  max-width:420px;
+  color:#d4af37;
+  text-align:center;
+  animation: pop 0.4s ease;
+}
+
+@keyframes pop{
+  from{transform:scale(0.7);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+
+.popup-actions{
+  margin-top:15px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
