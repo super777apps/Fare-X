@@ -3,43 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Fare | Fare-X</title>
+  <title>Fare-X | Create Fare</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header class="lux-header">
   <h1 class="logo">Fare<span class="gold">-X</span></h1>
+  <a href="dashboard.html" class="lux-btn">Back</a>
 </header>
 
 <main class="lux-main">
 
-<h2 class="section-title">Create Fare</h2>
+  <div class="fare-form">
 
-<input id="pickup" placeholder="Pickup location">
-<input id="drop" placeholder="Drop location">
+    <h2>Create New Fare</h2>
 
-<label class="lux-label">Pickup Date & Time</label>
-<input id="fareTime" type="datetime-local" class="lux-input" required>
+    <input id="pickup" placeholder="Pickup location">
+    <input id="drop" placeholder="Drop location">
 
-<select id="priceType">
-  <option value="fixed">Fixed Price</option>
-  <option value="meter">Meter + Extra</option>
-</select>
+    <input id="date" type="date">
+    <input id="time" type="time">
 
-<input id="price" placeholder="Fare or extra amount">
+    <select id="priceType">
+      <option value="fixed">Fixed Price</option>
+      <option value="meter">Meter + Extra</option>
+    </select>
 
-<textarea id="note" placeholder="Important notes (optional)"></textarea>
+    <input id="price" placeholder="Price">
 
-<select id="sendType">
-  <option value="broadcast">Broadcast Pool</option>
-  <option value="friend">Send To Friend</option>
-</select>
+    <textarea id="note" placeholder="Notes (optional)"></textarea>
 
-<!-- Updated friend dropdown dynamically populated -->
-<select id="friendSelect" style="display:none"></select>
+    <select id="sendType">
+      <option value="pool">Broadcast Pool</option>
+      <option value="friend">Send to Friend</option>
+      <option value="auto">Nearest Driver (Auto Dispatch)</option>
+    </select>
 
-<button id="createFareBtn" class="lux-btn full">Send Fare</button>
+    <select id="friendSelect" style="display:none">
+      <option value="">Select Friend</option>
+    </select>
+
+    <button id="createFareBtn" class="lux-btn full">Send Fare</button>
+
+  </div>
 
 </main>
 
