@@ -6,7 +6,7 @@
   <title>Create Fare | Fare-X</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="lux-body">
+<body>
 
 <header class="lux-header">
   <h1 class="logo">Fare<span class="gold">-X</span></h1>
@@ -14,13 +14,13 @@
 
 <main class="lux-main">
 
-<h2>Create Broadcast Fare</h2>
+<h2 class="section-title">Create Fare</h2>
 
 <input id="pickup" placeholder="Pickup location">
 <input id="drop" placeholder="Drop location">
 
-<input id="date" type="date">
-<input id="time" type="time">
+<label class="lux-label">Pickup Date & Time</label>
+<input id="fareTime" type="datetime-local" class="lux-input" required>
 
 <select id="priceType">
   <option value="fixed">Fixed Price</option>
@@ -31,7 +31,15 @@
 
 <textarea id="note" placeholder="Important notes (optional)"></textarea>
 
-<button id="createFareBtn" class="lux-btn full">Broadcast Fare</button>
+<select id="sendType">
+  <option value="broadcast">Broadcast Pool</option>
+  <option value="friend">Send To Friend</option>
+</select>
+
+<!-- Updated friend dropdown dynamically populated -->
+<select id="friendSelect" style="display:none"></select>
+
+<button id="createFareBtn" class="lux-btn full">Send Fare</button>
 
 </main>
 

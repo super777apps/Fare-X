@@ -10,7 +10,20 @@
 
 <header class="lux-header">
   <h1 class="logo">Fare<span class="gold">-X</span></h1>
-  <a href="create.html" class="lux-btn">+ Create Fare</a>
+
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="userInfo" style="color:#d4af37;font-weight:600"></span>
+
+    <!-- ✅ ID ADDED -->
+    <button id="logoutBtn" class="lux-btn" style="padding:6px 14px;font-size:13px;">
+      Logout
+    </button>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <a href="friends.html" class="lux-btn">Friends</a>
+    <a href="create.html" class="lux-btn">+ Create Fare</a>
+  </div>
 </header>
 
 <main class="lux-main">
@@ -42,7 +55,8 @@
 <audio id="declineSound" src="assets/decline.mp3"></audio>
 <audio id="notifySound" src="assets/notification.mp3"></audio>
 
-<script type="module" src="js/dashboard.js"></script>
+<audio id="jobSound" src="assets/job.mp3"></audio>
 
+<script type="module" src="js/dashboard.js"></script>
 </body>
 </html>
