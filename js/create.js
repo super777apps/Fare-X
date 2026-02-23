@@ -1,111 +1,140 @@
 import { db, auth } from "./firebase.js";
 import {
   collection, addDoc, serverTimestamp,
-  query, where, onSnapshot, getDoc, doc
+  query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const btn = document.getElementById("createFareBtn");
 const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
-const timeInput = document.getElementById("fareTime");
 
-let currentUser = null;
+/* ---------------- SAFE UI HANDLING ---------------- */
 
-/* ---------- AUTO TIME ---------- */
-
-if (timeInput) {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  timeInput.value = now.toISOString().slice(0,16);
+if(sendType && friendSelect){
+  sendType.onchange = () => {
+    if(sendType.value === "friend"){
+      friendSelect.style.display = "block";
+    } else {
+      friendSelect.style.display = "none";
+    }
+  };
 }
 
-/* ---------- AUTH ---------- */
+/* ---------------- AUTH ---------------- */
 
 onAuthStateChanged(auth, user => {
   if(!user){
-    location.href="index.html";
+    window.location.href = "index.html";
     return;
   }
-  currentUser = user;
-  loadFriends();
+  loadFriends(user.uid);   // ✅ USE UID ALWAYS
 });
 
-/* ---------- FRIEND DROPDOWN ---------- */
+/* ---------------- LOAD FRIENDS ---------------- */
 
-sendType.onchange = () => {
-  friendSelect.style.display =
-    sendType.value === "friend" ? "block" : "none";
-};
+function loadFriends(myUid){
+  if(!friendSelect) return;
 
-function loadFriends(){
   onSnapshot(
-    query(collection(db,"friends"), where("owner","==",currentUser.uid)),
-    async snap => {
-      friendSelect.innerHTML="<option value=''>Select Friend</option>";
+    query(collection(db,"friends"), where("owner","==",myUid)),
+    snap => {
+      friendSelect.innerHTML = "<option value=''>Select Friend</option>";
 
-      for(const docSnap of snap.docs){
-        const f = docSnap.data();
-        const drv = await getDoc(doc(db,"drivers",f.friendUID));
-        if(drv.exists()){
-          const d = drv.data();
-          const opt = document.createElement("option");
-          opt.value = f.friendUID;
-          opt.textContent = `${d.nickname} (${d.carNumber})`;
-          friendSelect.appendChild(opt);
-        }
+      if(snap.empty){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No friends yet";
+        friendSelect.appendChild(opt);
+        return;
       }
+
+      snap.forEach(doc => {
+        const f = doc.data();
+        const opt = document.createElement("option");
+        opt.value = f.friendUid || f.friend;
+        opt.textContent = `${f.name} (${f.friendEmail || f.friend})`;
+        friendSelect.appendChild(opt);
+      });
     }
   );
 }
 
-/* ---------- CREATE FARE ---------- */
+/* ---------------- CREATE FARE ---------------- */
 
+if(btn){
 btn.onclick = async () => {
 
-  const pickup = document.getElementById("pickup").value.trim();
-  const drop = document.getElementById("drop").value.trim();
-  const time = timeInput.value;
-  const priceType = document.getElementById("priceType").value;
-  const price = document.getElementById("price").value.trim();
-  const note = document.getElementById("note").value.trim();
+  const pickup = document.getElementById("pickup")?.value.trim();
+  const drop = document.getElementById("drop")?.value.trim();
+  const date = document.getElementById("date")?.value;
+  const time = document.getElementById("time")?.value;
+  const priceType = document.getElementById("priceType")?.value;
+  const price = document.getElementById("price")?.value.trim();
+  const note = document.getElementById("note")?.value.trim();
 
-  if(!pickup || !drop || !time || !price){
+  if (!pickup || !drop || !date || !time || !price) {
     alert("Please complete all required fields");
     return;
   }
 
+  const dateTime = `${date} ${time}`;
+
   const data = {
-    pickup, drop, time,
-    priceType, price, note,
-    status:"broadcast",
-    createdBy: currentUser.uid,
-    createdEmail: currentUser.email,
+    pickup,
+    drop,
+    time: dateTime,
+    priceType,
+    price,
+    note,
+    status: "broadcast",
+    createdBy: auth.currentUser.email,
+    createdUid: auth.currentUser.uid,
     createdAt: serverTimestamp()
   };
 
   try{
 
-    if(sendType.value==="friend"){
-      const friendUID = friendSelect.value;
-      if(!friendUID) return alert("Select a friend");
+    /* ---------- SEND TO FRIEND ---------- */
+    if(sendType && sendType.value === "friend"){
 
-      data.status="private";
-      data.targetUID = friendUID;
+      const friend = friendSelect?.value;
+      if(!friend){
+        alert("Please select a friend");
+        return;
+      }
 
-      await addDoc(collection(db,"privateFares"),data);
-      alert("Fare sent to friend 🚀");
+      data.status = "private";
+      data.targetUid = friend;
 
-    }else{
+      await addDoc(collection(db,"privateFares"), data);
 
-      await addDoc(collection(db,"fares"),data);
-      alert("Fare broadcasted 🚀");
-
+      alert("Fare sent to friend successfully 🚀");
+      window.location.href = "dashboard.html";
+      return;
     }
 
-    location.href="dashboard.html";
+    /* ---------- AUTO DISPATCH ---------- */
+    if(sendType && sendType.value === "auto"){
+
+      data.status = "auto";
+
+      await addDoc(collection(db,"autoDispatch"), data);
+
+      alert("Auto dispatch started 🚀");
+      window.location.href = "dashboard.html";
+      return;
+    }
+
+    /* ---------- BROADCAST ---------- */
+
+    await addDoc(collection(db,"fares"), data);
+
+    alert("Fare broadcasted successfully 🚀");
+    window.location.href = "dashboard.html";
 
   }catch(err){
-    alert(err.message);
+    alert("Failed: " + err.message);
   }
 };
+}

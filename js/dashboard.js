@@ -7,47 +7,28 @@ import {
   onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// ------------------- ELEMENTS -------------------
-
 const poolList = document.getElementById("poolList");
 const postedList = document.getElementById("postedList");
 const acceptedList = document.getElementById("acceptedList");
 const userInfo = document.getElementById("userInfo");
 
-const acceptSound = document.getElementById("acceptSound");
-const declineSound = document.getElementById("declineSound");
-const notifySound = document.getElementById("notifySound");
-const jobSound = document.getElementById("jobSound");
+const jobSound = new Audio("assets/job.mp3");
+jobSound.loop = true;
 
-const poolTab = document.getElementById("poolTab");
-const postedTab = document.getElementById("postedTab");
-const acceptedTab = document.getElementById("acceptedTab");
+const declineSound = new Audio("assets/decline.mp3");
 
-let jobTimer = null;
+let activeTimers = {};
 
-// ------------------- TAB HANDLING -------------------
-
-window.showTab = function(tab){
-  poolTab.style.display = tab === "pool" ? "block" : "none";
-  postedTab.style.display = tab === "posted" ? "block" : "none";
-  acceptedTab.style.display = tab === "accepted" ? "block" : "none";
-};
-
-// ------------------- LOGOUT -------------------
+/* ---------------- LOGOUT ---------------- */
 
 window.logout = async function(){
-  try{
-    await signOut(auth);
-    window.location.href = "index.html";
-  }catch(err){
-    alert("Logout failed: " + err.message);
-  }
-};
+  await signOut(auth);
+  window.location.href = "index.html";
+}
 
-// ------------------- AUTH CHECK -------------------
+/* ---------------- AUTH ---------------- */
 
 onAuthStateChanged(auth, async user => {
-
   if(!user){
     window.location.href = "index.html";
     return;
@@ -55,210 +36,157 @@ onAuthStateChanged(auth, async user => {
 
   userInfo.textContent = "Logged in: " + user.email;
 
-  const driverRef = doc(db,"drivers",user.uid);
-  const snap = await getDoc(driverRef);
-
-  if(!snap.exists() || !snap.data().nickname || !snap.data().carNumber || !snap.data().carBrand || !snap.data().email){
-    alert("Please complete your driver profile first.");
-    window.location.href = "profile.html";
-    return;
-  }
-
-  startListeners(user.email);
-
+  startListeners(user);
 });
 
-// ------------------- ALERT SYSTEM -------------------
+/* ---------------- DISPATCH LISTENERS ---------------- */
 
-function playJobAlert(){
-  jobSound.currentTime = 0;
-  jobSound.loop = true;
-  jobSound.play();
+function startListeners(user){
 
-  jobTimer = setTimeout(() => {
-    stopJobAlert();
-  },12000);
-}
+  const myEmail = user.email;
+  const myUid = user.uid;
 
-function stopJobAlert(){
-  jobSound.pause();
-  jobSound.loop = false;
-  clearTimeout(jobTimer);
-}
+  /* ---- BROADCAST POOL ---- */
 
-// ------------------- LISTENERS -------------------
-
-function startListeners(myEmail){
-
-  // -------- POOL --------
-  onSnapshot(query(collection(db,"fares"),where("status","==","broadcast")), snap=>{
+  onSnapshot(query(collection(db,"fares"), where("status","==","broadcast")), snap=>{
     poolList.innerHTML="";
     snap.forEach(docSnap=>{
-      poolList.appendChild(renderCard(docSnap.data(), docSnap.id, "pool"));
+      const f = docSnap.data();
+      if(f.createdBy === myEmail) return;
+      poolList.appendChild(renderCard(f, docSnap.id, "pool"));
     });
   });
 
-  // -------- MY POSTED --------
-  onSnapshot(query(collection(db,"fares"),where("createdBy","==",myEmail)), snap=>{
+  /* ---- MY POSTED ---- */
+
+  onSnapshot(query(collection(db,"fares"), where("createdUid","==",myUid)), snap=>{
     postedList.innerHTML="";
     snap.forEach(docSnap=>{
       postedList.appendChild(renderCard(docSnap.data(), docSnap.id, "posted"));
     });
   });
 
-  // -------- MY ACCEPTED --------
-  onSnapshot(query(collection(db,"fares"),where("acceptedBy","==",myEmail)), snap=>{
+  /* ---- MY ACCEPTED ---- */
+
+  onSnapshot(query(collection(db,"fares"), where("acceptedBy","==",myEmail)), snap=>{
     acceptedList.innerHTML="";
     snap.forEach(docSnap=>{
-      const f = docSnap.data();
-      if(f.status==="accepted") acceptedList.appendChild(renderCard(f, docSnap.id, "accepted"));
+      acceptedList.appendChild(renderCard(docSnap.data(), docSnap.id, "accepted"));
     });
   });
 
-  // -------- ASSIGNED TO ME --------
-  onSnapshot(query(collection(db,"fares"),where("assignedTo","==",myEmail)), snap=>{
+  /* ---- PRIVATE DISPATCH ---- */
 
+  onSnapshot(query(collection(db,"privateFares"), where("targetUid","==",myUid)), snap=>{
     snap.forEach(docSnap=>{
-
-      const f = docSnap.data();
-
-      if(f.status==="assigned"){
-        playJobAlert();
-        showJobPopup(docSnap.id,f);
-      }
-
-      if(f.status==="returned"){
-        declineSound.play();
-        alert("Job returned: " + f.returnReason);
-      }
-
+      handleIncomingDispatch(docSnap.id, docSnap.data());
     });
-
   });
 
 }
 
-// ------------------- POPUP -------------------
+/* ---------------- DISPATCH ENGINE ---------------- */
 
-function showJobPopup(id,f){
+async function handleIncomingDispatch(id, data){
 
-  if(document.getElementById("jobPopup")) return;
+  if(activeTimers[id]) return;
 
-  const box=document.createElement("div");
-  box.id="jobPopup";
-  box.style=`
-    position:fixed;
-    top:0;left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,.8);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
-  `;
+  jobSound.play();
 
-  box.innerHTML=`
-  <div style="background:#111;padding:20px;border-radius:10px;width:300px;text-align:center">
-    <h2 style="color:#d4af37">🚨 New Job</h2>
-    <p>${f.pickup} → ${f.drop}</p>
-    <p>${formatTime(f.time)}</p>
-    <div style="display:flex;gap:10px;justify-content:center">
-      <button class="accept-btn" onclick="acceptFare('${id}')">Accept</button>
-      <button class="cancel-btn" onclick="rejectFare('${id}')">Reject</button>
-    </div>
-  </div>`;
+  const timeout = setTimeout(async ()=>{
 
-  document.body.appendChild(box);
+    jobSound.pause();
+    jobSound.currentTime = 0;
+
+    declineSound.play();
+
+    await updateDoc(doc(db,"privateFares",id),{
+      status:"timeout",
+      declinedAt:serverTimestamp()
+    });
+
+    alert("Job timed out and returned to sender");
+
+    delete activeTimers[id];
+
+  },12000);
+
+  activeTimers[id] = timeout;
+
 }
 
-// ------------------- RENDER -------------------
+/* ---------------- ACCEPT / DECLINE ---------------- */
+
+window.acceptFare = async(id)=>{
+
+  clearTimeout(activeTimers[id]);
+  delete activeTimers[id];
+
+  jobSound.pause();
+  jobSound.currentTime = 0;
+
+  await updateDoc(doc(db,"fares",id),{
+    status:"accepted",
+    acceptedBy:auth.currentUser.email,
+    acceptedAt:serverTimestamp()
+  });
+
+}
+
+window.cancelFare = async(id)=>{
+
+  clearTimeout(activeTimers[id]);
+  delete activeTimers[id];
+
+  jobSound.pause();
+  jobSound.currentTime = 0;
+
+  declineSound.play();
+
+  await updateDoc(doc(db,"fares",id),{
+    status:"broadcast",
+    acceptedBy:""
+  });
+
+}
+
+/* ---------------- RENDER ---------------- */
 
 function renderCard(f,id,type){
+
   const d=document.createElement("div");
   d.className="fare-card";
 
   d.innerHTML=`
-  <div class="fare-row"><span>Pickup :</span><b>${f.pickup}</b></div>
-  <div class="fare-row"><span>Drop :</span><b>${f.drop}</b></div>
-  <div class="fare-row"><span>Time :</span><b>${formatTime(f.time)}</b></div>
-  <div class="fare-row"><span>Price :</span><b>${f.priceType==="meter"?"Meter + $"+f.price:"$"+f.price}</b></div>
-  <div class="fare-row"><span>Notes :</span><b>${f.note||"-"}</b></div>
-  <div class="fare-row"><span>Source :</span><b>${f.createdBy}</b></div>
+  <div><b>${f.pickup}</b> → <b>${f.drop}</b></div>
+  <div>🕒 ${f.time}</div>
+  <div>💰 $${f.price}</div>
 
-  <div class="fare-actions">
-    ${type==="pool"?`<button class="accept-btn" onclick="acceptFare('${id}')">Accept</button>`:""}
-    ${type==="posted" && f.status!=="completed"?`<button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>`:""}
+  <div style="margin-top:8px">
+    ${type==="pool"?`<button onclick="acceptFare('${id}')">Accept</button>`:""}
     ${type==="accepted"?`
-      <button class="accept-btn" onclick="completeFare('${id}')">Complete</button>
-      <button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>
+      <button onclick="completeFare('${id}')">Complete</button>
+      <button onclick="cancelFare('${id}')">Cancel</button>
     `:""}
-    ${f.status==="returned"?`
-      <button onclick="resendPool('${id}')">Broadcast</button>
-    `:""}
-  </div>`;
+  </div>
+  `;
 
   return d;
 }
 
-// ------------------- ACTIONS -------------------
-
-window.acceptFare = async(id)=>{
-  await updateDoc(doc(db,"fares",id),{
-    status:"accepted",
-    acceptedBy:auth.currentUser.email
-  });
-  stopJobAlert();
-  document.getElementById("jobPopup")?.remove();
-  acceptSound.play();
-};
-
-window.rejectFare = async(id)=>{
-  await updateDoc(doc(db,"fares",id),{
-    status:"rejected"
-  });
-  stopJobAlert();
-  document.getElementById("jobPopup")?.remove();
-  declineSound.play();
-};
-
-window.cancelFare = async(id)=>{
-  const r=prompt("Cancel Reason:");
-  if(!r) return;
-
-  await updateDoc(doc(db,"fares",id),{
-    status:"broadcast",
-    cancelReason:r,
-    acceptedBy:""
-  });
-
-  declineSound.play();
-};
+/* ---------------- COMPLETE ---------------- */
 
 window.completeFare = async(id)=>{
   await updateDoc(doc(db,"fares",id),{
     status:"completed",
     completedAt:serverTimestamp()
   });
+}
 
-  acceptSound.play();
-};
+/* ---------------- TABS ---------------- */
 
-window.resendPool = async(id)=>{
-  await updateDoc(doc(db,"fares",id),{
-    status:"broadcast",
-    assignedTo:"",
-    dispatchType:"pool"
-  });
-};
-
-// ------------------- UTIL -------------------
-
-function formatTime(val){
-  const d=new Date(val);
-  const n=new Date();
-  if(d.toDateString()===n.toDateString()){
-    return "Today · "+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  }
-  return d.toLocaleDateString()+" · "+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+window.showTab = function(tab){
+  poolTab.style.display = tab==="pool"?"block":"none";
+  postedTab.style.display = tab==="posted"?"block":"none";
+  acceptedTab.style.display = tab==="accepted"?"block":"none";
 }
