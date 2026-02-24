@@ -28,7 +28,10 @@ window.showTab = tab => {
 window.logout = async () => {
   try {
     await signOut(auth);
-    window.location.href = "index.html";
+
+    // Force full reset (kills firebase session + cache)
+    location.replace("index.html");
+
   } catch (err) {
     alert("Logout failed: " + err.message);
   }

@@ -18,7 +18,7 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   currentUser = user;
-  loadFriends(user.uid);
+  loadFriends(user.uid, user.email);
 });
 
 // ---------------- SEND TYPE CHANGE ----------------
@@ -27,22 +27,38 @@ sendType.onchange = () => {
     sendType.value === "friend" ? "block" : "none";
 };
 
-// ---------------- LOAD FRIENDS ----------------
-function loadFriends(myUID){
+// ---------------- LOAD FRIENDS (FIXED) ----------------
+function loadFriends(myUID, myEmail){
+
+  friendSelect.innerHTML = "<option value=''>Loading...</option>";
+
+  // 1️⃣ UID based friends
   onSnapshot(
     query(collection(db,"friends"), where("ownerUID","==",myUID)),
-    snap => {
-      friendSelect.innerHTML = "<option value=''>Select Friend</option>";
-      snap.forEach(docSnap => {
-        const f = docSnap.data();
-        const opt = document.createElement("option");
-        opt.value = f.friendUID;
-        opt.dataset.email = f.friendEmail;
-        opt.textContent = `${f.name} (${f.friendEmail})`;
-        friendSelect.appendChild(opt);
-      });
-    }
+    snap => renderFriends(snap)
   );
+
+  // 2️⃣ Legacy email based friends (BACKWARD COMPATIBLE)
+  onSnapshot(
+    query(collection(db,"friends"), where("owner","==",myEmail)),
+    snap => renderFriends(snap)
+  );
+}
+
+function renderFriends(snapshot){
+  friendSelect.innerHTML = "<option value=''>Select Friend</option>";
+
+  snapshot.forEach(docSnap => {
+    const f = docSnap.data();
+
+    if(!f.friendUID) return;
+
+    const opt = document.createElement("option");
+    opt.value = f.friendUID;
+    opt.dataset.email = f.friendEmail;
+    opt.textContent = `${f.name} (${f.friendEmail})`;
+    friendSelect.appendChild(opt);
+  });
 }
 
 // ---------------- CREATE FARE ----------------
@@ -101,7 +117,7 @@ btn.onclick = async () => {
 
     }
 
-    // -------- AUTO DISPATCH (NEAREST) --------
+    // -------- AUTO DISPATCH --------
     else if(sendType.value === "nearest"){
 
       data.status = "auto";
