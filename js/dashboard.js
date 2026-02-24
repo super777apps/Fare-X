@@ -26,8 +26,12 @@ window.showTab = tab => {
 
 // ---------------- LOGOUT ----------------
 window.logout = async () => {
-  await signOut(auth);
-  location.href = "index.html";
+  try {
+    await signOut(auth);
+    window.location.href = "index.html";
+  } catch (err) {
+    alert("Logout failed: " + err.message);
+  }
 };
 
 // ---------------- AUTH ----------------
@@ -72,15 +76,16 @@ function startListeners(myEmail){
   );
 
   // 🚀 PRIVATE JOB RECEIVER ENGINE
-  onSnapshot(
-    query(collection(db,"privateFares"),
-      where("target","==",myEmail),
-      where("status","==","pending")
-    ),
-    snap => {
-      snap.forEach(d => showPrivateDispatch(d.data(), d.id));
-    }
-  );
+ onSnapshot(
+  query(
+    collection(db,"privateFares"),
+    where("targetUID","==",auth.currentUser.uid),
+    where("status","==","pending")
+  ),
+  snap => {
+    snap.forEach(d => showPrivateDispatch(d.data(), d.id));
+  }
+);
 
   // 🔄 RETURNED JOB ENGINE (FOR SENDER)
   onSnapshot(
