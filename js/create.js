@@ -1,22 +1,13 @@
 import { db, auth } from "./firebase.js";
 import {
   collection, addDoc, serverTimestamp,
-  query, where, onSnapshot, getDocs
+  query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { startAutoDispatch } from "./dispatchEngine.js";
 
 const btn = document.getElementById("createFareBtn");
 const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
-
-/* ---------------- SAFE UI HANDLING ---------------- */
-
-if(sendType && friendSelect){
-  sendType.onchange = () => {
-    friendSelect.style.display = sendType.value === "friend" ? "block" : "none";
-  };
-}
 
 /* ---------------- AUTH ---------------- */
 
@@ -28,19 +19,33 @@ onAuthStateChanged(auth, user => {
   loadFriends(user.uid);
 });
 
+/* ---------------- FRIEND TOGGLE ---------------- */
+
+sendType.addEventListener("change",()=>{
+  friendSelect.style.display = sendType.value === "friend" ? "block" : "none";
+});
+
 /* ---------------- LOAD FRIENDS ---------------- */
 
 function loadFriends(myUid){
+
   onSnapshot(
     query(collection(db,"friends"), where("owner","==",myUid)),
     snap => {
-      friendSelect.innerHTML = "<option value=''>Select Friend</option>";
+      friendSelect.innerHTML = `<option value="">Select Friend</option>`;
+
+      if(snap.empty){
+        const opt = document.createElement("option");
+        opt.textContent = "No friends";
+        friendSelect.appendChild(opt);
+        return;
+      }
 
       snap.forEach(doc => {
         const f = doc.data();
         const opt = document.createElement("option");
         opt.value = f.friendUid;
-        opt.textContent = `${f.name} (${f.friendEmail})`;
+        opt.textContent = f.name || f.friendEmail || f.friendUid;
         friendSelect.appendChild(opt);
       });
     }
@@ -49,17 +54,17 @@ function loadFriends(myUid){
 
 /* ---------------- CREATE FARE ---------------- */
 
-btn.onclick = async () => {
+btn.addEventListener("click", async ()=>{
 
-  const pickup = pickupInput.value.trim();
-  const drop = dropInput.value.trim();
-  const datetime = datetimeInput.value;
-  const priceType = priceTypeSelect.value;
-  const price = priceInput.value.trim();
-  const note = noteInput.value.trim();
+  const pickup = document.getElementById("pickup").value.trim();
+  const drop   = document.getElementById("drop").value.trim();
+  const datetime = document.getElementById("datetime").value;
+  const price  = document.getElementById("price").value.trim();
+  const priceType = document.getElementById("priceType").value;
+  const note   = document.getElementById("note").value.trim();
 
-  if (!pickup || !drop || !datetime || !price) {
-    alert("Please complete all required fields");
+  if(!pickup || !drop || !datetime || !price){
+    alert("Please fill all required fields");
     return;
   }
 
@@ -67,10 +72,10 @@ btn.onclick = async () => {
     pickup,
     drop,
     time: datetime,
-    priceType,
     price,
+    priceType,
     note,
-    status: "broadcast",
+    status:"broadcast",
     createdBy: auth.currentUser.email,
     createdUid: auth.currentUser.uid,
     createdAt: serverTimestamp()
@@ -78,12 +83,13 @@ btn.onclick = async () => {
 
   try{
 
-    /* ---------- PRIVATE JOB ---------- */
+    /* -------- SEND TO FRIEND -------- */
+
     if(sendType.value === "friend"){
 
       const friend = friendSelect.value;
       if(!friend){
-        alert("Please select a friend");
+        alert("Select friend");
         return;
       }
 
@@ -92,47 +98,33 @@ btn.onclick = async () => {
 
       await addDoc(collection(db,"privateFares"), data);
 
-      alert("Private job sent 🚀");
+      alert("Private job sent ✔");
       location.href = "dashboard.html";
       return;
     }
 
-    /* ---------- AUTO DISPATCH ---------- */
+    /* -------- AUTO DISPATCH -------- */
+
     if(sendType.value === "auto"){
 
-      const jobRef = await addDoc(collection(db,"fares"), data);
+      data.status = "auto";
 
-      const drivers = await getNearestDrivers();
+      await addDoc(collection(db,"autoDispatch"), data);
 
-      await startAutoDispatch(jobRef.id, drivers);
-
-      alert("Auto dispatch started 🚀");
+      alert("Auto dispatch started ✔");
       location.href = "dashboard.html";
       return;
     }
 
-    /* ---------- BROADCAST ---------- */
+    /* -------- BROADCAST -------- */
 
     await addDoc(collection(db,"fares"), data);
 
-    alert("Fare broadcasted 🚀");
+    alert("Broadcast job created ✔");
     location.href = "dashboard.html";
 
   }catch(err){
-    alert("Failed: " + err.message);
+    alert("Error: " + err.message);
   }
-};
 
-/* ---------------- FIND NEAREST DRIVERS ---------------- */
-
-async function getNearestDrivers(){
-
-  const snap = await getDocs(
-    query(collection(db,"users"), where("role","==","driver"), where("online","==",true))
-  );
-
-  const drivers = [];
-  snap.forEach(d => drivers.push(d.data().email));
-
-  return drivers;
-}
+});
