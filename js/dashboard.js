@@ -5,6 +5,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+const logoutBtn = document.getElementById("logoutBtn");
+
+if(logoutBtn){
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      location.replace("index.html");   // HARD RESET
+    } catch (err) {
+      alert("Logout failed: " + err.message);
+    }
+  });
+}
+
 const poolList = document.getElementById("poolList");
 const postedList = document.getElementById("postedList");
 const acceptedList = document.getElementById("acceptedList");
@@ -80,15 +93,18 @@ function startListeners(myEmail){
 
   // 🚀 PRIVATE JOB RECEIVER ENGINE
  onSnapshot(
-  query(
-    collection(db,"privateFares"),
-    where("targetUID","==",auth.currentUser.uid),
-    where("status","==","pending")
-  ),
-  snap => {
-    snap.forEach(d => showPrivateDispatch(d.data(), d.id));
-  }
-);
+    query(
+      collection(db,"privateFares"),
+      where("targetUID","==",auth.currentUser.uid)
+    ),
+    snap => {
+      snap.forEach(d => {
+        if(d.data().status === "pending"){
+          showPrivateDispatch(d.data(), d.id);
+        }
+      });
+    }
+  );
 
   // 🔄 RETURNED JOB ENGINE (FOR SENDER)
   onSnapshot(
