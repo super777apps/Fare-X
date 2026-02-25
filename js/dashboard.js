@@ -1,23 +1,11 @@
 import { db, auth } from "./firebase.js";
 import {
   collection, query, onSnapshot, where,
-  doc, updateDoc, serverTimestamp, addDoc
+  doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const logoutBtn = document.getElementById("logoutBtn");
-
-if(logoutBtn){
-  logoutBtn.addEventListener("click", async () => {
-    try {
-      await signOut(auth);
-      location.replace("index.html");   // HARD RESET
-    } catch (err) {
-      alert("Logout failed: " + err.message);
-    }
-  });
-}
-
 const poolList = document.getElementById("poolList");
 const postedList = document.getElementById("postedList");
 const acceptedList = document.getElementById("acceptedList");
@@ -30,50 +18,50 @@ const notifySound = document.getElementById("notifySound");
 let alarmAudio;
 let alarmTimer;
 
-// ---------------- TAB SWITCH ----------------
-window.showTab = tab => {
-  poolTab.style.display = tab === "pool" ? "block" : "none";
-  postedTab.style.display = tab === "posted" ? "block" : "none";
-  acceptedTab.style.display = tab === "accepted" ? "block" : "none";
-};
+/* ---------------- LOGOUT ---------------- */
 
-// ---------------- LOGOUT ----------------
-window.logout = async () => {
-  try {
+if(logoutBtn){
+  logoutBtn.addEventListener("click", async () => {
     await signOut(auth);
-
-    // Force full reset (kills firebase session + cache)
     location.replace("index.html");
+  });
+}
 
-  } catch (err) {
-    alert("Logout failed: " + err.message);
-  }
-};
+/* ---------------- AUTH ---------------- */
 
-// ---------------- AUTH ----------------
 onAuthStateChanged(auth, user => {
-  if (!user) location.href = "index.html";
+  if (!user) return location.href = "index.html";
+
   userInfo.textContent = "Logged in: " + user.email;
-  startListeners(user.email);
+
+  startListeners(user);
 });
 
-// ---------------- MASTER LISTENERS ----------------
-function startListeners(myEmail){
+/* ---------------- MASTER LISTENERS ---------------- */
 
-  // Broadcast Pool
+function startListeners(user){
+
+  const myEmail = user.email;
+  const myUid   = user.uid;
+
+  /* ---------- BROADCAST POOL ---------- */
+
   onSnapshot(
-    query(collection(db,"fares"), where("status","==","broadcast")),
+    query(collection(db,"fares")),
     snap => {
       poolList.innerHTML = "";
       snap.forEach(d => {
-        if(d.data().createdBy !== myEmail){
-          poolList.appendChild(renderCard(d.data(), d.id, "pool"));
+        const f = d.data();
+
+        if(f.status === "broadcast" && f.createdBy !== myEmail){
+          poolList.appendChild(renderCard(f, d.id, "pool"));
         }
       });
     }
   );
 
-  // My Posted
+  /* ---------- MY POSTED ---------- */
+
   onSnapshot(
     query(collection(db,"fares"), where("createdBy","==",myEmail)),
     snap => {
@@ -82,7 +70,8 @@ function startListeners(myEmail){
     }
   );
 
-  // My Accepted
+  /* ---------- MY ACCEPTED ---------- */
+
   onSnapshot(
     query(collection(db,"fares"), where("acceptedBy","==",myEmail)),
     snap => {
@@ -91,12 +80,10 @@ function startListeners(myEmail){
     }
   );
 
-  // 🚀 PRIVATE JOB RECEIVER ENGINE
- onSnapshot(
-    query(
-      collection(db,"privateFares"),
-      where("targetUID","==",auth.currentUser.uid)
-    ),
+  /* ---------- PRIVATE JOB RECEIVER ---------- */
+
+  onSnapshot(
+    query(collection(db,"privateFares"), where("targetUID","==",myUid)),
     snap => {
       snap.forEach(d => {
         if(d.data().status === "pending"){
@@ -106,20 +93,23 @@ function startListeners(myEmail){
     }
   );
 
-  // 🔄 RETURNED JOB ENGINE (FOR SENDER)
+  /* ---------- RETURNED JOB RECEIVER ---------- */
+
   onSnapshot(
-    query(collection(db,"privateFares"),
-      where("createdBy","==",myEmail),
-      where("status","==","returned")
-    ),
+    query(collection(db,"privateFares"), where("createdBy","==",myEmail)),
     snap => {
-      snap.forEach(d => showReturnedJob(d.data(), d.id));
+      snap.forEach(d => {
+        if(d.data().status === "returned"){
+          showReturnedJob(d.data(), d.id);
+        }
+      });
     }
   );
 
 }
 
-// ---------------- PRIVATE DISPATCH POPUP ----------------
+/* ---------------- PRIVATE DISPATCH POPUP ---------------- */
+
 function showPrivateDispatch(f,id){
 
   if(document.getElementById("dispatchPopup")) return;
@@ -132,8 +122,9 @@ function showPrivateDispatch(f,id){
 
   div.innerHTML = `
     <div class="popup-card">
-      <h2>🚖 Job From ${f.senderNickname || f.createdBy}</h2>
+      <h2>🚖 Private Job</h2>
 
+      <p><b>From:</b> ${f.createdBy}</p>
       <p><b>Pickup:</b> ${f.pickup}</p>
       <p><b>Drop:</b> ${f.drop}</p>
       <p><b>Time:</b> ${f.time}</p>
@@ -151,13 +142,14 @@ function showPrivateDispatch(f,id){
   setTimeout(()=> autoReject(id),12000);
 }
 
-// ---------------- ALARM ENGINE ----------------
+/* ---------------- SOUND ENGINE ---------------- */
+
 function startAlarm(){
   alarmAudio = new Audio("assets/job.mp3");
   alarmAudio.loop = true;
   alarmAudio.play();
 
-  alarmTimer = setTimeout(()=> stopAlarm(),12000);
+  alarmTimer = setTimeout(stopAlarm,12000);
 }
 
 function stopAlarm(){
@@ -168,7 +160,8 @@ function stopAlarm(){
   clearTimeout(alarmTimer);
 }
 
-// ---------------- ACCEPT / REJECT ----------------
+/* ---------------- ACCEPT / REJECT PRIVATE ---------------- */
+
 window.acceptPrivate = async id => {
   stopAlarm();
 
@@ -196,8 +189,7 @@ window.rejectPrivate = async id => {
 };
 
 async function autoReject(id){
-  const ref = doc(db,"privateFares",id);
-  await updateDoc(ref,{
+  await updateDoc(doc(db,"privateFares",id),{
     status:"returned",
     rejectedBy:"timeout",
     rejectedAt:serverTimestamp()
@@ -205,15 +197,15 @@ async function autoReject(id){
   stopAlarm();
 }
 
-// ---------------- RETURN POPUP FOR SENDER ----------------
-function showReturnedJob(f,id){
+/* ---------------- RETURN POPUP ---------------- */
 
+function showReturnedJob(){
   declineSound.play();
-
-  alert(`❌ Job declined by driver.\nYou can resend it.`);
+  alert("❌ Job declined by driver. You can resend.");
 }
 
-// ---------------- STANDARD FARE CARDS ----------------
+/* ---------------- FARE CARDS ---------------- */
+
 function renderCard(f,id,type){
 
   const d=document.createElement("div");
@@ -228,9 +220,7 @@ function renderCard(f,id,type){
 
     <div class="fare-actions">
       ${type==="pool"?`<button class="accept-btn" onclick="acceptFare('${id}')">Accept</button>`:""}
-      ${type==="posted"?`
-        <button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>
-      `:""}
+      ${type==="posted"?`<button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>`:""}
       ${type==="accepted"?`
         <button class="accept-btn" onclick="completeFare('${id}')">Complete</button>
         <button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>
@@ -240,7 +230,8 @@ function renderCard(f,id,type){
   return d;
 }
 
-// ---------------- NORMAL ACCEPT ----------------
+/* ---------------- NORMAL ACCEPT ---------------- */
+
 window.acceptFare = async id => {
   await updateDoc(doc(db,"fares",id),{
     status:"accepted",
