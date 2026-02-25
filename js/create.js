@@ -1,7 +1,7 @@
 import { db, auth } from "./firebase.js";
 import {
   collection, addDoc, serverTimestamp,
-  query, where, onSnapshot, getDoc, doc
+  query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -9,141 +9,132 @@ const btn = document.getElementById("createFareBtn");
 const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
 
-let currentUser = null;
+/* ---------------- SAFE UI HANDLING ---------------- */
 
-// ---------------- AUTH ----------------
-onAuthStateChanged(auth, async user => {
+if(sendType && friendSelect){
+  sendType.onchange = () => {
+    if(sendType.value === "friend"){
+      friendSelect.style.display = "block";
+    } else {
+      friendSelect.style.display = "none";
+    }
+  };
+}
+
+/* ---------------- AUTH ---------------- */
+
+onAuthStateChanged(auth, user => {
   if(!user){
-    window.location.href="index.html";
+    window.location.href = "index.html";
     return;
   }
-  currentUser = user;
-  loadFriends(user.uid, user.email);
+  loadFriends(user.uid);   // ✅ USE UID ALWAYS
 });
 
-// ---------------- SEND TYPE CHANGE ----------------
-sendType.onchange = () => {
-  friendSelect.style.display =
-    sendType.value === "friend" ? "block" : "none";
-};
+/* ---------------- LOAD FRIENDS ---------------- */
 
-// ---------------- LOAD FRIENDS (FIXED) ----------------
-function loadFriends(myUID, myEmail){
+function loadFriends(myUid){
+  if(!friendSelect) return;
 
-  friendSelect.innerHTML = "<option value=''>Loading...</option>";
-
-  // 1️⃣ UID based friends
   onSnapshot(
-    query(collection(db,"friends"), where("ownerUID","==",myUID)),
-    snap => renderFriends(snap)
-  );
+    query(collection(db,"friends"), where("owner","==",myUid)),
+    snap => {
+      friendSelect.innerHTML = "<option value=''>Select Friend</option>";
 
-  // 2️⃣ Legacy email based friends (BACKWARD COMPATIBLE)
-  onSnapshot(
-    query(collection(db,"friends"), where("owner","==",myEmail)),
-    snap => renderFriends(snap)
+      if(snap.empty){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No friends yet";
+        friendSelect.appendChild(opt);
+        return;
+      }
+
+      snap.forEach(doc => {
+        const f = doc.data();
+        const opt = document.createElement("option");
+        opt.value = f.friendUid || f.friend;
+        opt.textContent = `${f.name} (${f.friendEmail || f.friend})`;
+        friendSelect.appendChild(opt);
+      });
+    }
   );
 }
 
-function renderFriends(snapshot){
-  friendSelect.innerHTML = "<option value=''>Select Friend</option>";
+/* ---------------- CREATE FARE ---------------- */
 
-  snapshot.forEach(docSnap => {
-    const f = docSnap.data();
-
-    if(!f.friendUID) return;
-
-    const opt = document.createElement("option");
-    opt.value = f.friendUID;
-    opt.dataset.email = f.friendEmail;
-    opt.textContent = `${f.name} (${f.friendEmail})`;
-    friendSelect.appendChild(opt);
-  });
-}
-
-// ---------------- CREATE FARE ----------------
+if(btn){
 btn.onclick = async () => {
+
+  const pickup = document.getElementById("pickup")?.value.trim();
+  const drop = document.getElementById("drop")?.value.trim();
+  const date = document.getElementById("date")?.value;
+  const time = document.getElementById("time")?.value;
+  const priceType = document.getElementById("priceType")?.value;
+  const price = document.getElementById("price")?.value.trim();
+  const note = document.getElementById("note")?.value.trim();
+
+  if (!pickup || !drop || !date || !time || !price) {
+    alert("Please complete all required fields");
+    return;
+  }
+
+  const dateTime = `${date} ${time}`;
+
+  const data = {
+    pickup,
+    drop,
+    time: dateTime,
+    priceType,
+    price,
+    note,
+    status: "broadcast",
+    createdBy: auth.currentUser.email,
+    createdUid: auth.currentUser.uid,
+    createdAt: serverTimestamp()
+  };
 
   try{
 
-    const pickup = document.getElementById("pickup").value.trim();
-    const drop = document.getElementById("drop").value.trim();
-    const dateTime = document.getElementById("datetime").value;
-    const priceType = document.getElementById("priceType").value;
-    const price = document.getElementById("price").value.trim();
-    const note = document.getElementById("note").value.trim();
+    /* ---------- SEND TO FRIEND ---------- */
+    if(sendType && sendType.value === "friend"){
 
-    if (!pickup || !drop || !dateTime || !price) {
-      alert("Please complete all required fields");
-      return;
-    }
-
-    const driverSnap = await getDoc(doc(db,"drivers",currentUser.uid));
-    const senderName = driverSnap.exists() ? driverSnap.data().nickname : "";
-
-    const data = {
-      pickup,
-      drop,
-      time: new Date(dateTime).toISOString(),
-      priceType,
-      price,
-      note,
-      status: "broadcast",
-      createdBy: currentUser.email,
-      createdUid: currentUser.uid,
-      senderNickname: senderName,
-      senderEmail: currentUser.email,
-      createdAt: serverTimestamp()
-    };
-
-    // -------- SEND TO FRIEND --------
-    if(sendType.value === "friend"){
-
-      const friendUID = friendSelect.value;
-      const friendEmail = friendSelect.options[friendSelect.selectedIndex]?.dataset.email;
-
-      if(!friendUID){
+      const friend = friendSelect?.value;
+      if(!friend){
         alert("Please select a friend");
         return;
       }
 
-      data.status = "pending";
-      data.targetUID = friendUID;
-      data.targetEmail = friendEmail;
+      data.status = "private";
+      data.targetUid = friend;
 
       await addDoc(collection(db,"privateFares"), data);
 
-      alert("🚀 Job sent to friend successfully");
-
+      alert("Fare sent to friend successfully 🚀");
+      window.location.href = "dashboard.html";
+      return;
     }
 
-    // -------- AUTO DISPATCH --------
-    else if(sendType.value === "nearest"){
+    /* ---------- AUTO DISPATCH ---------- */
+    if(sendType && sendType.value === "auto"){
 
       data.status = "auto";
 
       await addDoc(collection(db,"autoDispatch"), data);
 
-      alert("⚡ Auto dispatch started");
-
+      alert("Auto dispatch started 🚀");
+      window.location.href = "dashboard.html";
+      return;
     }
 
-    // -------- POOL BROADCAST --------
-    else{
+    /* ---------- BROADCAST ---------- */
 
-      data.status = "broadcast";
+    await addDoc(collection(db,"fares"), data);
 
-      await addDoc(collection(db,"fares"), data);
-
-      alert("📢 Job broadcasted successfully");
-
-    }
-
+    alert("Fare broadcasted successfully 🚀");
     window.location.href = "dashboard.html";
 
   }catch(err){
     alert("Failed: " + err.message);
-    console.error(err);
   }
-
 };
+}
