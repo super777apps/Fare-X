@@ -76,25 +76,28 @@ btn.addEventListener("click", async () => {
 
     /* ---------- PRIVATE FRIEND ---------- */
 
-    if (sendType.value === "friend") {
+    if(sendType.value === "friend"){
 
-      const friendUid = friendSelect.value;
-      if (!friendUid) return alert("Select a friend");
+  const friendUID = friendSelect.value;
 
-      data.status = "pending";
-
-    await addDoc(
-  collection(db, "privateFares", friend, "jobs"),
-  {
-    ...data,
-    status: "pending"
+  if(!friendUID){
+    alert("Select friend");
+    return;
   }
-);
 
-      alert("Private job sent ✔");
-      location.href = "dashboard.html";
-      return;
+  await addDoc(
+    collection(db, "privateFares", friendUID, "jobs"),
+    {
+      ...data,
+      status: "pending",
+      targetUID: friendUID
     }
+  );
+
+  alert("Private job sent ✔");
+  location.href = "dashboard.html";
+  return;
+}
 
     /* ---------- AUTO DISPATCH ---------- */
 
