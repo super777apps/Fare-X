@@ -83,10 +83,13 @@ btn.addEventListener("click", async () => {
 
       data.status = "pending";
 
-      await addDoc(
-        collection(db, "privateFares", friendUid, "jobs"),
-        data
-      );
+    await addDoc(
+  collection(db, "privateFares", friend, "jobs"),
+  {
+    ...data,
+    status: "pending"
+  }
+);
 
       alert("Private job sent ✔");
       location.href = "dashboard.html";
