@@ -76,10 +76,9 @@ btn.addEventListener("click", async () => {
 
     /* ---------- PRIVATE FRIEND ---------- */
 
-    if(sendType.value === "friend"){
+    if(if(sendType.value === "friend"){
 
   const friendUID = friendSelect.value;
-
   if(!friendUID){
     alert("Select friend");
     return;
@@ -90,7 +89,9 @@ btn.addEventListener("click", async () => {
     {
       ...data,
       status: "pending",
-      targetUID: friendUID
+      targetUID: friendUID,
+      senderUID: auth.currentUser.uid,
+      senderEmail: auth.currentUser.email
     }
   );
 
