@@ -83,26 +83,26 @@ btn.addEventListener("click", async ()=>{
 
   try{
 
-    /* -------- SEND TO FRIEND -------- */
+   /* -------- SEND TO FRIEND -------- */
 
-    if(sendType.value === "friend"){
+if(sendType.value === "friend"){
 
-      const friend = friendSelect.value;
-      if(!friend){
-        alert("Select friend");
-        return;
-      }
+  const friendEmail = friendSelect.value;
 
-      data.status = "pending";
-      data.targetUID = friend;
+  if(!friendEmail){
+    alert("Select friend");
+    return;
+  }
 
-      await addDoc(collection(db,"privateFares"), data);
+  data.status = "pending";
+  data.targetEmail = friendEmail;   // 🔥 route by email
 
-      alert("Private job sent ✔");
-      location.href = "dashboard.html";
-      return;
-    }
+  await addDoc(collection(db,"privateFares"), data);
 
+  alert("Private job sent ✔");
+  location.href = "dashboard.html";
+  return;
+}
     /* -------- AUTO DISPATCH -------- */
 
     if(sendType.value === "auto"){
