@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +24,7 @@
     <input id="pickup" placeholder="Pickup location">
     <input id="drop" placeholder="Drop location">
 
-    <input id="datetime" type="datetime-local" placeholder="Pickup Date & Time">
+    <input id="datetime" type="datetime-local">
 
     <select id="priceType">
       <option value="fixed">Fixed Price</option>
@@ -34,11 +36,15 @@
     <textarea id="note" placeholder="Notes (optional)"></textarea>
 
     <select id="sendType">
-      <option value="pool">Broadcast Pool</option>
-      <option value="friend">Send to Friend</option>
-      <option value="auto">Nearest Driver (Auto Dispatch)</option>
-    </select>
+  <option value="pool">Broadcast Pool</option>
+  <option value="friend">Send to Friend</option>
+  <option value="auto">Nearest Driver (Auto Dispatch)</option>
+</select>
 
+<select id="friendSelect" style="display:none">
+  <option value="">Select Friend</option>
+</select>
+    <!-- ALWAYS PRESENT -->
     <select id="friendSelect" style="display:none">
       <option value="">Select Friend</option>
     </select>
@@ -49,7 +55,7 @@
 
 </main>
 
-<<script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js"></script>
+<<script type="module" src="js/firebase.js"</script>
+<script type="module" src="js/create.js?v=100"></script>۔ 
 </body>
 </html>
