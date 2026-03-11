@@ -1,232 +1,202 @@
 import { db, auth } from "./firebase.js";
+
 import {
-  collection, query, onSnapshot, where,
-  doc, updateDoc, serverTimestamp
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  query,
+  where,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const poolTab = document.getElementById("poolTab");
-const postedTab = document.getElementById("postedTab");
-const acceptedTab = document.getElementById("acceptedTab");
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const poolList = document.getElementById("poolList");
-const postedList = document.getElementById("postedList");
-const acceptedList = document.getElementById("acceptedList");
 
-const userInfo = document.getElementById("userInfo");
-const logoutBtn = document.getElementById("logoutBtn");
+let currentUser = null;
 
-const acceptSound = document.getElementById("acceptSound");
-const declineSound = document.getElementById("declineSound");
-
-let alarmAudio;
-let alarmTimer;
-
-/* ---------------- TAB SWITCH ---------------- */
-
-window.showTab = tab => {
-  poolTab.style.display = tab === "pool" ? "block" : "none";
-  postedTab.style.display = tab === "posted" ? "block" : "none";
-  acceptedTab.style.display = tab === "accepted" ? "block" : "none";
-};
-
-/* ---------------- LOGOUT ---------------- */
-
-logoutBtn.onclick = async () => {
-  await signOut(auth);
-  location.replace("index.html");
-};
 
 /* ---------------- AUTH ---------------- */
 
-onAuthStateChanged(auth, user => {
-  if (!user) return location.href = "index.html";
-  userInfo.textContent = user.email;
-  startListeners(user);
+onAuthStateChanged(auth,(user)=>{
+
+  if(!user){
+    window.location.href="index.html";
+    return;
+  }
+
+  currentUser=user;
+
+  console.log("Dashboard user:",user.uid);
+
+  listenPrivateJobs(user);
+  listenPoolJobs(user);
+
 });
 
-/* ---------------- MASTER LISTENERS ---------------- */
 
-function startListeners(user) {
 
-  /* ---- BROADCAST POOL ---- */
-  onSnapshot(
-    query(collection(db, "fares"), where("status", "==", "broadcast")),
-    snap => {
-      poolList.innerHTML = "";
-      snap.forEach(d => {
-        if (d.data().createdUid !== user.uid) {
-          poolList.appendChild(renderCard(d.data(), d.id, "pool"));
+/* ---------------- PRIVATE JOB LISTENER ---------------- */
+
+function listenPrivateJobs(user){
+
+  const inboxRef=collection(db,"privateFares",user.uid,"jobs");
+
+  onSnapshot(inboxRef,(snapshot)=>{
+
+    snapshot.docChanges().forEach(change=>{
+
+      if(change.type==="added"){
+
+        const job=change.doc.data();
+
+        if(job.status==="pending"){
+
+          showPrivatePopup(job,change.doc.id);
+
         }
-      });
-    }
+
+      }
+
+    });
+
+  });
+
+}
+
+
+
+/* ---------------- SHOW POPUP ---------------- */
+
+function showPrivatePopup(job,jobId){
+
+  const popup=document.getElementById("jobPopup");
+  const details=document.getElementById("jobDetails");
+
+  const jobSound=document.getElementById("jobSound");
+  const declineSound=document.getElementById("declineSound");
+
+  details.innerHTML=`
+
+  <b>Pickup:</b> ${job.pickup}<br>
+  <b>Drop:</b> ${job.drop}<br>
+  <b>Price:</b> ${job.price}<br>
+  <b>Time:</b> ${job.time}
+
+  `;
+
+  popup.style.display="block";
+
+  jobSound.currentTime=0;
+  jobSound.play();
+
+
+  let timer=setTimeout(()=>{
+
+    jobSound.pause();
+    popup.style.display="none";
+
+  },12000);
+
+
+
+  document.getElementById("acceptBtn").onclick=async()=>{
+
+    await updateDoc(
+      doc(db,"privateFares",currentUser.uid,"jobs",jobId),
+      {status:"accepted"}
+    );
+
+    jobSound.pause();
+    popup.style.display="none";
+    clearTimeout(timer);
+
+  };
+
+
+  document.getElementById("rejectBtn").onclick=async()=>{
+
+    await updateDoc(
+      doc(db,"privateFares",currentUser.uid,"jobs",jobId),
+      {status:"rejected"}
+    );
+
+    jobSound.pause();
+    declineSound.play();
+
+    popup.style.display="none";
+    clearTimeout(timer);
+
+  };
+
+}
+
+
+
+/* ---------------- POOL JOB LISTENER ---------------- */
+
+function listenPoolJobs(user){
+
+  const poolRef=query(
+    collection(db,"fares"),
+    where("status","==","broadcast")
   );
 
-  /* ---- MY POSTED ---- */
-  onSnapshot(
-    query(collection(db, "fares"), where("createdUid", "==", user.uid)),
-    snap => {
-      postedList.innerHTML = "";
-      snap.forEach(d => postedList.appendChild(renderCard(d.data(), d.id, "posted")));
-    }
-  );
+  const poolContainer=document.getElementById("poolJobs");
 
-  /* ---- MY ACCEPTED ---- */
-  onSnapshot(
-    query(collection(db, "fares"), where("acceptedUid", "==", user.uid)),
-    snap => {
-      acceptedList.innerHTML = "";
-      snap.forEach(d => acceptedList.appendChild(renderCard(d.data(), d.id, "accepted")));
-    }
-  );
+  if(!poolContainer) return;
 
-  /* ---- PRIVATE JOB RECEIVER ENGINE ---- */
+  onSnapshot(poolRef,(snapshot)=>{
 
-  onSnapshot(
-    collection(db, "privateFares", user.uid, "jobs"),
-    snap => {
-      snap.docChanges().forEach(change => {
-        if (change.type === "added") {
-          const job = change.doc.data();
-          if (job.status === "pending") {
-            showPrivatePopup(job, change.doc.id);
+    poolContainer.innerHTML="";
+
+    snapshot.forEach(docSnap=>{
+
+      const job=docSnap.data();
+
+      const div=document.createElement("div");
+
+      div.className="jobCard";
+
+      div.innerHTML=`
+
+      <b>${job.pickup}</b> ➜ ${job.drop}<br>
+      Price: ${job.price}<br>
+      Time: ${job.time}
+
+      <br><br>
+
+      <button data-id="${docSnap.id}" class="acceptPool">
+      Accept
+      </button>
+
+      `;
+
+      poolContainer.appendChild(div);
+
+    });
+
+
+    document.querySelectorAll(".acceptPool").forEach(btn=>{
+
+      btn.onclick=async()=>{
+
+        const jobId=btn.dataset.id;
+
+        await updateDoc(
+          doc(db,"fares",jobId),
+          {
+            status:"accepted",
+            acceptedBy:currentUser.uid
           }
-        }
-      });
-    }
-  );
-}
+        );
 
-/* ---------------- PRIVATE JOB POPUP ---------------- */
+      };
 
-function showPrivatePopup(f, id) {
+    });
 
-  if (document.getElementById("dispatchPopup")) return;
-
-  startAlarm();
-
-  const div = document.createElement("div");
-  div.id = "dispatchPopup";
-  div.className = "private-popup";
-
-  div.innerHTML = `
-    <div class="popup-card">
-      <h2>🚖 Job from ${f.createdBy}</h2>
-      <p><b>Pickup:</b> ${f.pickup}</p>
-      <p><b>Drop:</b> ${f.drop}</p>
-      <p><b>Time:</b> ${f.time}</p>
-      <p><b>Price:</b> $${f.price}</p>
-
-      <div class="popup-actions">
-        <button class="accept-btn" onclick="acceptPrivate('${id}')">Accept</button>
-        <button class="cancel-btn" onclick="rejectPrivate('${id}')">Reject</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(div);
-
-  setTimeout(() => autoReject(id), 12000);
-}
-
-/* ---------------- SOUND ---------------- */
-
-function startAlarm() {
-  alarmAudio = new Audio("assets/job.mp3");
-  alarmAudio.loop = true;
-  alarmAudio.play();
-  alarmTimer = setTimeout(stopAlarm, 12000);
-}
-
-function stopAlarm() {
-  if (alarmAudio) {
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
-  }
-  clearTimeout(alarmTimer);
-}
-
-/* ---------------- ACCEPT / REJECT ---------------- */
-
-window.acceptPrivate = async id => {
-  stopAlarm();
-  await updateDoc(doc(db, "privateFares", auth.currentUser.uid, "jobs", id), {
-    status: "accepted",
-    acceptedUid: auth.currentUser.uid,
-    acceptedAt: serverTimestamp()
   });
-  acceptSound.play();
-  document.getElementById("dispatchPopup")?.remove();
-};
 
-window.rejectPrivate = async id => {
-  stopAlarm();
-  await updateDoc(doc(db, "privateFares", auth.currentUser.uid, "jobs", id), {
-    status: "returned",
-    rejectedUid: auth.currentUser.uid,
-    rejectedAt: serverTimestamp()
-  });
-  declineSound.play();
-  document.getElementById("dispatchPopup")?.remove();
-};
-
-async function autoReject(id) {
-  await updateDoc(doc(db, "privateFares", auth.currentUser.uid, "jobs", id), {
-    status: "returned",
-    rejectedUid: "timeout",
-    rejectedAt: serverTimestamp()
-  });
-  stopAlarm();
 }
-
-/* ---------------- CARD RENDER ---------------- */
-
-function renderCard(f, id, type) {
-
-  const d = document.createElement("div");
-  d.className = "fare-card";
-
-  d.innerHTML = `
-    <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
-    <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
-    <div class="fare-row"><span>Time:</span><b>${f.time}</b></div>
-    <div class="fare-row"><span>Price:</span><b>$${f.price}</b></div>
-
-    <div class="fare-actions">
-      ${type === "pool" ? `<button class="accept-btn" onclick="acceptFare('${id}')">Accept</button>` : ""}
-      ${type === "posted" ? `<button class="cancel-btn" onclick="cancelFare('${id}')">Cancel</button>` : ""}
-      ${type === "accepted" ? `<button class="accept-btn" onclick="completeFare('${id}')">Complete</button>` : ""}
-    </div>
-  `;
-  return d;
-}
-
-/* ---------------- NORMAL FLOW ---------------- */
-
-window.acceptFare = async id => {
-  await updateDoc(doc(db, "fares", id), {
-    status: "accepted",
-    acceptedUid: auth.currentUser.uid
-  });
-  acceptSound.play();
-};
-
-window.cancelFare = async id => {
-  const r = prompt("Cancel reason:");
-  if (!r) return;
-
-  await updateDoc(doc(db, "fares", id), {
-    status: "broadcast",
-    acceptedUid: "",
-    cancelReason: r
-  });
-  declineSound.play();
-};
-
-window.completeFare = async id => {
-  await updateDoc(doc(db, "fares", id), {
-    status: "completed",
-    completedAt: serverTimestamp()
-  });
-  acceptSound.play();
-};

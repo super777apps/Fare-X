@@ -1,130 +1,169 @@
 import { db, auth } from "./firebase.js";
 import {
-  collection, addDoc, serverTimestamp,
-  query, where, onSnapshot
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 
 const btn = document.getElementById("createFareBtn");
 const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
 
+let currentUser = null;
+
+
 /* ---------------- AUTH ---------------- */
 
-onAuthStateChanged(auth, user => {
-  if(!user){
+onAuthStateChanged(auth, (user) => {
+
+  if (!user) {
     window.location.href = "index.html";
     return;
   }
+
+  currentUser = user;
+
+  console.log("User logged in:", user.uid);
+
   loadFriends(user.uid);
 });
 
-/* ---------------- FRIEND TOGGLE ---------------- */
 
-sendType.addEventListener("change",()=>{
-  friendSelect.style.display = sendType.value === "friend" ? "block" : "none";
+/* ---------------- SHOW FRIEND SELECT ---------------- */
+
+sendType.addEventListener("change", () => {
+
+  if (sendType.value === "friend") {
+    friendSelect.style.display = "block";
+  } else {
+    friendSelect.style.display = "none";
+  }
+
 });
+
 
 /* ---------------- LOAD FRIENDS ---------------- */
 
-function loadFriends(myUid){
+function loadFriends(uid) {
 
-  onSnapshot(
-    query(collection(db,"friends"), where("owner","==",myUid)),
-    snap => {
-      friendSelect.innerHTML = `<option value="">Select Friend</option>`;
-
-      if(snap.empty){
-        const opt = document.createElement("option");
-        opt.textContent = "No friends";
-        friendSelect.appendChild(opt);
-        return;
-      }
-
-      snap.forEach(doc => {
-        const f = doc.data();
-        const opt = document.createElement("option");
-        opt.value = f.friendUid;
-        opt.textContent = f.name || f.friendEmail || f.friendUid;
-        friendSelect.appendChild(opt);
-      });
-    }
+  const q = query(
+    collection(db, "friends"),
+    where("owner", "==", uid)
   );
+
+  onSnapshot(q, (snapshot) => {
+
+    friendSelect.innerHTML = '<option value="">Select Friend</option>';
+
+    if (snapshot.empty) {
+      const opt = document.createElement("option");
+      opt.textContent = "No friends yet";
+      friendSelect.appendChild(opt);
+      return;
+    }
+
+    snapshot.forEach((docSnap) => {
+
+      const f = docSnap.data();
+
+      const opt = document.createElement("option");
+
+      opt.value = f.friendUid;
+      opt.textContent = f.name || f.email || f.friendUid;
+
+      friendSelect.appendChild(opt);
+
+    });
+
+  });
+
 }
+
 
 /* ---------------- CREATE FARE ---------------- */
 
-btn.addEventListener("click", async ()=>{
+btn.addEventListener("click", async () => {
+
+  if (!currentUser) {
+    alert("User not ready yet");
+    return;
+  }
 
   const pickup = document.getElementById("pickup").value.trim();
-  const drop   = document.getElementById("drop").value.trim();
+  const drop = document.getElementById("drop").value.trim();
   const datetime = document.getElementById("datetime").value;
-  const price  = document.getElementById("price").value.trim();
+  const price = document.getElementById("price").value.trim();
   const priceType = document.getElementById("priceType").value;
-  const note   = document.getElementById("note").value.trim();
+  const note = document.getElementById("note").value.trim();
 
-  if(!pickup || !drop || !datetime || !price){
-    alert("Please fill all required fields");
+  if (!pickup || !drop || !datetime || !price) {
+    alert("Please fill all fields");
     return;
   }
 
   const data = {
-    pickup,
-    drop,
+    pickup: pickup,
+    drop: drop,
     time: datetime,
-    price,
-    priceType,
-    note,
-    status:"broadcast",
-    createdBy: auth.currentUser.email,
-    createdUid: auth.currentUser.uid,
-    createdAt: serverTimestamp()
+    price: price,
+    priceType: priceType,
+    note: note,
+    createdBy: currentUser.email,
+    createdUid: currentUser.uid,
+    createdAt: serverTimestamp(),
+    status: "broadcast"
   };
 
-  try{
+  try {
 
-   /* -------- SEND TO FRIEND -------- */
+    /* -------- SEND TO FRIEND -------- */
 
-if(sendType.value === "friend"){
+    if (sendType.value === "friend") {
 
-  const friendEmail = friendSelect.value;
+      const friendUID = friendSelect.value;
 
-  if(!friendEmail){
-    alert("Select friend");
-    return;
-  }
+      if (!friendUID) {
+        alert("Select friend");
+        return;
+      }
 
-  data.status = "pending";
-  data.targetEmail = friendEmail;   // 🔥 route by email
+      data.status = "pending";
+      data.targetUID = friendUID;
 
-  await addDoc(collection(db,"privateFares"), data);
+      await addDoc(
+        collection(db, "privateFares", friendUID, "jobs"),
+        data
+      );
 
-  alert("Private job sent ✔");
-  location.href = "dashboard.html";
-  return;
-}
-    /* -------- AUTO DISPATCH -------- */
+      alert("Private job sent ✔");
 
-    if(sendType.value === "auto"){
-
-      data.status = "auto";
-
-      await addDoc(collection(db,"autoDispatch"), data);
-
-      alert("Auto dispatch started ✔");
-      location.href = "dashboard.html";
+      window.location.href = "dashboard.html";
       return;
     }
 
+
     /* -------- BROADCAST -------- */
 
-    await addDoc(collection(db,"fares"), data);
+    await addDoc(collection(db, "fares"), data);
 
     alert("Broadcast job created ✔");
-    location.href = "dashboard.html";
 
-  }catch(err){
+    window.location.href = "dashboard.html";
+
+  } catch (err) {
+
+    console.error(err);
+
     alert("Error: " + err.message);
+
   }
 
 });
