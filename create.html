@@ -1,61 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-<!DOCTYPE html>
-<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fare-X | Create Fare</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Create Fare</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
 <header class="lux-header">
-  <h1 class="logo">Fare<span class="gold">-X</span></h1>
-  <a href="dashboard.html" class="lux-btn">Back</a>
+<h1 class="logo">Fare<span class="gold">-X</span></h1>
+<a href="dashboard.html" class="lux-btn">Back</a>
 </header>
 
 <main class="lux-main">
 
-  <div class="fare-form">
+<div class="fare-form">
 
-    <h2>Create New Fare</h2>
+<h2>Create New Fare</h2>
 
-    <input id="pickup" placeholder="Pickup location">
-    <input id="drop" placeholder="Drop location">
+<input id="pickup" placeholder="Pickup location">
 
-    <input id="datetime" type="datetime-local">
+<input id="drop" placeholder="Drop location">
 
-    <select id="priceType">
-      <option value="fixed">Fixed Price</option>
-      <option value="meter">Meter + Extra</option>
-    </select>
+<input id="datetime" type="datetime-local">
 
-    <input id="price" placeholder="Price">
+<select id="priceType">
+<option value="fixed">Fixed Price</option>
+<option value="meter">Meter + Extra</option>
+</select>
 
-    <textarea id="note" placeholder="Notes (optional)"></textarea>
+<input id="price" placeholder="Price">
 
-    <select id="sendType">
-  <option value="pool">Broadcast Pool</option>
-  <option value="friend">Send to Friend</option>
-  <option value="auto">Nearest Driver (Auto Dispatch)</option>
+<textarea id="note" placeholder="Notes"></textarea>
+
+<select id="sendType">
+<option value="pool">Broadcast Pool</option>
+<option value="friend">Send to Friend</option>
+<option value="auto">Nearest Driver</option>
 </select>
 
 <select id="friendSelect" style="display:none">
-  <option value="">Select Friend</option>
+<option value="">Select Friend</option>
 </select>
-    <!-- ALWAYS PRESENT -->
-    <select id="friendSelect" style="display:none">
-      <option value="">Select Friend</option>
-    </select>
 
-    <button id="createFareBtn" class="lux-btn full">Send Fare</button>
+<button id="createFareBtn" class="lux-btn full">
+Send Fare
+</button>
 
-  </div>
+</div>
 
 </main>
 
-<<script type="module" src="js/firebase.js"</script>
-<script type="module" src="js/create.js?v=100"></script>۔ 
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/create.js?v=200"></script>
+
 </body>
 </html>
