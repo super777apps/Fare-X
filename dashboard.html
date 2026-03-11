@@ -58,6 +58,20 @@
 <audio id="jobSound" src="assets/job.mp3"></audio>
 
 <<script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/dashboard.js"></script>
+<script type="module" src="js/dashboard.js?v=100"></script>
+
+<div id="jobPopup" class="job-popup" style="display:none">
+
+  <h3>🚖 New Private Job</h3>
+
+  <div id="jobDetails"></div>
+
+  <button id="acceptBtn" class="lux-btn">Accept</button>
+  <button id="rejectBtn" class="lux-btn">Reject</button>
+
+</div>
+
+<audio id="jobSound" src="css/job.mp3" loop></audio>
+<audio id="declineSound" src="css/decline.mp3"></audio>
 </body>
 </html>
