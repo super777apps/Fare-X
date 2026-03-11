@@ -1,202 +1,145 @@
 import { db, auth } from "./firebase.js";
 
 import {
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  query,
-  where,
-  orderBy
+collection,
+onSnapshot,
+doc,
+updateDoc,
+query,
+where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  onAuthStateChanged
+onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+let currentUser=null;
 
-let currentUser = null;
 
+/* AUTH */
 
-/* ---------------- AUTH ---------------- */
+onAuthStateChanged(auth,user=>{
 
-onAuthStateChanged(auth,(user)=>{
+if(!user){
+location.href="index.html";
+return;
+}
 
-  if(!user){
-    window.location.href="index.html";
-    return;
-  }
+currentUser=user;
 
-  currentUser=user;
+listenPrivateJobs(user);
 
-  console.log("Dashboard user:",user.uid);
-
-  listenPrivateJobs(user);
-  listenPoolJobs(user);
+listenPoolJobs();
 
 });
 
 
-
-/* ---------------- PRIVATE JOB LISTENER ---------------- */
+/* PRIVATE JOB LISTENER */
 
 function listenPrivateJobs(user){
 
-  const inboxRef=collection(db,"privateFares",user.uid,"jobs");
+const ref=collection(db,"privateFares",user.uid,"jobs");
 
-  onSnapshot(inboxRef,(snapshot)=>{
+onSnapshot(ref,snap=>{
 
-    snapshot.docChanges().forEach(change=>{
+snap.docChanges().forEach(change=>{
 
-      if(change.type==="added"){
+if(change.type==="added"){
 
-        const job=change.doc.data();
+const job=change.doc.data();
 
-        if(job.status==="pending"){
+if(job.status==="pending"){
 
-          showPrivatePopup(job,change.doc.id);
+showPopup(job,change.doc.id);
 
-        }
+}
 
-      }
+}
 
-    });
+});
 
-  });
+});
 
 }
 
 
+/* POPUP */
 
-/* ---------------- SHOW POPUP ---------------- */
+function showPopup(job,id){
 
-function showPrivatePopup(job,jobId){
+const popup=document.getElementById("jobPopup");
+const details=document.getElementById("jobDetails");
+const sound=document.getElementById("jobSound");
 
-  const popup=document.getElementById("jobPopup");
-  const details=document.getElementById("jobDetails");
+details.innerHTML=`
+Pickup: ${job.pickup}<br>
+Drop: ${job.drop}<br>
+Price: ${job.price}
+`;
 
-  const jobSound=document.getElementById("jobSound");
-  const declineSound=document.getElementById("declineSound");
+popup.style.display="block";
 
-  details.innerHTML=`
+sound.play();
 
-  <b>Pickup:</b> ${job.pickup}<br>
-  <b>Drop:</b> ${job.drop}<br>
-  <b>Price:</b> ${job.price}<br>
-  <b>Time:</b> ${job.time}
+document.getElementById("acceptBtn").onclick=async()=>{
 
-  `;
+await updateDoc(
+doc(db,"privateFares",currentUser.uid,"jobs",id),
+{status:"accepted"}
+);
 
-  popup.style.display="block";
+popup.style.display="none";
+sound.pause();
 
-  jobSound.currentTime=0;
-  jobSound.play();
+};
 
+document.getElementById("rejectBtn").onclick=async()=>{
 
-  let timer=setTimeout(()=>{
+await updateDoc(
+doc(db,"privateFares",currentUser.uid,"jobs",id),
+{status:"rejected"}
+);
 
-    jobSound.pause();
-    popup.style.display="none";
+popup.style.display="none";
+sound.pause();
 
-  },12000);
-
-
-
-  document.getElementById("acceptBtn").onclick=async()=>{
-
-    await updateDoc(
-      doc(db,"privateFares",currentUser.uid,"jobs",jobId),
-      {status:"accepted"}
-    );
-
-    jobSound.pause();
-    popup.style.display="none";
-    clearTimeout(timer);
-
-  };
-
-
-  document.getElementById("rejectBtn").onclick=async()=>{
-
-    await updateDoc(
-      doc(db,"privateFares",currentUser.uid,"jobs",jobId),
-      {status:"rejected"}
-    );
-
-    jobSound.pause();
-    declineSound.play();
-
-    popup.style.display="none";
-    clearTimeout(timer);
-
-  };
+};
 
 }
 
 
+/* POOL JOBS */
 
-/* ---------------- POOL JOB LISTENER ---------------- */
+function listenPoolJobs(){
 
-function listenPoolJobs(user){
+const ref=query(
+collection(db,"fares"),
+where("status","==","broadcast")
+);
 
-  const poolRef=query(
-    collection(db,"fares"),
-    where("status","==","broadcast")
-  );
+const container=document.getElementById("poolList");
 
-  const poolContainer=document.getElementById("poolJobs");
+onSnapshot(ref,snap=>{
 
-  if(!poolContainer) return;
+container.innerHTML="";
 
-  onSnapshot(poolRef,(snapshot)=>{
+snap.forEach(docSnap=>{
 
-    poolContainer.innerHTML="";
+const job=docSnap.data();
 
-    snapshot.forEach(docSnap=>{
+const div=document.createElement("div");
 
-      const job=docSnap.data();
+div.className="fare-card";
 
-      const div=document.createElement("div");
+div.innerHTML=`
+<b>${job.pickup}</b> → ${job.drop}<br>
+Price: ${job.price}
+`;
 
-      div.className="jobCard";
+container.appendChild(div);
 
-      div.innerHTML=`
+});
 
-      <b>${job.pickup}</b> ➜ ${job.drop}<br>
-      Price: ${job.price}<br>
-      Time: ${job.time}
-
-      <br><br>
-
-      <button data-id="${docSnap.id}" class="acceptPool">
-      Accept
-      </button>
-
-      `;
-
-      poolContainer.appendChild(div);
-
-    });
-
-
-    document.querySelectorAll(".acceptPool").forEach(btn=>{
-
-      btn.onclick=async()=>{
-
-        const jobId=btn.dataset.id;
-
-        await updateDoc(
-          doc(db,"fares",jobId),
-          {
-            status:"accepted",
-            acceptedBy:currentUser.uid
-          }
-        );
-
-      };
-
-    });
-
-  });
+});
 
 }
