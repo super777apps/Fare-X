@@ -13,7 +13,6 @@ import {
 onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-
 const btn=document.getElementById("createFareBtn");
 const sendType=document.getElementById("sendType");
 const friendSelect=document.getElementById("friendSelect");
@@ -37,7 +36,7 @@ loadFriends(user.uid);
 });
 
 
-/* SHOW FRIEND LIST */
+/* SHOW FRIEND DROPDOWN */
 
 sendType.addEventListener("change",()=>{
 
@@ -69,7 +68,7 @@ const f=docSnap.data();
 
 const opt=document.createElement("option");
 
-opt.value=f.friendUID;   // FIXED
+opt.value=f.friendUID;
 
 opt.textContent=f.name || f.email;
 
@@ -91,15 +90,15 @@ alert("User not ready");
 return;
 }
 
-const pickup=document.getElementById("pickup").value;
-const drop=document.getElementById("drop").value;
+const pickup=document.getElementById("pickup").value.trim();
+const drop=document.getElementById("drop").value.trim();
 const datetime=document.getElementById("datetime").value;
-const price=document.getElementById("price").value;
+const price=document.getElementById("price").value.trim();
 const priceType=document.getElementById("priceType").value;
-const note=document.getElementById("note").value;
+const note=document.getElementById("note").value.trim();
 
 if(!pickup||!drop||!datetime||!price){
-alert("Fill all fields");
+alert("Please fill all fields");
 return;
 }
 
@@ -117,7 +116,7 @@ status:"broadcast"
 };
 
 
-/* PRIVATE JOB */
+/* SEND TO FRIEND */
 
 if(sendType.value==="friend"){
 
@@ -143,7 +142,7 @@ return;
 }
 
 
-/* POOL JOB */
+/* SEND TO POOL */
 
 await addDoc(collection(db,"fares"),data);
 
