@@ -2,11 +2,12 @@ import { db, auth } from "./firebase.js";
 
 import {
 collection,
+query,
+where,
 onSnapshot,
 doc,
 updateDoc,
-query,
-where
+getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -14,12 +15,13 @@ onAuthStateChanged,
 signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+
 let currentUser=null;
 
 
 /* AUTH */
 
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth,async user=>{
 
 if(!user){
 location.href="index.html";
@@ -49,7 +51,7 @@ location.href="index.html";
 };
 
 
-/* TAB SWITCH */
+/* TABS */
 
 window.showTab=function(tab){
 
@@ -94,7 +96,7 @@ div.className="fare-card";
 
 div.innerHTML=`
 
-<b>${job.pickup}</b> ➜ ${job.drop}<br>
+<b>${job.pickup}</b> → ${job.drop}<br>
 Price: ${job.price}
 
 <br><br>
@@ -115,13 +117,24 @@ btn.onclick=async()=>{
 
 const jobId=btn.dataset.id;
 
-await updateDoc(
-doc(db,"fares",jobId),
-{
+const ref=doc(db,"fares",jobId);
+
+const snap=await getDoc(ref);
+
+if(!snap.exists()){
+alert("Job not found");
+return;
+}
+
+if(snap.data().status!=="broadcast"){
+alert("Job already taken");
+return;
+}
+
+await updateDoc(ref,{
 status:"accepted",
 acceptedBy:currentUser.uid
-}
-);
+});
 
 };
 
@@ -156,7 +169,7 @@ const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
-<b>${job.pickup}</b> ➜ ${job.drop}<br>
+<b>${job.pickup}</b> → ${job.drop}<br>
 Price: ${job.price}
 `;
 
@@ -169,7 +182,7 @@ container.appendChild(div);
 }
 
 
-/* MY POSTED JOBS */
+/* MY POSTED */
 
 function listenPostedJobs(){
 
@@ -193,9 +206,11 @@ const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
-<b>${job.pickup}</b> ➜ ${job.drop}<br>
+
+<b>${job.pickup}</b> → ${job.drop}<br>
 Price: ${job.price}<br>
 Status: ${job.status}
+
 `;
 
 container.appendChild(div);
@@ -207,7 +222,7 @@ container.appendChild(div);
 }
 
 
-/* PRIVATE JOB POPUP */
+/* PRIVATE POPUP */
 
 function listenPrivateJobs(user){
 
@@ -222,9 +237,7 @@ if(change.type==="added"){
 const job=change.doc.data();
 
 if(job.status==="pending"){
-
 showPopup(job,change.doc.id);
-
 }
 
 }
@@ -249,6 +262,7 @@ Price: ${job.price}
 
 popup.style.display="block";
 
+
 document.getElementById("acceptBtn").onclick=async()=>{
 
 await updateDoc(
@@ -259,6 +273,7 @@ doc(db,"privateFares",currentUser.uid,"jobs",id),
 popup.style.display="none";
 
 };
+
 
 document.getElementById("rejectBtn").onclick=async()=>{
 

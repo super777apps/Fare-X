@@ -3,21 +3,22 @@ import { db, auth } from "./firebase.js";
 import {
 collection,
 addDoc,
-serverTimestamp,
 query,
 where,
-onSnapshot
+onSnapshot,
+serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
 onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const btn=document.getElementById("createFareBtn");
-const sendType=document.getElementById("sendType");
-const friendSelect=document.getElementById("friendSelect");
 
 let currentUser=null;
+
+const sendType=document.getElementById("sendType");
+const friendSelect=document.getElementById("friendSelect");
+const btn=document.getElementById("createFareBtn");
 
 
 /* AUTH */
@@ -36,7 +37,7 @@ loadFriends(user.uid);
 });
 
 
-/* SHOW FRIEND DROPDOWN */
+/* SHOW FRIEND SELECT */
 
 sendType.addEventListener("change",()=>{
 
@@ -69,7 +70,6 @@ const f=docSnap.data();
 const opt=document.createElement("option");
 
 opt.value=f.friendUID;
-
 opt.textContent=f.name || f.email;
 
 friendSelect.appendChild(opt);
@@ -83,7 +83,7 @@ friendSelect.appendChild(opt);
 
 /* CREATE JOB */
 
-btn.addEventListener("click",async()=>{
+btn.onclick=async()=>{
 
 if(!currentUser){
 alert("User not ready");
@@ -98,21 +98,26 @@ const priceType=document.getElementById("priceType").value;
 const note=document.getElementById("note").value.trim();
 
 if(!pickup||!drop||!datetime||!price){
-alert("Please fill all fields");
+alert("Fill all required fields");
 return;
 }
 
 const data={
+
 pickup,
 drop,
 time:datetime,
 price,
 priceType,
 note,
+
 createdBy:currentUser.email,
 createdUid:currentUser.uid,
+
 createdAt:serverTimestamp(),
+
 status:"broadcast"
+
 };
 
 
@@ -134,20 +139,24 @@ collection(db,"privateFares",friendUID,"jobs"),
 data
 );
 
-alert("Private job sent ✔");
+alert("Private job sent");
 
 location.href="dashboard.html";
 
 return;
+
 }
 
 
 /* SEND TO POOL */
 
-await addDoc(collection(db,"fares"),data);
+await addDoc(
+collection(db,"fares"),
+data
+);
 
-alert("Broadcast job created ✔");
+alert("Broadcast job created");
 
 location.href="dashboard.html";
 
-});
+};
