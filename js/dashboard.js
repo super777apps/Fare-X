@@ -20,7 +20,7 @@ let currentUser=null;
 
 /* SOUND ALERT */
 
-let jobSound = new Audio("sounds/jobAlert.mp3");
+let jobSound = new Audio("assets/job.mp3");
 jobSound.loop=true;
 
 
