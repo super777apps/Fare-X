@@ -2,59 +2,53 @@ import { db } from "./firebase.js";
 
 import {
 doc,
+getDoc,
 updateDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
-export async function acceptJob(jobId,driverUID){
-
-await updateDoc(doc(db,"fares",jobId),{
-
-status:"accepted",
-acceptedBy:driverUID,
-currentDriverUID:driverUID,
-acceptedAt:serverTimestamp()
-
-});
-
-}
+const ALERT_TIMEOUT = 12000;
 
 
-export async function completeJob(jobId,driverUID){
-
-await updateDoc(doc(db,"fares",jobId),{
-
-status:"completed",
-completedBy:driverUID,
-completedAt:serverTimestamp()
-
-});
-
-}
-
-
-export async function sendToFriend(jobId,driverUID){
+export async function sendToFriend(jobId,friendUID){
 
 await updateDoc(doc(db,"fares",jobId),{
 
 status:"assigned",
 dispatchType:"friend",
-currentDriverUID:driverUID
+assignedTo:friendUID,
+dispatchStartedAt:serverTimestamp()
+
+});
+
+startFriendTimer(jobId);
+
+}
+
+
+function startFriendTimer(jobId){
+
+setTimeout(async()=>{
+
+const snap=await getDoc(doc(db,"fares",jobId));
+
+if(!snap.exists()) return;
+
+const job=snap.data();
+
+if(job.status==="assigned"){
+
+await updateDoc(doc(db,"fares",jobId),{
+
+status:"broadcast",
+assignedTo:"",
+returnReason:"Friend timeout"
 
 });
 
 }
 
-
-export async function sendToPool(jobId){
-
-await updateDoc(doc(db,"fares",jobId),{
-
-status:"broadcast",
-dispatchType:"pool",
-currentDriverUID:""
-
-});
+},ALERT_TIMEOUT);
 
 }

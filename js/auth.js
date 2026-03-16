@@ -1,87 +1,77 @@
 import { auth, db } from "./firebase.js";
-
 import {
-createUserWithEmailAndPassword,
-signInWithEmailAndPassword,
-onAuthStateChanged
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import {
-doc,
-setDoc,
-getDoc,
-serverTimestamp,
-updateDoc
+  doc,
+  setDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const loginBtn=document.getElementById("loginBtn");
-const registerBtn=document.getElementById("registerBtn");
+const emailInput = document.getElementById("emailInput");
+const passwordInput = document.getElementById("passwordInput");
+const loginBtn = document.getElementById("loginBtn");
+const registerBtn = document.getElementById("registerBtn");
 
-const emailInput=document.getElementById("emailInput");
-const passwordInput=document.getElementById("passwordInput");
+/* ---------------- LOGIN ---------------- */
 
+loginBtn.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-/* LOGIN */
+  if (!email || !password) {
+    alert("Enter email and password");
+    return;
+  }
 
-loginBtn.onclick=async()=>{
-
-const email=emailInput.value.trim();
-const pass=passwordInput.value.trim();
-
-if(!email||!pass){
-alert("Enter email and password");
-return;
-}
-
-try{
-
-const cred=await signInWithEmailAndPassword(auth,email,pass);
-
-await updateDoc(doc(db,"users",cred.user.uid),{
-online:true,
-lastLogin:serverTimestamp()
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    await createUserIfNotExists(cred.user);
+    location.href = "dashboard.html";
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
-location.href="dashboard.html";
+/* ---------------- REGISTER ---------------- */
 
-}catch(e){
-alert(e.message);
-}
+registerBtn.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-};
+  if (!email || !password) {
+    alert("Enter email and password");
+    return;
+  }
 
-
-/* REGISTER */
-
-registerBtn.onclick=async()=>{
-
-const email=emailInput.value.trim();
-const pass=passwordInput.value.trim();
-
-if(!email||!pass){
-alert("Enter email and password");
-return;
-}
-
-try{
-
-const cred=await createUserWithEmailAndPassword(auth,email,pass);
-
-const user=cred.user;
-
-await setDoc(doc(db,"users",user.uid),{
-
-email:user.email,
-nickname:user.email.split("@")[0],
-createdAt:serverTimestamp(),
-online:true
-
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await createUserIfNotExists(cred.user);
+    location.href = "dashboard.html";
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
-location.href="dashboard.html";
+/* ---------------- AUTO CREATE USER ---------------- */
 
-}catch(e){
-alert(e.message);
+async function createUserIfNotExists(user) {
+  const ref = doc(db, "users", user.uid);
+
+  await setDoc(ref, {
+    uid: user.uid,
+    email: user.email,
+    createdAt: serverTimestamp()
+  }, { merge: true });
 }
 
-};
+/* ---------------- AUTO LOGIN ---------------- */
+
+onAuthStateChanged(auth, user => {
+  if (user && location.pathname.includes("index.html")) {
+    location.href = "dashboard.html";
+  }
+});

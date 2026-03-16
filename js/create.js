@@ -1,26 +1,30 @@
 import { db, auth } from "./firebase.js";
+import { sendToFriend } from "./dispatchEngine.js";
 
 import {
 collection,
 addDoc,
 query,
 where,
-getDocs,
-serverTimestamp,
-doc,
-getDoc
+onSnapshot,
+serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 
 let currentUser=null;
-let role="driver";
 
-const driverSelect=document.getElementById("friendSelect");
+const sendType=document.getElementById("sendType");
+const friendSelect=document.getElementById("friendSelect");
 const btn=document.getElementById("createFareBtn");
 
 
-onAuthStateChanged(auth,async user=>{
+/* AUTH */
+
+onAuthStateChanged(auth,user=>{
 
 if(!user){
 location.href="index.html";
@@ -29,76 +33,135 @@ return;
 
 currentUser=user;
 
-const userDoc=await getDoc(doc(db,"users",user.uid));
-
-if(userDoc.exists()){
-role=userDoc.data().role || "driver";
-}
-
-loadDrivers();
+loadFriends(user.uid);
 
 });
 
 
-async function loadDrivers(){
+/* SHOW FRIEND SELECT */
+
+sendType.addEventListener("change",()=>{
+
+if(sendType.value==="friend"){
+friendSelect.style.display="block";
+}else{
+friendSelect.style.display="none";
+}
+
+});
+
+
+/* LOAD FRIENDS */
+
+function loadFriends(uid){
 
 const q=query(
-collection(db,"users"),
-where("role","==","driver")
+collection(db,"friends"),
+where("owner","==",uid)
 );
 
-const snap=await getDocs(q);
+onSnapshot(q,snap=>{
 
-driverSelect.innerHTML='<option value="">Select Driver</option>';
+friendSelect.innerHTML='<option value="">Select Friend</option>';
 
-snap.forEach(d=>{
+snap.forEach(docSnap=>{
+
+const f=docSnap.data();
 
 const opt=document.createElement("option");
 
-opt.value=d.id;
-opt.textContent=d.data().nickname || d.data().email;
+opt.value=f.friendUID;
+opt.textContent=f.name || f.email;
 
-driverSelect.appendChild(opt);
+friendSelect.appendChild(opt);
+
+});
 
 });
 
 }
 
+
+/* CREATE JOB */
 
 btn.onclick=async()=>{
 
-const pickup=document.getElementById("pickup").value;
-const drop=document.getElementById("drop").value;
-const price=document.getElementById("price").value;
-
-const selectedDriver=driverSelect.value;
-
-if(!selectedDriver){
-alert("Select driver");
+if(!currentUser){
+alert("User not ready");
 return;
 }
 
+const pickup=document.getElementById("pickup").value.trim();
+const drop=document.getElementById("drop").value.trim();
+const datetime=document.getElementById("datetime").value;
+const price=document.getElementById("price").value.trim();
+const priceType=document.getElementById("priceType").value;
+const note=document.getElementById("note").value.trim();
 
-await addDoc(collection(db,"fares"),{
+if(!pickup||!drop||!datetime||!price){
+alert("Fill all required fields");
+return;
+}
+
+const data={
 
 pickup,
 drop,
+time:datetime,
 price,
+priceType,
+note,
 
-createdByUID:currentUser.uid,
-createdByRole:role,
+createdBy:currentUser.email,
+createdUid:currentUser.uid,
 
-originalDriverUID:selectedDriver,
-currentDriverUID:selectedDriver,
+createdAt:serverTimestamp(),
 
-status:"assigned",
-dispatchType:"direct",
+status:"broadcast",
+dispatchType:"pool"
 
-createdAt:serverTimestamp()
+};
 
-});
 
-alert("Job created");
+/* SEND TO FRIEND */
+
+if(sendType.value==="friend"){
+
+const friendUID=friendSelect.value;
+
+if(!friendUID){
+alert("Select friend");
+return;
+}
+
+data.dispatchType="friend";
+data.status="assigned";
+data.assignedTo=friendUID;
+
+const ref=await addDoc(
+collection(db,"fares"),
+data
+);
+
+await sendToFriend(ref.id,friendUID);
+
+alert("Private job sent");
+
+location.href="dashboard.html";
+
+return;
+
+}
+
+
+/* SEND TO POOL */
+
+await addDoc(
+collection(db,"fares"),
+data
+);
+
+alert("Broadcast job created");
 
 location.href="dashboard.html";
 
