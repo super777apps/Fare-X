@@ -18,13 +18,13 @@ signOut
 
 let currentUser=null;
 
-/* SOUND ALERT */
-
 let jobSound = new Audio("assets/job.mp3");
+let notifySound = new Audio("assets/notification.mp3");
+let acceptSound = new Audio("assets/accept.mp3");
+let declineSound = new Audio("assets/decline.mp3");
+
 jobSound.loop=true;
 
-
-/* AUTH */
 
 onAuthStateChanged(auth,async user=>{
 
@@ -41,11 +41,10 @@ listenPoolJobs();
 listenAcceptedJobs();
 listenPostedJobs();
 listenPrivateJobs(user);
+listenCompletion(user);
 
 });
 
-
-/* LOGOUT */
 
 document.getElementById("logoutBtn").onclick=async()=>{
 
@@ -56,27 +55,18 @@ location.href="index.html";
 };
 
 
-/* TABS */
-
 window.showTab=function(tab){
 
 document.getElementById("poolTab").style.display="none";
 document.getElementById("postedTab").style.display="none";
 document.getElementById("acceptedTab").style.display="none";
 
-if(tab==="pool")
-document.getElementById("poolTab").style.display="block";
-
-if(tab==="posted")
-document.getElementById("postedTab").style.display="block";
-
-if(tab==="accepted")
-document.getElementById("acceptedTab").style.display="block";
+document.getElementById(tab+"Tab").style.display="block";
 
 };
 
 
-/* POOL JOBS */
+/* POOL */
 
 function listenPoolJobs(){
 
@@ -103,13 +93,11 @@ div.innerHTML=`
 
 <b>${job.pickup}</b> → ${job.drop}<br>
 Price: ${job.price}<br>
-Type: ${job.dispatchType || "pool"}
+Original Driver: ${job.originalDriverUID}
 
 <br><br>
 
-<button data-id="${docSnap.id}" class="acceptPool">
-Accept
-</button>
+<button data-id="${docSnap.id}" class="acceptPool">Accept</button>
 
 `;
 
@@ -123,24 +111,15 @@ btn.onclick=async()=>{
 
 const jobId=btn.dataset.id;
 
-const ref=doc(db,"fares",jobId);
+await updateDoc(doc(db,"fares",jobId),{
 
-const snap=await getDoc(ref);
-
-if(!snap.exists()){
-alert("Job not found");
-return;
-}
-
-if(snap.data().status!=="broadcast"){
-alert("Job already taken");
-return;
-}
-
-await updateDoc(ref,{
 status:"accepted",
-acceptedBy:currentUser.uid
+acceptedBy:currentUser.uid,
+currentDriverUID:currentUser.uid
+
 });
+
+acceptSound.play();
 
 };
 
@@ -151,13 +130,14 @@ acceptedBy:currentUser.uid
 }
 
 
-/* ACCEPTED JOBS */
+/* ACCEPTED */
 
 function listenAcceptedJobs(){
 
 const ref=query(
 collection(db,"fares"),
-where("acceptedBy","==",currentUser.uid)
+where("currentDriverUID","==",currentUser.uid),
+where("status","==","accepted")
 );
 
 const container=document.getElementById("acceptedList");
@@ -175,11 +155,33 @@ const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
+
 <b>${job.pickup}</b> → ${job.drop}<br>
-Price: ${job.price}
+Price: ${job.price}<br>
+Original Driver: ${job.originalDriverUID}
+
+<button data-id="${docSnap.id}" class="completeJob">Complete</button>
+
 `;
 
 container.appendChild(div);
+
+});
+
+document.querySelectorAll(".completeJob").forEach(btn=>{
+
+btn.onclick=async()=>{
+
+await updateDoc(doc(db,"fares",btn.dataset.id),{
+
+status:"completed",
+completedBy:currentUser.uid
+
+});
+
+notifySound.play();
+
+};
 
 });
 
@@ -188,13 +190,13 @@ container.appendChild(div);
 }
 
 
-/* MY POSTED */
+/* POSTED */
 
 function listenPostedJobs(){
 
 const ref=query(
 collection(db,"fares"),
-where("createdUid","==",currentUser.uid)
+where("originalDriverUID","==",currentUser.uid)
 );
 
 const container=document.getElementById("postedList");
@@ -214,9 +216,8 @@ div.className="fare-card";
 div.innerHTML=`
 
 <b>${job.pickup}</b> → ${job.drop}<br>
-Price: ${job.price}<br>
-Status: ${job.status}
-${job.returnReason ? "<br>Returned: "+job.returnReason : ""}
+Status: ${job.status}<br>
+Current Driver: ${job.currentDriverUID}
 
 `;
 
@@ -229,7 +230,7 @@ container.appendChild(div);
 }
 
 
-/* PRIVATE DISPATCH POPUP */
+/* PRIVATE */
 
 function listenPrivateJobs(user){
 
@@ -248,6 +249,8 @@ if(change.type==="added"){
 const job=change.doc.data();
 
 showPopup(job,change.doc.id);
+
+jobSound.play();
 
 }
 
@@ -271,10 +274,6 @@ Price: ${job.price}
 
 popup.style.display="block";
 
-jobSound.play();
-
-
-/* ACCEPT */
 
 document.getElementById("acceptBtn").onclick=async()=>{
 
@@ -282,51 +281,60 @@ await updateDoc(
 doc(db,"fares",id),
 {
 status:"accepted",
-acceptedBy:currentUser.uid
+acceptedBy:currentUser.uid,
+currentDriverUID:currentUser.uid
 }
 );
 
-popup.style.display="none";
+acceptSound.play();
 
-jobSound.pause();
-jobSound.currentTime=0;
+popup.style.display="none";
 
 };
 
-
-/* REJECT */
 
 document.getElementById("rejectBtn").onclick=async()=>{
 
 await updateDoc(
 doc(db,"fares",id),
 {
-status:"returned",
-returnReason:"Driver rejected"
+status:"returned"
 }
 );
 
-popup.style.display="none";
+declineSound.play();
 
-jobSound.pause();
-jobSound.currentTime=0;
+popup.style.display="none";
 
 };
 
+}
 
-/* AUTO CLOSE */
 
-setTimeout(()=>{
+/* COMPLETION NOTIFY */
 
-if(popup.style.display==="block"){
+function listenCompletion(user){
 
-popup.style.display="none";
+const ref=query(
+collection(db,"fares"),
+where("originalDriverUID","==",user.uid),
+where("status","==","completed")
+);
 
-jobSound.pause();
-jobSound.currentTime=0;
+onSnapshot(ref,snap=>{
+
+snap.docChanges().forEach(change=>{
+
+if(change.type==="modified"){
+
+notifySound.play();
+
+alert("Your job has been completed");
 
 }
 
-},12000);
+});
+
+});
 
 }

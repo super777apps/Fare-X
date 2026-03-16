@@ -7,9 +7,7 @@ updateDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
 const ALERT_TIMEOUT = 12000;
-
 
 export async function sendToFriend(jobId,friendUID){
 
@@ -18,6 +16,7 @@ await updateDoc(doc(db,"fares",jobId),{
 status:"assigned",
 dispatchType:"friend",
 assignedTo:friendUID,
+currentDriverUID:friendUID,
 dispatchStartedAt:serverTimestamp()
 
 });

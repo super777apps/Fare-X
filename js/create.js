@@ -10,19 +10,13 @@ onSnapshot,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
 
 const sendType=document.getElementById("sendType");
 const friendSelect=document.getElementById("friendSelect");
 const btn=document.getElementById("createFareBtn");
-
-
-/* AUTH */
 
 onAuthStateChanged(auth,user=>{
 
@@ -38,8 +32,6 @@ loadFriends(user.uid);
 });
 
 
-/* SHOW FRIEND SELECT */
-
 sendType.addEventListener("change",()=>{
 
 if(sendType.value==="friend"){
@@ -51,8 +43,6 @@ friendSelect.style.display="none";
 });
 
 
-/* LOAD FRIENDS */
-
 function loadFriends(uid){
 
 const q=query(
@@ -62,7 +52,7 @@ where("owner","==",uid)
 
 onSnapshot(q,snap=>{
 
-friendSelect.innerHTML='<option value="">Select Friend</option>';
+friendSelect.innerHTML='<option value="">Select Driver</option>';
 
 snap.forEach(docSnap=>{
 
@@ -81,8 +71,6 @@ friendSelect.appendChild(opt);
 
 }
 
-
-/* CREATE JOB */
 
 btn.onclick=async()=>{
 
@@ -115,6 +103,11 @@ note,
 createdBy:currentUser.email,
 createdUid:currentUser.uid,
 
+originalDriverUID:currentUser.uid,
+currentDriverUID:currentUser.uid,
+
+passengerUID:currentUser.uid,
+
 createdAt:serverTimestamp(),
 
 status:"broadcast",
@@ -122,8 +115,6 @@ dispatchType:"pool"
 
 };
 
-
-/* SEND TO FRIEND */
 
 if(sendType.value==="friend"){
 
@@ -153,8 +144,6 @@ return;
 
 }
 
-
-/* SEND TO POOL */
 
 await addDoc(
 collection(db,"fares"),
