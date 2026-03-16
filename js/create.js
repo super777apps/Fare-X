@@ -5,25 +5,22 @@ collection,
 addDoc,
 query,
 where,
-onSnapshot,
-serverTimestamp
+getDocs,
+serverTimestamp,
+doc,
+getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
+let role="driver";
 
-const sendType=document.getElementById("sendType");
-const friendSelect=document.getElementById("friendSelect");
+const driverSelect=document.getElementById("friendSelect");
 const btn=document.getElementById("createFareBtn");
 
 
-/* AUTH */
-
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth,async user=>{
 
 if(!user){
 location.href="index.html";
@@ -32,130 +29,76 @@ return;
 
 currentUser=user;
 
-loadFriends(user.uid);
+const userDoc=await getDoc(doc(db,"users",user.uid));
 
-});
-
-
-/* SHOW FRIEND SELECT */
-
-sendType.addEventListener("change",()=>{
-
-if(sendType.value==="friend"){
-friendSelect.style.display="block";
-}else{
-friendSelect.style.display="none";
+if(userDoc.exists()){
+role=userDoc.data().role || "driver";
 }
 
+loadDrivers();
+
 });
 
 
-/* LOAD FRIENDS */
-
-function loadFriends(uid){
+async function loadDrivers(){
 
 const q=query(
-collection(db,"friends"),
-where("owner","==",uid)
+collection(db,"users"),
+where("role","==","driver")
 );
 
-onSnapshot(q,snap=>{
+const snap=await getDocs(q);
 
-friendSelect.innerHTML='<option value="">Select Friend</option>';
+driverSelect.innerHTML='<option value="">Select Driver</option>';
 
-snap.forEach(docSnap=>{
-
-const f=docSnap.data();
+snap.forEach(d=>{
 
 const opt=document.createElement("option");
 
-opt.value=f.friendUID;
-opt.textContent=f.name || f.email;
+opt.value=d.id;
+opt.textContent=d.data().nickname || d.data().email;
 
-friendSelect.appendChild(opt);
-
-});
+driverSelect.appendChild(opt);
 
 });
 
 }
 
-
-/* CREATE JOB */
 
 btn.onclick=async()=>{
 
-if(!currentUser){
-alert("User not ready");
+const pickup=document.getElementById("pickup").value;
+const drop=document.getElementById("drop").value;
+const price=document.getElementById("price").value;
+
+const selectedDriver=driverSelect.value;
+
+if(!selectedDriver){
+alert("Select driver");
 return;
 }
 
-const pickup=document.getElementById("pickup").value.trim();
-const drop=document.getElementById("drop").value.trim();
-const datetime=document.getElementById("datetime").value;
-const price=document.getElementById("price").value.trim();
-const priceType=document.getElementById("priceType").value;
-const note=document.getElementById("note").value.trim();
 
-if(!pickup||!drop||!datetime||!price){
-alert("Fill all required fields");
-return;
-}
-
-const data={
+await addDoc(collection(db,"fares"),{
 
 pickup,
 drop,
-time:datetime,
 price,
-priceType,
-note,
 
-createdBy:currentUser.email,
-createdUid:currentUser.uid,
+createdByUID:currentUser.uid,
+createdByRole:role,
 
-createdAt:serverTimestamp(),
+originalDriverUID:selectedDriver,
+currentDriverUID:selectedDriver,
 
-status:"broadcast"
+status:"assigned",
+dispatchType:"direct",
 
-};
+createdAt:serverTimestamp()
 
+});
 
-/* SEND TO FRIEND */
-
-if(sendType.value==="friend"){
-
-const friendUID=friendSelect.value;
-
-if(!friendUID){
-alert("Select friend");
-return;
-}
-
-data.status="pending";
-
-await addDoc(
-collection(db,"privateFares",friendUID,"jobs"),
-data
-);
-
-alert("Private job sent");
-
-location.href="dashboard.html";
-
-return;
-
-}
-
-
-/* SEND TO POOL */
-
-await addDoc(
-collection(db,"fares"),
-data
-);
-
-alert("Broadcast job created");
+alert("Job created");
 
 location.href="dashboard.html";
 
