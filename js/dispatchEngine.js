@@ -2,52 +2,30 @@ import { db } from "./firebase.js";
 
 import {
 doc,
-getDoc,
 updateDoc,
+getDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const ALERT_TIMEOUT = 12000;
+export async function sendToFriend(jobId,friendUID,senderUID){
 
-export async function sendToFriend(jobId,friendUID){
+const ref=doc(db,"fares",jobId);
+const snap=await getDoc(ref);
 
-await updateDoc(doc(db,"fares",jobId),{
+let chain = snap.exists() ? snap.data().chain || [] : [];
 
+chain.push({
+from: senderUID,
+to: friendUID,
+time: Date.now()
+});
+
+await updateDoc(ref,{
 status:"assigned",
 dispatchType:"friend",
 assignedTo:friendUID,
 currentDriverUID:friendUID,
-dispatchStartedAt:serverTimestamp()
-
+chain: chain,
+dispatchStartedAt: serverTimestamp()
 });
-
-startFriendTimer(jobId);
-
-}
-
-
-function startFriendTimer(jobId){
-
-setTimeout(async()=>{
-
-const snap=await getDoc(doc(db,"fares",jobId));
-
-if(!snap.exists()) return;
-
-const job=snap.data();
-
-if(job.status==="assigned"){
-
-await updateDoc(doc(db,"fares",jobId),{
-
-status:"broadcast",
-assignedTo:"",
-returnReason:"Friend timeout"
-
-});
-
-}
-
-},ALERT_TIMEOUT);
-
 }
