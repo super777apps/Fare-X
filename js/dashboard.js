@@ -1,7 +1,7 @@
 import { db, auth } from "./firebase.js";
 
 import {
-collection, query, where, onSnapshot,
+collection, onSnapshot,
 doc, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -11,39 +11,37 @@ onAuthStateChanged, signOut
 
 let currentUser = null;
 
-/* 🎵 SOUND CONTROL (FIXED PROPERLY) */
+/* SOUND */
 const jobSound = document.getElementById("jobSound");
 const acceptSound = document.getElementById("acceptSound");
 const declineSound = document.getElementById("declineSound");
 
-function stopAllSounds() {
-  [jobSound].forEach(s => {
-    if (s) {
-      s.pause();
-      s.currentTime = 0;
-    }
-  });
+function stopSound(){
+  jobSound.pause();
+  jobSound.currentTime = 0;
 }
 
-/* ✅ FIXED NAME CACHE */
-const userCache = {};
+/* NAME CACHE */
+const cache = {};
 
-async function getName(uid) {
-  if (userCache[uid]) return userCache[uid];
+async function getName(uid){
+  if(!uid) return "Unknown";
 
-  const snap = await getDoc(doc(db, "users", uid));
+  if(cache[uid]) return cache[uid];
+
+  const snap = await getDoc(doc(db,"users",uid));
   const name = snap.exists()
     ? (snap.data().nickname || snap.data().email)
-    : uid;
+    : "User";
 
-  userCache[uid] = name;
+  cache[uid] = name;
   return name;
 }
 
 /* AUTH */
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth,user=>{
 
-  if (!user) return location.href = "index.html";
+  if(!user) return location.href="index.html";
 
   currentUser = user;
 
@@ -52,87 +50,92 @@ onAuthStateChanged(auth, user => {
   listenPool();
   listenPosted();
   listenAccepted();
-  listenAssigned();
+  listenPrivate();
   listenReturns();
 });
 
 /* LOGOUT */
-document.getElementById("logoutBtn").onclick = async () => {
+document.getElementById("logoutBtn").onclick = async ()=>{
   await signOut(auth);
-  location.href = "index.html";
+  location.href="index.html";
 };
 
 /* POOL */
-function listenPool() {
+function listenPool(){
 
-  const q = query(collection(db, "fares"), where("status", "==", "broadcast"));
   const box = document.getElementById("poolList");
 
-  onSnapshot(q, snap => {
+  onSnapshot(collection(db,"fares"), async snap=>{
 
-    box.innerHTML = "";
+    box.innerHTML="";
 
-    snap.forEach(async docSnap => {
+    for(const d of snap.docs){
 
-      const f = docSnap.data();
-      const name = await getName(f.originalDriverUID);
+      const f = d.data();
+
+      if(f.status !== "broadcast") continue;
+
+      const name = await getName(f.originalDriverUID || f.createdUid);
 
       const div = document.createElement("div");
 
-      div.className = "fare-card";
+      div.className="fare-card";
 
-      div.innerHTML = `
+      div.innerHTML=`
         <b>${f.pickup}</b> → ${f.drop}<br>
         Price: ${f.price}<br>
         Original: ${name}<br>
-        <button onclick="acceptPool('${docSnap.id}')">Accept</button>
+        <button onclick="acceptPool('${d.id}')">Accept</button>
       `;
 
       box.appendChild(div);
-    });
+    }
   });
 }
 
 /* ACCEPT POOL */
-window.acceptPool = async id => {
+window.acceptPool = async id=>{
 
-  await updateDoc(doc(db, "fares", id), {
-    status: "accepted",
-    currentDriverUID: currentUser.uid
+  await updateDoc(doc(db,"fares",id),{
+    status:"accepted",
+    currentDriverUID:currentUser.uid,
+    acceptedBy:currentUser.uid
   });
 
-  stopAllSounds();
+  stopSound();
   acceptSound.play();
 };
 
 /* POSTED */
-function listenPosted() {
+function listenPosted(){
 
-  const q = query(collection(db, "fares"),
-    where("originalDriverUID", "==", currentUser.uid)
-  );
+  const box=document.getElementById("postedList");
 
-  const box = document.getElementById("postedList");
+  onSnapshot(collection(db,"fares"), async snap=>{
 
-  onSnapshot(q, async snap => {
+    box.innerHTML="";
 
-    box.innerHTML = "";
+    for(const d of snap.docs){
 
-    for (const d of snap.docs) {
+      const f=d.data();
 
-      const f = d.data();
+      if(
+        f.originalDriverUID!==currentUser.uid &&
+        f.createdUid!==currentUser.uid
+      ) continue;
+
       const currentName = await getName(f.currentDriverUID);
 
-      const div = document.createElement("div");
+      const div=document.createElement("div");
 
-      div.className = "fare-card";
+      div.className="fare-card";
 
-      div.innerHTML = `
+      div.innerHTML=`
         <b>${f.pickup}</b> → ${f.drop}<br>
         Status: ${f.status}<br>
         Current: ${currentName}<br>
 
-        ${f.status === "returned" ? `<button onclick="resend('${d.id}')">Resend</button>` : ""}
+        ${f.status==="returned" ? `<button onclick="resend('${d.id}')">Resend</button>`:""}
 
         <button onclick="deleteJob('${d.id}')">Delete</button>
       `;
@@ -142,53 +145,56 @@ function listenPosted() {
   });
 }
 
-/* RESEND (FIXED A→B→A FLOW) */
-window.resend = async id => {
+/* RESEND */
+window.resend = async id=>{
 
-  await updateDoc(doc(db, "fares", id), {
-    status: "broadcast",
-    assignedTo: "",
-    currentDriverUID: currentUser.uid
+  await updateDoc(doc(db,"fares",id),{
+    status:"broadcast",
+    assignedTo:"",
+    currentDriverUID:currentUser.uid
   });
 
   alert("Resent to pool");
 };
 
 /* DELETE */
-window.deleteJob = async id => {
+window.deleteJob = async id=>{
 
-  await updateDoc(doc(db, "fares", id), {
-    status: "deleted"
+  await updateDoc(doc(db,"fares",id),{
+    status:"deleted"
   });
 
   alert("Deleted");
 };
 
 /* ACCEPTED */
-function listenAccepted() {
+function listenAccepted(){
 
-  const q = query(collection(db, "fares"),
-    where("currentDriverUID", "==", currentUser.uid)
-  );
+  const box=document.getElementById("acceptedList");
 
-  const box = document.getElementById("acceptedList");
+  onSnapshot(collection(db,"fares"), async snap=>{
 
-  onSnapshot(q, async snap => {
+    box.innerHTML="";
 
-    box.innerHTML = "";
+    for(const d of snap.docs){
 
-    for (const d of snap.docs) {
+      const f=d.data();
 
-      const f = d.data();
+      if(
+        f.currentDriverUID!==currentUser.uid &&
+        f.acceptedBy!==currentUser.uid
+      ) continue;
+
       const originalName = await getName(f.originalDriverUID);
 
-      const div = document.createElement("div");
+      const div=document.createElement("div");
 
-      div.className = "fare-card";
+      div.className="fare-card";
 
-      div.innerHTML = `
+      div.innerHTML=`
         <b>${f.pickup}</b> → ${f.drop}<br>
         Original: ${originalName}<br>
+        Status: ${f.status}
       `;
 
       box.appendChild(div);
@@ -196,109 +202,111 @@ function listenAccepted() {
   });
 }
 
-/* PRIVATE POPUP (FULL FIX) */
-function listenAssigned() {
+/* PRIVATE POPUP */
+function listenPrivate(){
 
-  const q = query(
-    collection(db, "fares"),
-    where("assignedTo", "==", currentUser.uid),
-    where("status", "==", "assigned")
-  );
+  onSnapshot(collection(db,"fares"), snap=>{
 
-  onSnapshot(q, snap => {
+    snap.docChanges().forEach(change=>{
 
-    snap.docChanges().forEach(change => {
+      if(change.type!=="added") return;
 
-      if (change.type === "added") {
-        showPopup(change.doc.data(), change.doc.id);
+      const f=change.doc.data();
+
+      if(f.assignedTo===currentUser.uid && f.status==="assigned"){
+        showPopup(f,change.doc.id);
       }
 
     });
+
   });
 }
 
-function showPopup(f, id) {
+function showPopup(f,id){
 
-  const popup = document.getElementById("jobPopup");
-  popup.style.display = "block";
+  const popup=document.getElementById("jobPopup");
 
-  stopAllSounds();
+  popup.style.display="block";
+
   jobSound.play();
 
-  document.getElementById("jobDetails").innerHTML = `
+  document.getElementById("jobDetails").innerHTML=`
     Pickup: ${f.pickup}<br>
     Drop: ${f.drop}<br>
     Price: ${f.price}
   `;
 
-  let handled = false;
+  let handled=false;
 
-  const timer = setTimeout(async () => {
+  const timer=setTimeout(async()=>{
 
-    if (handled) return;
-    handled = true;
+    if(handled) return;
 
-    await updateDoc(doc(db, "fares", id), {
-      status: "returned",
-      assignedTo: "",
-      currentDriverUID: f.originalDriverUID
+    handled=true;
+
+    await updateDoc(doc(db,"fares",id),{
+      status:"returned",
+      assignedTo:"",
+      currentDriverUID:f.originalDriverUID
     });
 
-    stopAllSounds();
-    popup.style.display = "none";
+    stopSound();
+    popup.style.display="none";
 
-  }, 12000);
+  },12000);
 
-  document.getElementById("acceptBtn").onclick = async () => {
+  document.getElementById("acceptBtn").onclick=async()=>{
 
-    if (handled) return;
-    handled = true;
+    if(handled) return;
 
-    await updateDoc(doc(db, "fares", id), {
-      status: "accepted",
-      currentDriverUID: currentUser.uid
+    handled=true;
+
+    await updateDoc(doc(db,"fares",id),{
+      status:"accepted",
+      currentDriverUID:currentUser.uid
     });
 
-    stopAllSounds();
+    stopSound();
     acceptSound.play();
 
-    popup.style.display = "none";
+    popup.style.display="none";
     clearTimeout(timer);
   };
 
-  document.getElementById("rejectBtn").onclick = async () => {
+  document.getElementById("rejectBtn").onclick=async()=>{
 
-    if (handled) return;
-    handled = true;
+    if(handled) return;
 
-    await updateDoc(doc(db, "fares", id), {
-      status: "returned",
-      assignedTo: "",
-      currentDriverUID: f.originalDriverUID
+    handled=true;
+
+    await updateDoc(doc(db,"fares",id),{
+      status:"returned",
+      assignedTo:"",
+      currentDriverUID:f.originalDriverUID
     });
 
-    stopAllSounds();
+    stopSound();
     declineSound.play();
 
-    popup.style.display = "none";
+    popup.style.display="none";
     clearTimeout(timer);
   };
 }
 
-/* RETURN SOUND (FOR A) */
-function listenReturns() {
+/* RETURN SOUND */
+function listenReturns(){
 
-  const q = query(
-    collection(db, "fares"),
-    where("originalDriverUID", "==", auth.currentUser.uid),
-    where("status", "==", "returned")
-  );
+  onSnapshot(collection(db,"fares"), snap=>{
 
-  onSnapshot(q, snap => {
+    snap.docChanges().forEach(change=>{
 
-    snap.docChanges().forEach(change => {
+      const f=change.doc.data();
 
-      if (change.type === "modified") {
+      if(
+        change.type==="modified" &&
+        f.originalDriverUID===currentUser.uid &&
+        f.status==="returned"
+      ){
         declineSound.play();
       }
 

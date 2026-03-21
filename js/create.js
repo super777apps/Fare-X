@@ -80,6 +80,7 @@ btn.onclick = async () => {
     dispatchType: "pool"
   };
 
+  /* SEND TO FRIEND */
   if (sendType.value === "friend") {
 
     const friendUID = friendSelect.value;
@@ -94,6 +95,7 @@ btn.onclick = async () => {
     return;
   }
 
+  /* SEND TO POOL */
   await addDoc(collection(db, "fares"), data);
 
   alert("Broadcast job created");
