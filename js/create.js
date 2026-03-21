@@ -12,146 +12,90 @@ serverTimestamp
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-let currentUser=null;
+let currentUser = null;
 
-const sendType=document.getElementById("sendType");
-const friendSelect=document.getElementById("friendSelect");
-const btn=document.getElementById("createFareBtn");
+const sendType = document.getElementById("sendType");
+const friendSelect = document.getElementById("friendSelect");
+const btn = document.getElementById("createFareBtn");
 
-onAuthStateChanged(auth,user=>{
-
-if(!user){
-location.href="index.html";
-return;
-}
-
-currentUser=user;
-
-loadFriends(user.uid);
-
+/* AUTH */
+onAuthStateChanged(auth, user => {
+  if (!user) return location.href = "index.html";
+  currentUser = user;
+  loadFriends(user.uid);
 });
 
-
-sendType.addEventListener("change",()=>{
-
-if(sendType.value==="friend"){
-friendSelect.style.display="block";
-}else{
-friendSelect.style.display="none";
-}
-
+/* SHOW FRIEND */
+sendType.addEventListener("change", () => {
+  friendSelect.style.display = sendType.value === "friend" ? "block" : "none";
 });
 
+/* LOAD FRIENDS */
+function loadFriends(uid) {
+  const q = query(collection(db, "friends"), where("owner", "==", uid));
 
-function loadFriends(uid){
+  onSnapshot(q, snap => {
+    friendSelect.innerHTML = '<option value="">Select Friend</option>';
 
-const q=query(
-collection(db,"friends"),
-where("owner","==",uid)
-);
-
-onSnapshot(q,snap=>{
-
-friendSelect.innerHTML='<option value="">Select Driver</option>';
-
-snap.forEach(docSnap=>{
-
-const f=docSnap.data();
-
-const opt=document.createElement("option");
-
-opt.value=f.friendUID;
-opt.textContent=f.name || f.email;
-
-friendSelect.appendChild(opt);
-
-});
-
-});
-
+    snap.forEach(docSnap => {
+      const f = docSnap.data();
+      const opt = document.createElement("option");
+      opt.value = f.friendUID;
+      opt.textContent = f.name || f.email;
+      friendSelect.appendChild(opt);
+    });
+  });
 }
 
+/* CREATE JOB */
+btn.onclick = async () => {
 
-btn.onclick=async()=>{
+  if (!currentUser) return alert("User not ready");
 
-if(!currentUser){
-alert("User not ready");
-return;
-}
+  const pickup = document.getElementById("pickup").value.trim();
+  const drop = document.getElementById("drop").value.trim();
+  const datetime = document.getElementById("datetime").value;
+  const price = document.getElementById("price").value.trim();
 
-const pickup=document.getElementById("pickup").value.trim();
-const drop=document.getElementById("drop").value.trim();
-const datetime=document.getElementById("datetime").value;
-const price=document.getElementById("price").value.trim();
-const priceType=document.getElementById("priceType").value;
-const note=document.getElementById("note").value.trim();
+  if (!pickup || !drop || !datetime || !price) {
+    alert("Fill all fields");
+    return;
+  }
 
-if(!pickup||!drop||!datetime||!price){
-alert("Fill all required fields");
-return;
-}
+  const data = {
+    pickup,
+    drop,
+    time: datetime,
+    price,
 
-const data={
+    createdBy: currentUser.email,
+    createdUid: currentUser.uid,
 
-pickup,
-drop,
-time:datetime,
-price,
-priceType,
-note,
+    originalDriverUID: currentUser.uid,
+    currentDriverUID: currentUser.uid,
 
-createdBy:currentUser.email,
-createdUid:currentUser.uid,
+    createdAt: serverTimestamp(),
 
-originalDriverUID:currentUser.uid,
-currentDriverUID:currentUser.uid,
+    status: "broadcast",
+    dispatchType: "pool"
+  };
 
-passengerUID:currentUser.uid,
+  if (sendType.value === "friend") {
 
-createdAt:serverTimestamp(),
+    const friendUID = friendSelect.value;
+    if (!friendUID) return alert("Select friend");
 
-status:"broadcast",
-dispatchType:"pool"
+    const ref = await addDoc(collection(db, "fares"), data);
 
-};
+    await sendToFriend(ref.id, friendUID);
 
+    alert("Private job sent");
+    location.href = "dashboard.html";
+    return;
+  }
 
-if(sendType.value==="friend"){
+  await addDoc(collection(db, "fares"), data);
 
-const friendUID=friendSelect.value;
-
-if(!friendUID){
-alert("Select friend");
-return;
-}
-
-data.dispatchType="friend";
-data.status="assigned";
-data.assignedTo=friendUID;
-
-const ref=await addDoc(
-collection(db,"fares"),
-data
-);
-
-await sendToFriend(ref.id,friendUID);
-
-alert("Private job sent");
-
-location.href="dashboard.html";
-
-return;
-
-}
-
-
-await addDoc(
-collection(db,"fares"),
-data
-);
-
-alert("Broadcast job created");
-
-location.href="dashboard.html";
-
+  alert("Broadcast job created");
+  location.href = "dashboard.html";
 };

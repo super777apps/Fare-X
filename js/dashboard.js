@@ -1,340 +1,308 @@
 import { db, auth } from "./firebase.js";
 
 import {
-collection,
-query,
-where,
-onSnapshot,
-doc,
-updateDoc,
-getDoc
+collection, query, where, onSnapshot,
+doc, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-onAuthStateChanged,
-signOut
+onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+let currentUser = null;
 
-let currentUser=null;
+/* 🎵 SOUND CONTROL (FIXED PROPERLY) */
+const jobSound = document.getElementById("jobSound");
+const acceptSound = document.getElementById("acceptSound");
+const declineSound = document.getElementById("declineSound");
 
-let jobSound = new Audio("assets/job.mp3");
-let notifySound = new Audio("assets/notification.mp3");
-let acceptSound = new Audio("assets/accept.mp3");
-let declineSound = new Audio("assets/decline.mp3");
-
-jobSound.loop=true;
-
-
-onAuthStateChanged(auth,async user=>{
-
-if(!user){
-location.href="index.html";
-return;
+function stopAllSounds() {
+  [jobSound].forEach(s => {
+    if (s) {
+      s.pause();
+      s.currentTime = 0;
+    }
+  });
 }
 
-currentUser=user;
+/* ✅ FIXED NAME CACHE */
+const userCache = {};
 
-document.getElementById("userInfo").textContent=user.email;
+async function getName(uid) {
+  if (userCache[uid]) return userCache[uid];
 
-listenPoolJobs();
-listenAcceptedJobs();
-listenPostedJobs();
-listenPrivateJobs(user);
-listenCompletion(user);
+  const snap = await getDoc(doc(db, "users", uid));
+  const name = snap.exists()
+    ? (snap.data().nickname || snap.data().email)
+    : uid;
 
+  userCache[uid] = name;
+  return name;
+}
+
+/* AUTH */
+onAuthStateChanged(auth, user => {
+
+  if (!user) return location.href = "index.html";
+
+  currentUser = user;
+
+  document.getElementById("userInfo").textContent = user.email;
+
+  listenPool();
+  listenPosted();
+  listenAccepted();
+  listenAssigned();
+  listenReturns();
 });
 
-
-document.getElementById("logoutBtn").onclick=async()=>{
-
-await signOut(auth);
-
-location.href="index.html";
-
+/* LOGOUT */
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  location.href = "index.html";
 };
-
-
-window.showTab=function(tab){
-
-document.getElementById("poolTab").style.display="none";
-document.getElementById("postedTab").style.display="none";
-document.getElementById("acceptedTab").style.display="none";
-
-document.getElementById(tab+"Tab").style.display="block";
-
-};
-
 
 /* POOL */
+function listenPool() {
 
-function listenPoolJobs(){
+  const q = query(collection(db, "fares"), where("status", "==", "broadcast"));
+  const box = document.getElementById("poolList");
 
-const ref=query(
-collection(db,"fares"),
-where("status","==","broadcast")
-);
+  onSnapshot(q, snap => {
 
-const container=document.getElementById("poolList");
+    box.innerHTML = "";
 
-onSnapshot(ref,snap=>{
+    snap.forEach(async docSnap => {
 
-container.innerHTML="";
+      const f = docSnap.data();
+      const name = await getName(f.originalDriverUID);
 
-snap.forEach(docSnap=>{
+      const div = document.createElement("div");
 
-const job=docSnap.data();
+      div.className = "fare-card";
 
-const div=document.createElement("div");
+      div.innerHTML = `
+        <b>${f.pickup}</b> → ${f.drop}<br>
+        Price: ${f.price}<br>
+        Original: ${name}<br>
+        <button onclick="acceptPool('${docSnap.id}')">Accept</button>
+      `;
 
-div.className="fare-card";
-
-div.innerHTML=`
-
-<b>${job.pickup}</b> → ${job.drop}<br>
-Price: ${job.price}<br>
-Original Driver: ${job.originalDriverUID}
-
-<br><br>
-
-<button data-id="${docSnap.id}" class="acceptPool">Accept</button>
-
-`;
-
-container.appendChild(div);
-
-});
-
-document.querySelectorAll(".acceptPool").forEach(btn=>{
-
-btn.onclick=async()=>{
-
-const jobId=btn.dataset.id;
-
-await updateDoc(doc(db,"fares",jobId),{
-
-status:"accepted",
-acceptedBy:currentUser.uid,
-currentDriverUID:currentUser.uid
-
-});
-
-acceptSound.play();
-
-};
-
-});
-
-});
-
+      box.appendChild(div);
+    });
+  });
 }
 
+/* ACCEPT POOL */
+window.acceptPool = async id => {
 
-/* ACCEPTED */
+  await updateDoc(doc(db, "fares", id), {
+    status: "accepted",
+    currentDriverUID: currentUser.uid
+  });
 
-function listenAcceptedJobs(){
-
-const ref=query(
-collection(db,"fares"),
-where("currentDriverUID","==",currentUser.uid),
-where("status","==","accepted")
-);
-
-const container=document.getElementById("acceptedList");
-
-onSnapshot(ref,snap=>{
-
-container.innerHTML="";
-
-snap.forEach(docSnap=>{
-
-const job=docSnap.data();
-
-const div=document.createElement("div");
-
-div.className="fare-card";
-
-div.innerHTML=`
-
-<b>${job.pickup}</b> → ${job.drop}<br>
-Price: ${job.price}<br>
-Original Driver: ${job.originalDriverUID}
-
-<button data-id="${docSnap.id}" class="completeJob">Complete</button>
-
-`;
-
-container.appendChild(div);
-
-});
-
-document.querySelectorAll(".completeJob").forEach(btn=>{
-
-btn.onclick=async()=>{
-
-await updateDoc(doc(db,"fares",btn.dataset.id),{
-
-status:"completed",
-completedBy:currentUser.uid
-
-});
-
-notifySound.play();
-
+  stopAllSounds();
+  acceptSound.play();
 };
-
-});
-
-});
-
-}
-
 
 /* POSTED */
+function listenPosted() {
 
-function listenPostedJobs(){
+  const q = query(collection(db, "fares"),
+    where("originalDriverUID", "==", currentUser.uid)
+  );
 
-const ref=query(
-collection(db,"fares"),
-where("originalDriverUID","==",currentUser.uid)
-);
+  const box = document.getElementById("postedList");
 
-const container=document.getElementById("postedList");
+  onSnapshot(q, async snap => {
 
-onSnapshot(ref,snap=>{
+    box.innerHTML = "";
 
-container.innerHTML="";
+    for (const d of snap.docs) {
 
-snap.forEach(docSnap=>{
+      const f = d.data();
+      const currentName = await getName(f.currentDriverUID);
 
-const job=docSnap.data();
+      const div = document.createElement("div");
 
-const div=document.createElement("div");
+      div.className = "fare-card";
 
-div.className="fare-card";
+      div.innerHTML = `
+        <b>${f.pickup}</b> → ${f.drop}<br>
+        Status: ${f.status}<br>
+        Current: ${currentName}<br>
 
-div.innerHTML=`
+        ${f.status === "returned" ? `<button onclick="resend('${d.id}')">Resend</button>` : ""}
 
-<b>${job.pickup}</b> → ${job.drop}<br>
-Status: ${job.status}<br>
-Current Driver: ${job.currentDriverUID}
+        <button onclick="deleteJob('${d.id}')">Delete</button>
+      `;
 
-`;
-
-container.appendChild(div);
-
-});
-
-});
-
+      box.appendChild(div);
+    }
+  });
 }
 
+/* RESEND (FIXED A→B→A FLOW) */
+window.resend = async id => {
 
-/* PRIVATE */
+  await updateDoc(doc(db, "fares", id), {
+    status: "broadcast",
+    assignedTo: "",
+    currentDriverUID: currentUser.uid
+  });
 
-function listenPrivateJobs(user){
-
-const ref=query(
-collection(db,"fares"),
-where("assignedTo","==",user.uid),
-where("status","==","assigned")
-);
-
-onSnapshot(ref,snap=>{
-
-snap.docChanges().forEach(change=>{
-
-if(change.type==="added"){
-
-const job=change.doc.data();
-
-showPopup(job,change.doc.id);
-
-jobSound.play();
-
-}
-
-});
-
-});
-
-}
-
-
-function showPopup(job,id){
-
-const popup=document.getElementById("jobPopup");
-const details=document.getElementById("jobDetails");
-
-details.innerHTML=`
-Pickup: ${job.pickup}<br>
-Drop: ${job.drop}<br>
-Price: ${job.price}
-`;
-
-popup.style.display="block";
-
-
-document.getElementById("acceptBtn").onclick=async()=>{
-
-await updateDoc(
-doc(db,"fares",id),
-{
-status:"accepted",
-acceptedBy:currentUser.uid,
-currentDriverUID:currentUser.uid
-}
-);
-
-acceptSound.play();
-
-popup.style.display="none";
-
+  alert("Resent to pool");
 };
 
+/* DELETE */
+window.deleteJob = async id => {
 
-document.getElementById("rejectBtn").onclick=async()=>{
+  await updateDoc(doc(db, "fares", id), {
+    status: "deleted"
+  });
 
-await updateDoc(
-doc(db,"fares",id),
-{
-status:"returned"
-}
-);
-
-declineSound.play();
-
-popup.style.display="none";
-
+  alert("Deleted");
 };
 
+/* ACCEPTED */
+function listenAccepted() {
+
+  const q = query(collection(db, "fares"),
+    where("currentDriverUID", "==", currentUser.uid)
+  );
+
+  const box = document.getElementById("acceptedList");
+
+  onSnapshot(q, async snap => {
+
+    box.innerHTML = "";
+
+    for (const d of snap.docs) {
+
+      const f = d.data();
+      const originalName = await getName(f.originalDriverUID);
+
+      const div = document.createElement("div");
+
+      div.className = "fare-card";
+
+      div.innerHTML = `
+        <b>${f.pickup}</b> → ${f.drop}<br>
+        Original: ${originalName}<br>
+      `;
+
+      box.appendChild(div);
+    }
+  });
 }
 
+/* PRIVATE POPUP (FULL FIX) */
+function listenAssigned() {
 
-/* COMPLETION NOTIFY */
+  const q = query(
+    collection(db, "fares"),
+    where("assignedTo", "==", currentUser.uid),
+    where("status", "==", "assigned")
+  );
 
-function listenCompletion(user){
+  onSnapshot(q, snap => {
 
-const ref=query(
-collection(db,"fares"),
-where("originalDriverUID","==",user.uid),
-where("status","==","completed")
-);
+    snap.docChanges().forEach(change => {
 
-onSnapshot(ref,snap=>{
+      if (change.type === "added") {
+        showPopup(change.doc.data(), change.doc.id);
+      }
 
-snap.docChanges().forEach(change=>{
-
-if(change.type==="modified"){
-
-notifySound.play();
-
-alert("Your job has been completed");
-
+    });
+  });
 }
 
-});
+function showPopup(f, id) {
 
-});
+  const popup = document.getElementById("jobPopup");
+  popup.style.display = "block";
 
+  stopAllSounds();
+  jobSound.play();
+
+  document.getElementById("jobDetails").innerHTML = `
+    Pickup: ${f.pickup}<br>
+    Drop: ${f.drop}<br>
+    Price: ${f.price}
+  `;
+
+  let handled = false;
+
+  const timer = setTimeout(async () => {
+
+    if (handled) return;
+    handled = true;
+
+    await updateDoc(doc(db, "fares", id), {
+      status: "returned",
+      assignedTo: "",
+      currentDriverUID: f.originalDriverUID
+    });
+
+    stopAllSounds();
+    popup.style.display = "none";
+
+  }, 12000);
+
+  document.getElementById("acceptBtn").onclick = async () => {
+
+    if (handled) return;
+    handled = true;
+
+    await updateDoc(doc(db, "fares", id), {
+      status: "accepted",
+      currentDriverUID: currentUser.uid
+    });
+
+    stopAllSounds();
+    acceptSound.play();
+
+    popup.style.display = "none";
+    clearTimeout(timer);
+  };
+
+  document.getElementById("rejectBtn").onclick = async () => {
+
+    if (handled) return;
+    handled = true;
+
+    await updateDoc(doc(db, "fares", id), {
+      status: "returned",
+      assignedTo: "",
+      currentDriverUID: f.originalDriverUID
+    });
+
+    stopAllSounds();
+    declineSound.play();
+
+    popup.style.display = "none";
+    clearTimeout(timer);
+  };
+}
+
+/* RETURN SOUND (FOR A) */
+function listenReturns() {
+
+  const q = query(
+    collection(db, "fares"),
+    where("originalDriverUID", "==", auth.currentUser.uid),
+    where("status", "==", "returned")
+  );
+
+  onSnapshot(q, snap => {
+
+    snap.docChanges().forEach(change => {
+
+      if (change.type === "modified") {
+        declineSound.play();
+      }
+
+    });
+
+  });
 }

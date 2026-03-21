@@ -7,45 +7,34 @@ doc,
 updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
 export async function dispatchNearest(jobId,lat,lng){
 
 const drivers=await getDocs(collection(db,"users"));
 
 let nearest=null;
-let minDistance=999999;
-
+let min=999999;
 
 drivers.forEach(d=>{
+const u=d.data();
 
-const data=d.data();
+if(!u.lat || !u.lng) return;
 
-if(data.role!=="driver") return;
+const dist=Math.sqrt((lat-u.lat)**2+(lng-u.lng)**2);
 
-const dist=Math.sqrt(
-Math.pow(lat-data.lat,2)+
-Math.pow(lng-data.lng,2)
-);
-
-if(dist<minDistance){
-
-minDistance=dist;
+if(dist<min){
+min=dist;
 nearest=d.id;
-
 }
-
 });
-
 
 if(nearest){
 
 await updateDoc(doc(db,"fares",jobId),{
-
-currentDriverUID:nearest,
-dispatchType:"auto"
-
+status:"assigned",
+dispatchType:"auto",
+assignedTo:nearest,
+currentDriverUID:nearest
 });
 
 }
-
 }
