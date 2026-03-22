@@ -1,4 +1,5 @@
 import { db, auth } from "./firebase.js";
+import { sendToFriend } from "./dispatchEngine.js";
 
 import {
 collection,
@@ -17,6 +18,7 @@ signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
+let myFriends=[];
 
 /* SOUNDS */
 const jobSound=new Audio("assets/job.mp3");
@@ -30,13 +32,16 @@ jobSound.currentTime=0;
 }
 
 /* AUTH */
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth, async user=>{
 
 if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
 
-document.getElementById("userInfo").textContent=user.email;
+document.getElementById("userInfo").textContent=user.displayName || user.email;
+
+/* LOAD FRIENDS FOR DROPDOWN */
+loadFriends();
 
 listenPool();
 listenPosted();
@@ -44,6 +49,19 @@ listenAccepted();
 listenAssigned();
 
 });
+
+/* LOAD FRIEND LIST */
+function loadFriends(){
+
+const q=query(collection(db,"friends"), where("owner","==",currentUser.uid));
+
+onSnapshot(q,snap=>{
+myFriends=[];
+snap.forEach(docSnap=>{
+myFriends.push(docSnap.data());
+});
+});
+}
 
 /* LOGOUT */
 document.getElementById("logoutBtn").onclick=async()=>{
@@ -59,7 +77,10 @@ document.getElementById(t+"Tab").style.display="none";
 document.getElementById(tab+"Tab").style.display="block";
 };
 
-/* POOL */
+///////////////////////////////////////////////////////
+///////////////////// POOL /////////////////////////////
+///////////////////////////////////////////////////////
+
 function listenPool(){
 
 const q=query(collection(db,"fares"),
@@ -83,7 +104,8 @@ div.className="fare-card";
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Price: ${f.price}<br>
-Driver: ${f.originalDriverName}
+Driver: ${f.originalDriverName}<br>
+Time: ${f.time}
 
 <br><br>
 
@@ -93,7 +115,6 @@ Driver: ${f.originalDriverName}
 box.appendChild(div);
 
 });
-
 });
 }
 
@@ -111,7 +132,7 @@ if(snap.data().status!=="broadcast") throw "taken";
 tx.update(ref,{
 status:"accepted",
 currentDriverUID:currentUser.uid,
-currentDriverName:currentUser.email
+currentDriverName:currentUser.displayName || currentUser.email
 });
 });
 
@@ -122,7 +143,10 @@ alert("Already taken");
 }
 };
 
-/* POSTED */
+///////////////////////////////////////////////////////
+///////////////////// POSTED ///////////////////////////
+///////////////////////////////////////////////////////
+
 function listenPosted(){
 
 const q=query(collection(db,"fares"),
@@ -140,20 +164,41 @@ snap.forEach(d=>{
 const f=d.data();
 if(f.deleted) return;
 
+/* FRIEND DROPDOWN */
+let friendOptions = `<option value="">Select Friend</option>`;
+myFriends.forEach(fr=>{
+friendOptions += `<option value="${fr.friendUID}">${fr.name || fr.email}</option>`;
+});
+
 const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
+<div style="border:1px solid gold;padding:10px;border-radius:10px">
+
 <b>${f.pickup}</b> → ${f.drop}<br>
-Status: ${f.status}<br>
-Current: ${f.currentDriverName}
+Price: ${f.price}<br>
+Time: ${f.time}<br>
+
+Status: <b>${f.status}</b><br>
+Current Driver: ${f.currentDriverName}
 
 ${f.returnReason ? `<br><span style="color:#ff6b6b">${f.returnReason}</span>`:""}
 
 <br><br>
 
-<button onclick="resendPool('${d.id}')">Pool</button>
+<select id="friend-${d.id}">
+${friendOptions}
+</select>
+
+<br><br>
+
+<button onclick="resendFriend('${d.id}')">Send Friend</button>
+<button onclick="resendPool('${d.id}')">Send Pool</button>
+<button onclick="editJob('${d.id}')">Edit</button>
 <button onclick="deleteJob('${d.id}')">Delete</button>
+
+</div>
 `;
 
 box.appendChild(div);
@@ -163,7 +208,21 @@ box.appendChild(div);
 });
 }
 
-/* RESEND */
+/* SEND FRIEND (NO PROMPT) */
+window.resendFriend=async(id)=>{
+
+const select=document.getElementById("friend-"+id);
+const friendUID=select.value;
+
+if(!friendUID) return alert("Select friend");
+
+await sendToFriend(id,friendUID,currentUser.uid);
+
+alert("Sent to friend ✔");
+
+};
+
+/* RESEND POOL */
 window.resendPool=async(id)=>{
 await updateDoc(doc(db,"fares",id),{
 status:"broadcast",
@@ -179,7 +238,35 @@ deleted:true
 });
 };
 
-/* ACCEPTED */
+/* EDIT */
+window.editJob=async(id)=>{
+
+const ref=doc(db,"fares",id);
+const snap=await getDoc(ref);
+
+if(!snap.exists()) return;
+
+const f=snap.data();
+
+const pickup=prompt("Pickup",f.pickup);
+const drop=prompt("Drop",f.drop);
+const price=prompt("Price",f.price);
+const time=prompt("Time",f.time);
+
+await updateDoc(ref,{
+pickup:pickup||f.pickup,
+drop:drop||f.drop,
+price:price||f.price,
+time:time||f.time
+});
+
+alert("Updated ✔");
+};
+
+///////////////////////////////////////////////////////
+///////////////////// ACCEPTED /////////////////////////
+///////////////////////////////////////////////////////
+
 function listenAccepted(){
 
 const q=query(collection(db,"fares"),
@@ -210,7 +297,6 @@ Original: ${f.originalDriverName}<br>
 box.appendChild(div);
 
 });
-
 });
 }
 
@@ -222,7 +308,10 @@ status:"completed"
 notifySound.play();
 };
 
-/* PRIVATE POPUP */
+///////////////////////////////////////////////////////
+///////////////////// POPUP ////////////////////////////
+///////////////////////////////////////////////////////
+
 function listenAssigned(){
 
 const q=query(collection(db,"fares"),
@@ -251,14 +340,14 @@ jobSound.play();
 document.getElementById("jobDetails").innerHTML=`
 Pickup: ${f.pickup}<br>
 Drop: ${f.drop}<br>
-Price: ${f.price}
+Price: ${f.price}<br>
+From: ${f.originalDriverName}
 `;
 
 const timer=setTimeout(async()=>{
 stopSound();
 popup.style.display="none";
 
-/* AUTO RETURN */
 await updateDoc(doc(db,"fares",id),{
 status:"returned",
 assignedTo:"",
@@ -275,7 +364,7 @@ document.getElementById("acceptBtn").onclick=async()=>{
 await updateDoc(doc(db,"fares",id),{
 status:"accepted",
 currentDriverUID:currentUser.uid,
-currentDriverName:currentUser.email
+currentDriverName:currentUser.displayName || currentUser.email
 });
 
 stopSound();
