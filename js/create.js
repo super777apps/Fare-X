@@ -4,9 +4,6 @@ import { sendToFriend } from "./dispatchEngine.js";
 import {
 collection,
 addDoc,
-query,
-where,
-onSnapshot,
 serverTimestamp,
 doc,
 getDoc
@@ -15,89 +12,93 @@ getDoc
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
-let currentUserData=null;
 
 const sendType=document.getElementById("sendType");
 const friendSelect=document.getElementById("friendSelect");
 const btn=document.getElementById("createFareBtn");
 
-/* AUTH */
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,async user=>{
+
 if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
-
-/* GET USER PROFILE (nickname) */
-const snap = await getDoc(doc(db,"users",user.uid));
-currentUserData = snap.exists() ? snap.data() : {};
-
 loadFriends(user.uid);
+
 });
 
-/* SEND TYPE */
-sendType.addEventListener("change",()=>{
-friendSelect.style.display = sendType.value==="friend" ? "block" : "none";
-});
+async function loadFriends(uid){
 
-/* LOAD FRIENDS */
-function loadFriends(uid){
+const snap = await getDoc(doc(db,"users",uid));
 
-const q=query(collection(db,"friends"), where("owner","==",uid));
+const q = await fetchFriends(uid);
 
-onSnapshot(q,snap=>{
 friendSelect.innerHTML='<option value="">Select Driver</option>';
 
-snap.forEach(docSnap=>{
-const f=docSnap.data();
-
+q.forEach(f=>{
 const opt=document.createElement("option");
 opt.value=f.friendUID;
 opt.textContent=f.name || f.email;
-
 friendSelect.appendChild(opt);
 });
-});
+
 }
 
-/* CREATE JOB */
-btn.onclick=async()=>{
+async function fetchFriends(uid){
 
-if(!currentUser) return alert("User not ready");
+const { collection, getDocs, query, where } =
+await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+const q=query(collection(db,"friends"), where("owner","==",uid));
+const snap=await getDocs(q);
+
+let arr=[];
+snap.forEach(d=>arr.push(d.data()));
+return arr;
+
+}
+
+sendType.addEventListener("change",()=>{
+friendSelect.style.display = sendType.value==="friend" ? "block":"none";
+});
+
+btn.onclick=async()=>{
 
 const pickup=document.getElementById("pickup").value.trim();
 const drop=document.getElementById("drop").value.trim();
-const datetime=document.getElementById("datetime").value;
+const time=document.getElementById("datetime").value;
 const price=document.getElementById("price").value.trim();
 
-if(!pickup||!drop||!datetime||!price){
-alert("Fill all fields");
-return;
-}
+if(!pickup||!drop||!time||!price) return alert("Fill all fields");
+
+const userSnap=await getDoc(doc(db,"users",currentUser.uid));
+const nickname=userSnap.data()?.nickname || currentUser.email;
+const role=userSnap.data()?.role || "driver";
 
 const data={
-pickup,
-drop,
-time:datetime,
-price,
+pickup,drop,time,price,
 
 createdBy:currentUser.email,
-createdUid:currentUser.uid,
+createdName:nickname,
 
 originalDriverUID:currentUser.uid,
-originalDriverName: currentUserData.nickname || currentUser.email,
+originalDriverName:nickname,
 
 currentDriverUID:currentUser.uid,
-currentDriverName: currentUserData.nickname || currentUser.email,
+currentDriverName:nickname,
 
-createdAt:serverTimestamp(),
+passengerUID:currentUser.uid,
 
 status:"broadcast",
 dispatchType:"pool",
-returnReason:"",
-deleted:false
+
+createdAt:serverTimestamp()
 };
 
-/* FRIEND */
+if(role==="passenger"){
+sendType.value="friend";
+sendType.disabled=true;
+}
+
 if(sendType.value==="friend"){
 
 const friendUID=friendSelect.value;
@@ -107,14 +108,14 @@ const ref=await addDoc(collection(db,"fares"),data);
 
 await sendToFriend(ref.id,friendUID,currentUser.uid);
 
-alert("Sent successfully");
+alert("Sent ✔");
 location.href="dashboard.html";
 return;
 }
 
-/* POOL */
 await addDoc(collection(db,"fares"),data);
 
-alert("Broadcast created");
+alert("Created ✔");
 location.href="dashboard.html";
+
 };

@@ -7,49 +7,46 @@ getDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const ALERT_TIMEOUT = 12000;
+const TIMEOUT = 12000;
 
 export async function sendToFriend(jobId,friendUID,senderUID){
 
 const ref=doc(db,"fares",jobId);
 const snap=await getDoc(ref);
 
-const job=snap.data();
+const senderSnap=await getDoc(doc(db,"users",senderUID));
+const friendSnap=await getDoc(doc(db,"users",friendUID));
 
-/* UPDATE JOB */
+const senderName=senderSnap.data()?.nickname || "";
+const friendName=friendSnap.data()?.nickname || "";
+
 await updateDoc(ref,{
 status:"assigned",
-dispatchType:"friend",
 assignedTo:friendUID,
-
 currentDriverUID:friendUID,
-currentDriverName:"",
-
+currentDriverName:friendName,
+lastSenderUID:senderUID,
+lastSenderName:senderName,
 dispatchStartedAt:serverTimestamp()
 });
 
-/* AUTO RETURN TIMER */
 setTimeout(async()=>{
 
-const snap2=await getDoc(ref);
-if(!snap2.exists()) return;
+const s=await getDoc(ref);
+if(!s.exists()) return;
 
-const j=snap2.data();
-
-if(j.status==="assigned"){
+if(s.data().status==="assigned"){
 
 await updateDoc(ref,{
 status:"returned",
 assignedTo:"",
-
-currentDriverUID:j.originalDriverUID,
-currentDriverName:j.originalDriverName,
-
+currentDriverUID:s.data().originalDriverUID,
+currentDriverName:s.data().originalDriverName,
 returnReason:"Timeout"
 });
 
 }
 
-},ALERT_TIMEOUT);
+},TIMEOUT);
 
 }

@@ -1,5 +1,4 @@
 import { db, auth } from "./firebase.js";
-import { sendToFriend } from "./dispatchEngine.js";
 
 import {
 collection,
@@ -8,8 +7,7 @@ where,
 onSnapshot,
 doc,
 updateDoc,
-getDoc,
-runTransaction
+getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -18,13 +16,11 @@ signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
-let myFriends=[];
 
 /* SOUNDS */
 const jobSound=new Audio("assets/job.mp3");
 const acceptSound=new Audio("assets/accept.mp3");
 const declineSound=new Audio("assets/decline.mp3");
-const notifySound=new Audio("assets/notification.mp3");
 
 function stopSound(){
 jobSound.pause();
@@ -32,16 +28,13 @@ jobSound.currentTime=0;
 }
 
 /* AUTH */
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,user=>{
 
 if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
 
-document.getElementById("userInfo").textContent=user.displayName || user.email;
-
-/* LOAD FRIENDS FOR DROPDOWN */
-loadFriends();
+document.getElementById("userInfo").textContent=user.email;
 
 listenPool();
 listenPosted();
@@ -49,19 +42,6 @@ listenAccepted();
 listenAssigned();
 
 });
-
-/* LOAD FRIEND LIST */
-function loadFriends(){
-
-const q=query(collection(db,"friends"), where("owner","==",currentUser.uid));
-
-onSnapshot(q,snap=>{
-myFriends=[];
-snap.forEach(docSnap=>{
-myFriends.push(docSnap.data());
-});
-});
-}
 
 /* LOGOUT */
 document.getElementById("logoutBtn").onclick=async()=>{
@@ -71,22 +51,19 @@ location.href="index.html";
 
 /* TABS */
 window.showTab=function(tab){
+
 ["pool","posted","accepted"].forEach(t=>{
 document.getElementById(t+"Tab").style.display="none";
 });
+
 document.getElementById(tab+"Tab").style.display="block";
+
 };
 
-///////////////////////////////////////////////////////
-///////////////////// POOL /////////////////////////////
-///////////////////////////////////////////////////////
-
+/* POOL */
 function listenPool(){
 
-const q=query(collection(db,"fares"),
-where("status","==","broadcast"),
-where("deleted","==",false)
-);
+const q=query(collection(db,"fares"), where("status","==","broadcast"));
 
 const box=document.getElementById("poolList");
 
@@ -99,15 +76,13 @@ snap.forEach(d=>{
 const f=d.data();
 
 const div=document.createElement("div");
+
 div.className="fare-card";
 
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Price: ${f.price}<br>
 Driver: ${f.originalDriverName}<br>
-Time: ${f.time}
-
-<br><br>
 
 <button onclick="acceptPool('${d.id}')">Accept</button>
 `;
@@ -115,38 +90,28 @@ Time: ${f.time}
 box.appendChild(div);
 
 });
+
 });
+
 }
 
-/* ACCEPT POOL */
 window.acceptPool=async(id)=>{
 
 const ref=doc(db,"fares",id);
+const snap=await getDoc(ref);
 
-try{
+if(snap.data().status!=="broadcast") return alert("Taken");
 
-await runTransaction(db,async(tx)=>{
-const snap=await tx.get(ref);
-if(snap.data().status!=="broadcast") throw "taken";
-
-tx.update(ref,{
+await updateDoc(ref,{
 status:"accepted",
-currentDriverUID:currentUser.uid,
-currentDriverName:currentUser.displayName || currentUser.email
-});
+currentDriverUID:currentUser.uid
 });
 
 acceptSound.play();
 
-}catch{
-alert("Already taken");
-}
 };
 
-///////////////////////////////////////////////////////
-///////////////////// POSTED ///////////////////////////
-///////////////////////////////////////////////////////
-
+/* POSTED */
 function listenPosted(){
 
 const q=query(collection(db,"fares"),
@@ -162,43 +127,22 @@ box.innerHTML="";
 snap.forEach(d=>{
 
 const f=d.data();
-if(f.deleted) return;
-
-/* FRIEND DROPDOWN */
-let friendOptions = `<option value="">Select Friend</option>`;
-myFriends.forEach(fr=>{
-friendOptions += `<option value="${fr.friendUID}">${fr.name || fr.email}</option>`;
-});
 
 const div=document.createElement("div");
+
 div.className="fare-card";
 
 div.innerHTML=`
-<div style="border:1px solid gold;padding:10px;border-radius:10px">
-
 <b>${f.pickup}</b> → ${f.drop}<br>
-Price: ${f.price}<br>
-Time: ${f.time}<br>
+Status: ${f.status}<br>
+Current: ${f.currentDriverName}<br>
 
-Status: <b>${f.status}</b><br>
-Current Driver: ${f.currentDriverName}
-
-${f.returnReason ? `<br><span style="color:#ff6b6b">${f.returnReason}</span>`:""}
-
-<br><br>
-
-<select id="friend-${d.id}">
-${friendOptions}
-</select>
-
-<br><br>
-
-<button onclick="resendFriend('${d.id}')">Send Friend</button>
-<button onclick="resendPool('${d.id}')">Send Pool</button>
-<button onclick="editJob('${d.id}')">Edit</button>
+${f.status==="returned" ? `
+<button onclick="resendFriend('${d.id}')">Friend</button>
+<button onclick="resendPool('${d.id}')">Pool</button>
 <button onclick="deleteJob('${d.id}')">Delete</button>
+` : ""}
 
-</div>
 `;
 
 box.appendChild(div);
@@ -206,67 +150,10 @@ box.appendChild(div);
 });
 
 });
+
 }
 
-/* SEND FRIEND (NO PROMPT) */
-window.resendFriend=async(id)=>{
-
-const select=document.getElementById("friend-"+id);
-const friendUID=select.value;
-
-if(!friendUID) return alert("Select friend");
-
-await sendToFriend(id,friendUID,currentUser.uid);
-
-alert("Sent to friend ✔");
-
-};
-
-/* RESEND POOL */
-window.resendPool=async(id)=>{
-await updateDoc(doc(db,"fares",id),{
-status:"broadcast",
-assignedTo:"",
-returnReason:""
-});
-};
-
-/* DELETE */
-window.deleteJob=async(id)=>{
-await updateDoc(doc(db,"fares",id),{
-deleted:true
-});
-};
-
-/* EDIT */
-window.editJob=async(id)=>{
-
-const ref=doc(db,"fares",id);
-const snap=await getDoc(ref);
-
-if(!snap.exists()) return;
-
-const f=snap.data();
-
-const pickup=prompt("Pickup",f.pickup);
-const drop=prompt("Drop",f.drop);
-const price=prompt("Price",f.price);
-const time=prompt("Time",f.time);
-
-await updateDoc(ref,{
-pickup:pickup||f.pickup,
-drop:drop||f.drop,
-price:price||f.price,
-time:time||f.time
-});
-
-alert("Updated ✔");
-};
-
-///////////////////////////////////////////////////////
-///////////////////// ACCEPTED /////////////////////////
-///////////////////////////////////////////////////////
-
+/* ACCEPTED */
 function listenAccepted(){
 
 const q=query(collection(db,"fares"),
@@ -282,14 +169,15 @@ box.innerHTML="";
 snap.forEach(d=>{
 
 const f=d.data();
-if(f.deleted) return;
 
 const div=document.createElement("div");
+
 div.className="fare-card";
 
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Original: ${f.originalDriverName}<br>
+Status: ${f.status}
 
 <button onclick="completeJob('${d.id}')">Complete</button>
 `;
@@ -297,21 +185,17 @@ Original: ${f.originalDriverName}<br>
 box.appendChild(div);
 
 });
+
 });
+
 }
 
 /* COMPLETE */
 window.completeJob=async(id)=>{
-await updateDoc(doc(db,"fares",id),{
-status:"completed"
-});
-notifySound.play();
+await updateDoc(doc(db,"fares",id),{status:"completed"});
 };
 
-///////////////////////////////////////////////////////
-///////////////////// POPUP ////////////////////////////
-///////////////////////////////////////////////////////
-
+/* POPUP */
 function listenAssigned(){
 
 const q=query(collection(db,"fares"),
@@ -331,7 +215,6 @@ showPopup(c.doc.data(),c.doc.id);
 function showPopup(f,id){
 
 const popup=document.getElementById("jobPopup");
-
 popup.style.display="block";
 
 jobSound.loop=true;
@@ -340,54 +223,48 @@ jobSound.play();
 document.getElementById("jobDetails").innerHTML=`
 Pickup: ${f.pickup}<br>
 Drop: ${f.drop}<br>
-Price: ${f.price}<br>
-From: ${f.originalDriverName}
+Price: ${f.price}
 `;
 
-const timer=setTimeout(async()=>{
+const timer=setTimeout(()=>{
 stopSound();
 popup.style.display="none";
-
-await updateDoc(doc(db,"fares",id),{
-status:"returned",
-assignedTo:"",
-currentDriverUID:f.originalDriverUID,
-currentDriverName:f.originalDriverName,
-returnReason:"Timeout"
-});
-
 },12000);
 
-/* ACCEPT */
 document.getElementById("acceptBtn").onclick=async()=>{
-
 await updateDoc(doc(db,"fares",id),{
 status:"accepted",
-currentDriverUID:currentUser.uid,
-currentDriverName:currentUser.displayName || currentUser.email
+currentDriverUID:currentUser.uid
 });
-
 stopSound();
-acceptSound.play();
 popup.style.display="none";
 clearTimeout(timer);
 };
 
-/* REJECT */
 document.getElementById("rejectBtn").onclick=async()=>{
-
 await updateDoc(doc(db,"fares",id),{
 status:"returned",
 assignedTo:"",
 currentDriverUID:f.originalDriverUID,
-currentDriverName:f.originalDriverName,
-returnReason:"Driver rejected"
+currentDriverName:f.originalDriverName
 });
-
 stopSound();
-declineSound.play();
 popup.style.display="none";
 clearTimeout(timer);
 };
 
 }
+
+/* RESEND */
+window.resendPool=async(id)=>{
+await updateDoc(doc(db,"fares",id),{
+status:"broadcast",
+assignedTo:""
+});
+};
+
+window.deleteJob=async(id)=>{
+await updateDoc(doc(db,"fares",id),{
+status:"deleted"
+});
+};

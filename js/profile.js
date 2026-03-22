@@ -1,79 +1,54 @@
 import { db, auth } from "./firebase.js";
-import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const fullName = document.getElementById("fullName");
-const emailInput = document.getElementById("email");
-const mobile = document.getElementById("mobile");
-const nickname = document.getElementById("nickname");
-const carNumber = document.getElementById("carNumber");
-const carBrand = document.getElementById("carBrand");
-const saveBtn = document.getElementById("saveProfileBtn");
-const logoutBtn = document.getElementById("logoutBtn");
+import {
+doc,
+getDoc,
+setDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let currentUser = null;
+import {
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// ------------------- AUTH CHECK -------------------
-onAuthStateChanged(auth, async user => {
-  if(!user){
-    window.location.href = "index.html";
-    return;
-  }
-  currentUser = user;
+let currentUser=null;
 
-  // Load existing profile if exists
-  const driverDoc = doc(db,"drivers",user.uid);
-  const snap = await getDoc(driverDoc);
-  if(snap.exists()){
-    const data = snap.data();
-    fullName.value = data.fullName || "";
-    emailInput.value = data.email || "";
-    mobile.value = data.mobile || "";
-    nickname.value = data.nickname || "";
-    carNumber.value = data.carNumber || "";
-    carBrand.value = data.carBrand || "";
-  }
+onAuthStateChanged(auth, async user=>{
+
+if(!user){
+location.href="index.html";
+return;
+}
+
+currentUser=user;
+
+const ref=doc(db,"users",user.uid);
+const snap=await getDoc(ref);
+
+if(snap.exists()){
+const d=snap.data();
+document.getElementById("nickname").value=d.nickname || "";
+document.getElementById("role").value=d.role || "driver";
+}
+
 });
 
-// ------------------- SAVE PROFILE -------------------
-saveBtn.onclick = async () => {
-  const full = fullName.value.trim();
-  const em = emailInput.value.trim();
-  const mob = mobile.value.trim();
-  const nick = nickname.value.trim();
-  const carNum = carNumber.value.trim();
-  const carBr = carBrand.value.trim();
+/* SAVE */
+document.getElementById("saveBtn").onclick=async()=>{
 
-  if(!full || !em || !mob || !nick || !carNum || !carBr){
-    return alert("Please complete all fields!");
-  }
+const nickname=document.getElementById("nickname").value.trim();
+const role=document.getElementById("role").value;
 
-  try{
-    await setDoc(doc(db,"drivers",currentUser.uid), {
-      uid: currentUser.uid,
-      fullName: full,
-      email: em,
-      mobile: mob,
-      nickname: nick,
-      carNumber: carNum,
-      carBrand: carBr,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+if(!nickname){
+alert("Enter nickname");
+return;
+}
 
-    alert("Profile saved successfully 🚀");
-    window.location.href = "dashboard.html";
+await setDoc(doc(db,"users",currentUser.uid),{
+uid:currentUser.uid,
+email:currentUser.email,
+nickname:nickname,
+role:role
+},{merge:true});
 
-  }catch(err){
-    alert("Failed to save profile: " + err.message);
-  }
-};
-
-// ------------------- LOGOUT -------------------
-logoutBtn.onclick = async () => {
-  try{
-    await signOut(auth);
-    window.location.href = "index.html";
-  }catch(err){
-    alert("Logout failed: " + err.message);
-  }
+alert("Saved ✔");
 };

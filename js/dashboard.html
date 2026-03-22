@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="lux-header">
+  <h1 class="logo">Fare<span class="gold">-X</span></h1>
+
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="userInfo" style="color:#d4af37;font-weight:600"></span>
+
+    <!-- ✅ ID ADDED -->
+    <button id="logoutBtn" class="lux-btn" style="padding:6px 14px;font-size:13px;">
+  Logout
+</button>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <a href="friends.html" class="lux-btn">Friends</a>
+    <a href="create.html" class="lux-btn">+ Create Fare</a>
+  </div>
+  <a href="profile.html" class="lux-btn">Profile</a>
+  
+</header>
+
+<main class="lux-main">
+
+  <div style="display:flex;gap:10px;margin-bottom:20px;">
+    <button class="lux-btn" onclick="showTab('pool')">Broadcast Pool</button>
+    <button class="lux-btn" onclick="showTab('posted')">My Posted</button>
+    <button class="lux-btn" onclick="showTab('accepted')">My Accepted</button>
+  </div>
+
+  <div id="poolTab">
+    <h2 class="section-title">Live Broadcast Pool</h2>
+    <div id="poolList" class="fare-list"></div>
+  </div>
+
+  <div id="postedTab" style="display:none">
+    <h2 class="section-title">My Posted Jobs</h2>
+    <div id="postedList" class="fare-list"></div>
+  </div>
+
+  <div id="acceptedTab" style="display:none">
+    <h2 class="section-title">My Accepted Jobs</h2>
+    <div id="acceptedList" class="fare-list"></div>
+  </div>
+
+</main>
+
+<audio id="acceptSound" src="assets/accept.mp3"></audio>
+<audio id="declineSound" src="assets/decline.mp3"></audio>
+<audio id="notifySound" src="assets/notification.mp3"></audio>
+
+<audio id="jobSound" src="assets/job.mp3"></audio>
+
+<<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/dashboard.js?v=100"></script>
+
+<div id="jobPopup" class="job-popup" style="display:none">
+
+  <h3>🚖 New Private Job</h3>
+
+  <div id="jobDetails"></div>
+
+  <button id="acceptBtn" class="lux-btn">Accept</button>
+  <button id="rejectBtn" class="lux-btn">Reject</button>
+
+</div>
+
+<audio id="jobSound" src="css/job.mp3" loop></audio>
+<audio id="declineSound" src="css/decline.mp3"></audio>
+</body>
+</html>
