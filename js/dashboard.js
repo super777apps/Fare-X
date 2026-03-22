@@ -6,8 +6,9 @@ query,
 where,
 onSnapshot,
 doc,
-runTransaction,
-updateDoc
+updateDoc,
+getDoc,
+runTransaction
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -23,7 +24,7 @@ const acceptSound=new Audio("assets/accept.mp3");
 const declineSound=new Audio("assets/decline.mp3");
 const notifySound=new Audio("assets/notification.mp3");
 
-function stopAll(){
+function stopSound(){
 jobSound.pause();
 jobSound.currentTime=0;
 }
@@ -35,7 +36,7 @@ if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
 
-document.getElementById("userInfo").textContent=user.displayName || user.email;
+document.getElementById("userInfo").textContent=user.email;
 
 listenPool();
 listenPosted();
@@ -61,7 +62,10 @@ document.getElementById(tab+"Tab").style.display="block";
 /* POOL */
 function listenPool(){
 
-const q=query(collection(db,"fares"), where("status","==","broadcast"));
+const q=query(collection(db,"fares"),
+where("status","==","broadcast"),
+where("deleted","==",false)
+);
 
 const box=document.getElementById("poolList");
 
@@ -79,7 +83,9 @@ div.className="fare-card";
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Price: ${f.price}<br>
-Original: ${f.originalDriverName || "Unknown"}<br>
+Driver: ${f.originalDriverName}
+
+<br><br>
 
 <button onclick="acceptPool('${d.id}')">Accept</button>
 `;
@@ -97,18 +103,16 @@ window.acceptPool=async(id)=>{
 const ref=doc(db,"fares",id);
 
 try{
+
 await runTransaction(db,async(tx)=>{
-
 const snap=await tx.get(ref);
-
 if(snap.data().status!=="broadcast") throw "taken";
 
 tx.update(ref,{
 status:"accepted",
 currentDriverUID:currentUser.uid,
-currentDriverName: currentUser.displayName || currentUser.email
+currentDriverName:currentUser.email
 });
-
 });
 
 acceptSound.play();
@@ -116,20 +120,25 @@ acceptSound.play();
 }catch{
 alert("Already taken");
 }
-
 };
 
 /* POSTED */
 function listenPosted(){
 
-const q=query(collection(db,"fares"), where("originalDriverUID","==",currentUser.uid));
+const q=query(collection(db,"fares"),
+where("originalDriverUID","==",currentUser.uid)
+);
 
 const box=document.getElementById("postedList");
 
 onSnapshot(q,snap=>{
+
 box.innerHTML="";
+
 snap.forEach(d=>{
+
 const f=d.data();
+if(f.deleted) return;
 
 const div=document.createElement("div");
 div.className="fare-card";
@@ -137,13 +146,38 @@ div.className="fare-card";
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Status: ${f.status}<br>
-Current Driver: ${f.currentDriverName || "Unknown"}
+Current: ${f.currentDriverName}
+
+${f.returnReason ? `<br><span style="color:#ff6b6b">${f.returnReason}</span>`:""}
+
+<br><br>
+
+<button onclick="resendPool('${d.id}')">Pool</button>
+<button onclick="deleteJob('${d.id}')">Delete</button>
 `;
 
 box.appendChild(div);
+
 });
+
 });
 }
+
+/* RESEND */
+window.resendPool=async(id)=>{
+await updateDoc(doc(db,"fares",id),{
+status:"broadcast",
+assignedTo:"",
+returnReason:""
+});
+};
+
+/* DELETE */
+window.deleteJob=async(id)=>{
+await updateDoc(doc(db,"fares",id),{
+deleted:true
+});
+};
 
 /* ACCEPTED */
 function listenAccepted(){
@@ -155,22 +189,28 @@ where("currentDriverUID","==",currentUser.uid)
 const box=document.getElementById("acceptedList");
 
 onSnapshot(q,snap=>{
+
 box.innerHTML="";
+
 snap.forEach(d=>{
+
 const f=d.data();
+if(f.deleted) return;
 
 const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
-Original: ${f.originalDriverName || "Unknown"}<br>
+Original: ${f.originalDriverName}<br>
 
 <button onclick="completeJob('${d.id}')">Complete</button>
 `;
 
 box.appendChild(div);
+
 });
+
 });
 }
 
@@ -211,35 +251,51 @@ jobSound.play();
 document.getElementById("jobDetails").innerHTML=`
 Pickup: ${f.pickup}<br>
 Drop: ${f.drop}<br>
-Price: ${f.price}<br>
-From: ${f.originalDriverName || "Unknown"}
+Price: ${f.price}
 `;
 
-const timer=setTimeout(()=>{
-stopAll();
+const timer=setTimeout(async()=>{
+stopSound();
 popup.style.display="none";
+
+/* AUTO RETURN */
+await updateDoc(doc(db,"fares",id),{
+status:"returned",
+assignedTo:"",
+currentDriverUID:f.originalDriverUID,
+currentDriverName:f.originalDriverName,
+returnReason:"Timeout"
+});
+
 },12000);
 
+/* ACCEPT */
 document.getElementById("acceptBtn").onclick=async()=>{
+
 await updateDoc(doc(db,"fares",id),{
 status:"accepted",
 currentDriverUID:currentUser.uid,
-currentDriverName: currentUser.displayName || currentUser.email
+currentDriverName:currentUser.email
 });
-stopAll();
+
+stopSound();
 acceptSound.play();
 popup.style.display="none";
 clearTimeout(timer);
 };
 
+/* REJECT */
 document.getElementById("rejectBtn").onclick=async()=>{
+
 await updateDoc(doc(db,"fares",id),{
-status:"broadcast",
+status:"returned",
 assignedTo:"",
-currentDriverUID: f.originalDriverUID,
-currentDriverName: f.originalDriverName
+currentDriverUID:f.originalDriverUID,
+currentDriverName:f.originalDriverName,
+returnReason:"Driver rejected"
 });
-stopAll();
+
+stopSound();
 declineSound.play();
 popup.style.display="none";
 clearTimeout(timer);

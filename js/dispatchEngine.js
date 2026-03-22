@@ -7,28 +7,49 @@ getDoc,
 serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-export async function sendToFriend(jobId,friendUID,senderUID,senderName,receiverName){
+const ALERT_TIMEOUT = 12000;
+
+export async function sendToFriend(jobId,friendUID,senderUID){
 
 const ref=doc(db,"fares",jobId);
 const snap=await getDoc(ref);
 
-let chain = snap.exists() ? snap.data().chain || [] : [];
+const job=snap.data();
 
-chain.push({
-from: senderName,
-to: receiverName,
-time: Date.now()
-});
-
+/* UPDATE JOB */
 await updateDoc(ref,{
 status:"assigned",
 dispatchType:"friend",
 assignedTo:friendUID,
 
 currentDriverUID:friendUID,
-currentDriverName: receiverName,
+currentDriverName:"",
 
-chain: chain,
-dispatchStartedAt: serverTimestamp()
+dispatchStartedAt:serverTimestamp()
 });
+
+/* AUTO RETURN TIMER */
+setTimeout(async()=>{
+
+const snap2=await getDoc(ref);
+if(!snap2.exists()) return;
+
+const j=snap2.data();
+
+if(j.status==="assigned"){
+
+await updateDoc(ref,{
+status:"returned",
+assignedTo:"",
+
+currentDriverUID:j.originalDriverUID,
+currentDriverName:j.originalDriverName,
+
+returnReason:"Timeout"
+});
+
+}
+
+},ALERT_TIMEOUT);
+
 }

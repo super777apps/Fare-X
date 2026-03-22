@@ -1,6 +1,5 @@
 import { db, auth } from "./firebase.js";
 import { sendToFriend } from "./dispatchEngine.js";
-import { dispatchNearest } from "./autoDispatch.js";
 
 import {
 collection,
@@ -8,35 +7,31 @@ addDoc,
 query,
 where,
 onSnapshot,
-serverTimestamp
+serverTimestamp,
+doc,
+getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser=null;
+let currentUserData=null;
 
 const sendType=document.getElementById("sendType");
 const friendSelect=document.getElementById("friendSelect");
 const btn=document.getElementById("createFareBtn");
-const roleSelect=document.getElementById("roleSelect");
 
 /* AUTH */
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth, async user=>{
 if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
-loadFriends(user.uid);
-});
 
-/* ROLE CONTROL */
-roleSelect?.addEventListener("change",()=>{
-if(roleSelect.value==="passenger"){
-sendType.value="friend";
-sendType.disabled=true;
-friendSelect.style.display="block";
-}else{
-sendType.disabled=false;
-}
+/* GET USER PROFILE (nickname) */
+const snap = await getDoc(doc(db,"users",user.uid));
+currentUserData = snap.exists() ? snap.data() : {};
+
+loadFriends(user.uid);
 });
 
 /* SEND TYPE */
@@ -54,9 +49,11 @@ friendSelect.innerHTML='<option value="">Select Driver</option>';
 
 snap.forEach(docSnap=>{
 const f=docSnap.data();
+
 const opt=document.createElement("option");
 opt.value=f.friendUID;
 opt.textContent=f.name || f.email;
+
 friendSelect.appendChild(opt);
 });
 });
@@ -77,34 +74,27 @@ alert("Fill all fields");
 return;
 }
 
-/* ✅ GET NICKNAME */
-const nickname = currentUser.displayName || currentUser.email;
-
-const role = roleSelect?.value || "driver";
-
 const data={
-pickup,drop,time:datetime,price,
+pickup,
+drop,
+time:datetime,
+price,
 
 createdBy:currentUser.email,
 createdUid:currentUser.uid,
 
-/* ✅ ORIGINAL DRIVER */
 originalDriverUID:currentUser.uid,
-originalDriverName: nickname,
+originalDriverName: currentUserData.nickname || currentUser.email,
 
-/* ✅ CURRENT DRIVER */
 currentDriverUID:currentUser.uid,
-currentDriverName: nickname,
-
-passengerUID:currentUser.uid,
-passengerName: nickname,
-
-chain:[],
+currentDriverName: currentUserData.nickname || currentUser.email,
 
 createdAt:serverTimestamp(),
 
 status:"broadcast",
-dispatchType:"pool"
+dispatchType:"pool",
+returnReason:"",
+deleted:false
 };
 
 /* FRIEND */
@@ -113,41 +103,12 @@ if(sendType.value==="friend"){
 const friendUID=friendSelect.value;
 if(!friendUID) return alert("Select friend");
 
-const friendName = friendSelect.options[friendSelect.selectedIndex].text;
-
 const ref=await addDoc(collection(db,"fares"),data);
 
-await sendToFriend(
-ref.id,
-friendUID,
-currentUser.uid,
-nickname,
-friendName
-);
+await sendToFriend(ref.id,friendUID,currentUser.uid);
 
 alert("Sent successfully");
 location.href="dashboard.html";
-return;
-}
-
-/* AUTO */
-if(sendType.value==="auto"){
-
-navigator.geolocation.getCurrentPosition(async pos=>{
-
-const ref=await addDoc(collection(db,"fares"),data);
-
-await dispatchNearest(
-ref.id,
-pos.coords.latitude,
-pos.coords.longitude
-);
-
-alert("Auto dispatch started");
-location.href="dashboard.html";
-
-});
-
 return;
 }
 
@@ -156,5 +117,4 @@ await addDoc(collection(db,"fares"),data);
 
 alert("Broadcast created");
 location.href="dashboard.html";
-
 };
