@@ -24,7 +24,8 @@ const declineSound=new Audio("assets/decline.mp3");
 const notifySound=new Audio("assets/notification.mp3");
 
 function stopAll(){
-jobSound.pause(); jobSound.currentTime=0;
+jobSound.pause();
+jobSound.currentTime=0;
 }
 
 /* AUTH */
@@ -34,21 +35,12 @@ if(!user){ location.href="index.html"; return; }
 
 currentUser=user;
 
-document.getElementById("userInfo").textContent=user.email;
+document.getElementById("userInfo").textContent=user.displayName || user.email;
 
 listenPool();
 listenPosted();
 listenAccepted();
 listenAssigned();
-listenPassenger();
-
-/* LOCATION */
-navigator.geolocation.watchPosition(async pos=>{
-await updateDoc(doc(db,"users",user.uid),{
-lat:pos.coords.latitude,
-lng:pos.coords.longitude
-});
-});
 
 });
 
@@ -87,6 +79,8 @@ div.className="fare-card";
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Price: ${f.price}<br>
+Original: ${f.originalDriverName || "Unknown"}<br>
+
 <button onclick="acceptPool('${d.id}')">Accept</button>
 `;
 
@@ -97,13 +91,12 @@ box.appendChild(div);
 });
 }
 
-/* RACE FIX */
+/* ACCEPT POOL */
 window.acceptPool=async(id)=>{
 
 const ref=doc(db,"fares",id);
 
 try{
-
 await runTransaction(db,async(tx)=>{
 
 const snap=await tx.get(ref);
@@ -112,7 +105,8 @@ if(snap.data().status!=="broadcast") throw "taken";
 
 tx.update(ref,{
 status:"accepted",
-currentDriverUID:currentUser.uid
+currentDriverUID:currentUser.uid,
+currentDriverName: currentUser.displayName || currentUser.email
 });
 
 });
@@ -136,15 +130,14 @@ onSnapshot(q,snap=>{
 box.innerHTML="";
 snap.forEach(d=>{
 const f=d.data();
-const div=document.createElement("div");
 
+const div=document.createElement("div");
 div.className="fare-card";
 
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
 Status: ${f.status}<br>
-Current Driver: ${f.currentDriverUID}<br>
-Chain: ${f.chain?.length || 0}
+Current Driver: ${f.currentDriverName || "Unknown"}
 `;
 
 box.appendChild(div);
@@ -171,8 +164,8 @@ div.className="fare-card";
 
 div.innerHTML=`
 <b>${f.pickup}</b> → ${f.drop}<br>
-Original: ${f.originalDriverUID}<br>
-Chain: ${f.chain?.length || 0}
+Original: ${f.originalDriverName || "Unknown"}<br>
+
 <button onclick="completeJob('${d.id}')">Complete</button>
 `;
 
@@ -189,7 +182,7 @@ status:"completed"
 notifySound.play();
 };
 
-/* ASSIGNED POPUP */
+/* PRIVATE POPUP */
 function listenAssigned(){
 
 const q=query(collection(db,"fares"),
@@ -209,6 +202,7 @@ showPopup(c.doc.data(),c.doc.id);
 function showPopup(f,id){
 
 const popup=document.getElementById("jobPopup");
+
 popup.style.display="block";
 
 jobSound.loop=true;
@@ -217,7 +211,8 @@ jobSound.play();
 document.getElementById("jobDetails").innerHTML=`
 Pickup: ${f.pickup}<br>
 Drop: ${f.drop}<br>
-Price: ${f.price}
+Price: ${f.price}<br>
+From: ${f.originalDriverName || "Unknown"}
 `;
 
 const timer=setTimeout(()=>{
@@ -228,7 +223,8 @@ popup.style.display="none";
 document.getElementById("acceptBtn").onclick=async()=>{
 await updateDoc(doc(db,"fares",id),{
 status:"accepted",
-currentDriverUID:currentUser.uid
+currentDriverUID:currentUser.uid,
+currentDriverName: currentUser.displayName || currentUser.email
 });
 stopAll();
 acceptSound.play();
@@ -239,7 +235,9 @@ clearTimeout(timer);
 document.getElementById("rejectBtn").onclick=async()=>{
 await updateDoc(doc(db,"fares",id),{
 status:"broadcast",
-assignedTo:""
+assignedTo:"",
+currentDriverUID: f.originalDriverUID,
+currentDriverName: f.originalDriverName
 });
 stopAll();
 declineSound.play();
@@ -247,33 +245,4 @@ popup.style.display="none";
 clearTimeout(timer);
 };
 
-}
-
-/* PASSENGER */
-function listenPassenger(){
-
-const q=query(collection(db,"fares"),
-where("createdUid","==",currentUser.uid)
-);
-
-onSnapshot(q,snap=>{
-snap.docChanges().forEach(c=>{
-
-if(c.type==="modified"){
-
-const f=c.doc.data();
-
-if(f.status==="accepted"){
-alert("Driver accepted your job");
-}
-
-if(f.status==="completed"){
-alert("Job completed");
-notifySound.play();
-}
-
-}
-
-});
-});
 }

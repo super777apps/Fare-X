@@ -23,6 +23,7 @@ const roleSelect=document.getElementById("roleSelect");
 /* AUTH */
 onAuthStateChanged(auth,user=>{
 if(!user){ location.href="index.html"; return; }
+
 currentUser=user;
 loadFriends(user.uid);
 });
@@ -76,6 +77,9 @@ alert("Fill all fields");
 return;
 }
 
+/* ✅ GET NICKNAME */
+const nickname = currentUser.displayName || currentUser.email;
+
 const role = roleSelect?.value || "driver";
 
 const data={
@@ -84,11 +88,16 @@ pickup,drop,time:datetime,price,
 createdBy:currentUser.email,
 createdUid:currentUser.uid,
 
+/* ✅ ORIGINAL DRIVER */
 originalDriverUID:currentUser.uid,
+originalDriverName: nickname,
+
+/* ✅ CURRENT DRIVER */
 currentDriverUID:currentUser.uid,
+currentDriverName: nickname,
 
 passengerUID:currentUser.uid,
-role: role,
+passengerName: nickname,
 
 chain:[],
 
@@ -104,9 +113,17 @@ if(sendType.value==="friend"){
 const friendUID=friendSelect.value;
 if(!friendUID) return alert("Select friend");
 
+const friendName = friendSelect.options[friendSelect.selectedIndex].text;
+
 const ref=await addDoc(collection(db,"fares"),data);
 
-await sendToFriend(ref.id,friendUID,currentUser.uid);
+await sendToFriend(
+ref.id,
+friendUID,
+currentUser.uid,
+nickname,
+friendName
+);
 
 alert("Sent successfully");
 location.href="dashboard.html";
