@@ -347,3 +347,10 @@ html, body {
 .danger {
   background: crimson;
 }
+.gold{
+border:1px solid #d4af37;
+box-shadow:0 0 10px rgba(212,175,55,0.3);
+border-radius:10px;
+padding:10px;
+margin-bottom:10px;
+}
