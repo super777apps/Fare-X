@@ -53,7 +53,7 @@ document.getElementById("logoutBtn").onclick = async () => {
 
 /* ---------- NAVIGATION ---------- */
 document.getElementById("createFareBtn").onclick = () => openPage("createPassenger.html");
-document.getElementById("driversBtn").onclick = () => openPage("friends.html");
+document.getElementById("driversBtn").onclick = () => openPage("passengerDrivers.html");;
 document.getElementById("profileBtn").onclick = () => openPage("passengerProfile.html");
 document.getElementById("helpBtn").onclick = () => openPage("help.html");
 
