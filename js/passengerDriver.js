@@ -12,24 +12,23 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
-let myDrivers = [];
-
 const list = document.getElementById("driversList");
 const searchInput = document.getElementById("searchInput");
 
+let myDrivers = [];
+
 /* ---------- AUTH ---------- */
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     location.href = "index.html";
     return;
   }
 
   currentUser = user;
-
-  loadDrivers(); // SAME AS CREATE PAGE
+  loadDrivers();
 });
 
-/* ---------- LOAD DRIVERS (SAME LOGIC AS DROPDOWN) ---------- */
+/* ---------- LOAD DRIVERS ---------- */
 function loadDrivers() {
 
   const q = query(
@@ -37,7 +36,7 @@ function loadDrivers() {
     where("owner", "==", currentUser.uid)
   );
 
-  onSnapshot(q, snap => {
+  onSnapshot(q, (snap) => {
 
     myDrivers = [];
 
@@ -55,11 +54,11 @@ function renderDrivers(data) {
   list.innerHTML = "";
 
   if (data.length === 0) {
-    list.innerHTML = `<div class="gold">No drivers added</div>`;
+    list.innerHTML = `<div class="gold">No drivers added yet</div>`;
     return;
   }
 
-  data.forEach(f => {
+  data.forEach(d => {
 
     const div = document.createElement("div");
     div.className = "fare-card";
@@ -67,7 +66,7 @@ function renderDrivers(data) {
     div.innerHTML = `
       <div class="fare-row">
         <span>Driver:</span>
-        <b>${f.nickName || f.name || f.email}</b>
+        <b>${d.nickName || d.name || d.email}</b>
       </div>
     `;
 
@@ -75,12 +74,11 @@ function renderDrivers(data) {
   });
 }
 
-/* ---------- SEARCH + ADD ---------- */
+/* ---------- SEARCH ---------- */
 searchInput.addEventListener("input", async () => {
 
   const val = searchInput.value.trim().toLowerCase();
 
-  // If empty → show existing drivers
   if (!val) {
     renderDrivers(myDrivers);
     return;
@@ -88,12 +86,11 @@ searchInput.addEventListener("input", async () => {
 
   list.innerHTML = `<div class="gold">Searching...</div>`;
 
-  /* SEARCH ALL USERS */
-  const snap = await getDocs(collection(db, "users"));
+  const usersSnap = await getDocs(collection(db, "users"));
 
   let results = [];
 
-  snap.forEach(docSnap => {
+  usersSnap.forEach(docSnap => {
 
     const u = docSnap.data();
 
@@ -102,17 +99,16 @@ searchInput.addEventListener("input", async () => {
       (u.nickName || "").toLowerCase().includes(val)
     ) {
 
-      const already = myDrivers.find(d => d.friendUID === docSnap.id);
+      const exists = myDrivers.find(d => d.friendUID === docSnap.id);
 
       results.push({
         uid: docSnap.id,
         nickName: u.nickName,
-        already
+        exists
       });
     }
   });
 
-  /* SHOW RESULTS */
   list.innerHTML = "";
 
   if (results.length === 0) {
@@ -132,7 +128,7 @@ searchInput.addEventListener("input", async () => {
       </div>
 
       ${
-        u.already
+        u.exists
         ? `<div class="gold">Already Added</div>`
         : `
         <div class="fare-actions">
@@ -146,7 +142,6 @@ searchInput.addEventListener("input", async () => {
 
     list.appendChild(div);
   });
-
 });
 
 /* ---------- ADD DRIVER ---------- */
