@@ -1,23 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fare-X | My Drivers</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | My Drivers</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="lux-header">
-  <div class="logo">Fare<span class="gold">-X</span></div>
-</div>
-
 <div class="lux-main">
+  <button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">← Back to Dashboard</button>
+  <h2 style="text-align:center; margin:20px 0;">My Drivers</h2>
 
-  <h2 class="section-title">My Drivers</h2>
-  <input id="searchInput" placeholder="Search drivers by nickname..." style="margin-bottom:15px;">
-  <div id="driversList" class="fare-list"></div>
-
+  <input type="text" id="driverSearch" placeholder="Search for driver by nickname">
+  <div id="driversList"></div>
 </div>
 
 <script type="module" src="js/passengerDriver.js"></script>
