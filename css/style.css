@@ -33,7 +33,48 @@ body {
   background: linear-gradient(180deg, #020202, #090909);
   border-bottom: 1px solid rgba(212,175,55,.35);
   box-shadow: 0 0 18px rgba(212,175,55,.2);
+
+  /* NEW FIX */
+  flex-wrap: wrap;
+  gap: 10px;
 }
+
+/* NEW USER BLOCK */
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #d4af37;
+  font-weight: 600;
+}
+
+/* NEW NAV FIX */
+.header-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* SMALL BUTTON */
+.lux-btn.small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* MOBILE HEADER FIX */
+@media (max-width: 600px) {
+  .header-user {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .header-nav {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ---------- LOGO ---------- */
 
 .logo {
   font-size: 28px;
@@ -177,8 +218,9 @@ input:focus, textarea:focus, select:focus {
 
 .fare-actions {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   margin-top: 14px;
+  flex-wrap: wrap; /* NEW FIX */
 }
 
 .accept-btn {
@@ -222,6 +264,7 @@ body::before {
   from { transform: translateY(0px); }
   to { transform: translateY(-120px); }
 }
+
 /* ---------- MOBILE FIX ---------- */
 
 html, body {
@@ -263,19 +306,9 @@ html, body {
     flex-direction: column;
   }
 }
-/* ----- DASHBOARD TAB BUTTON FIX ----- */
 
-@media (max-width: 600px) {
-  .lux-main > div:first-child {
-    flex-wrap: wrap;
-  }
+/* ---------- POPUPS ---------- */
 
-  .lux-main > div:first-child .lux-btn {
-    flex: 1 1 30%;
-    padding: 10px 6px;
-    font-size: 13px;
-  }
-}
 .private-popup{
   position:fixed;
   inset:0;
@@ -309,6 +342,7 @@ html, body {
   gap:10px;
   justify-content:center;
 }
+
 .job-popup {
   position: fixed;
   top: 50%;
@@ -346,11 +380,4 @@ html, body {
 
 .danger {
   background: crimson;
-}
-.gold{
-border:1px solid #d4af37;
-box-shadow:0 0 10px rgba(212,175,55,0.3);
-border-radius:10px;
-padding:10px;
-margin-bottom:10px;
 }
