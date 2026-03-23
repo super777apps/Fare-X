@@ -54,7 +54,7 @@ document.getElementById("logoutBtn").onclick = async () => {
 /* ---------- NAVIGATION ---------- */
 document.getElementById("createFareBtn").onclick = () => openPage("createPassenger.html");
 document.getElementById("driversBtn").onclick = () => {
-  window.location.href = "passengerDrivers.html";
+  window.location.href = "passengerDriver.html";
 };
 document.getElementById("profileBtn").onclick = () => openPage("passengerProfile.html");
 document.getElementById("helpBtn").onclick = () => openPage("help.html");
