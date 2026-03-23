@@ -10,30 +10,18 @@
 
 <div class="lux-header">
   <div class="logo">Fare<span class="gold">-X</span></div>
-  <div>
-    <span id="passengerName" class="gold"></span> |
-    <span id="passengerRole" class="gold"></span>
-  </div>
+  <div id="passengerInfo" style="margin-left:auto; color:#d4af37; font-weight:600;"></div>
 </div>
 
 <div class="lux-main">
 
-  <!-- BUTTONS -->
-  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
-    <button id="createFareBtn" class="lux-btn">Create Fare</button>
-    <button id="driversBtn" class="lux-btn">Drivers</button>
-    <button id="profileBtn" class="lux-btn">Profile</button>
-    <button id="jobsBtn" class="lux-btn">Jobs</button>
-    <button id="helpBtn" class="lux-btn">Help</button>
-    <button id="logoutBtn" class="lux-btn danger">Logout</button>
-  </div>
+  <button id="createFareBtn" class="lux-btn full">Create Fare</button>
+  <button id="driversBtn" class="lux-btn full">Drivers</button>
+  <button id="profileBtn" class="lux-btn full">Profile</button>
+  <button id="helpBtn" class="lux-btn full">Help</button>
+  <button id="jobsBtn" class="lux-btn full">Jobs</button>
 
-  <!-- PAGE VIEW -->
-  <div id="pageContainer" style="margin-bottom:25px;"></div>
-
-  <!-- JOBS SECTION -->
-  <h2 class="section-title">Your Jobs</h2>
-  <div id="jobsList" class="fare-list"></div>
+  <div id="jobsList" class="fare-list" style="margin-top:20px;"></div>
 
 </div>
 
