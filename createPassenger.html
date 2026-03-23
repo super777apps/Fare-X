@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Create Fare (Passenger)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="lux-main">
+
+  <div class="auth-box">
+    <h1 class="auth-title">Create Fare</h1>
+    <div class="auth-sub">Send a ride request to your drivers</div>
+
+    <input id="pickup" type="text" placeholder="Pickup Location">
+    <input id="drop" type="text" placeholder="Drop Location">
+    <input id="datetime" type="datetime-local" placeholder="Date & Time">
+    <input id="price" type="number" placeholder="Price">
+
+    <select id="driverSelect">
+      <option value="">Select Driver</option>
+    </select>
+
+    <button id="createFareBtn" class="lux-btn full">Send to Driver</button>
+
+  </div>
+
+</div>
+
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/createFarePassenger.js"></script>
+
+</body>
+</html>

@@ -1,33 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Driver Profile | Fare-X</title>
+  <title>Profile</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header class="lux-header">
-  <h1 class="logo">Fare<span class="gold">-X</span></h1>
-  <button id="logoutBtn" class="lux-btn">Logout</button>
+  <h1>Profile</h1>
+  <a href="dashboard.html" class="lux-btn">Back</a>
 </header>
 
-<main class="lux-main">
+<div class="lux-main">
 
-<h2 class="section-title">Driver Profile</h2>
+  <div class="fare-card">
 
-<input id="fullName" placeholder="Full Name" required>
-<input id="email" placeholder="Email" type="email" required>
-<input id="mobile" placeholder="Mobile Number" required>
-<input id="nickname" placeholder="Nickname (e.g. Alex BMW)" required>
-<input id="carNumber" placeholder="Car Number" required>
-<input id="carBrand" placeholder="Car Brand & Model" required>
+    <label>Nickname</label>
+    <input id="nickname" placeholder="Enter nickname">
 
-<button id="saveProfileBtn" class="lux-btn full">Save Profile</button>
+    <label>Role</label>
+    <select id="role">
+      <option value="driver">Driver</option>
+      <option value="passenger">Passenger</option>
+    </select>
 
-</main>
-<script type="module" src="js/firebase.js"></script>
+    <br><br>
+
+    <button id="saveBtn" class="lux-btn full">Save</button>
+
+  </div>
+
+</div>
+
 <script type="module" src="js/profile.js"></script>
 
 </body>

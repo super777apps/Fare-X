@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Passenger Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="lux-header">
+  <div class="logo">Fare<span class="gold">-X</span></div>
+  <div id="userInfo"></div>
+  <button id="logoutBtn" class="lux-btn">Logout</button>
+</div>
+
+<div class="lux-main">
+  <button onclick="location.href='createPassenger.html'" class="lux-btn full">Create Fare</button>
+  <button onclick="location.href='driversPassenger.html'" class="lux-btn full">Drivers</button>
+  <button onclick="location.href='profilePassenger.html'" class="lux-btn full">Profile</button>
+
+  <h2 class="section-title">Jobs</h2>
+  <div id="jobList" class="fare-list"></div>
+</div>
+
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/dashboardPassenger.js"></script>
+</body>
+</html>
