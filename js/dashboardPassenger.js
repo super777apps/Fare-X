@@ -1,13 +1,9 @@
 import { db, auth } from "./firebase.js";
-import { collection, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, query, where, onSnapshot, getDocs, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentUser = null;
 
-const passengerInfo = document.getElementById("passengerInfo");
-const jobsList = document.getElementById("jobsList");
-
-/* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     location.href = "index.html";
@@ -15,59 +11,48 @@ onAuthStateChanged(auth, async (user) => {
   }
   currentUser = user;
 
-  // Show nickname and role
-  const userSnap = await getDocs(collection(db, "users"));
-  const docRef = userSnap.docs.find(d => d.id === currentUser.uid);
-  const u = docRef ? docRef.data() : null;
-  const nick = u?.nickName || currentUser.email;
-  passengerInfo.textContent = `${nick} – Passenger`;
+  // Show logged in nickname and role
+  const userSnap = await getDocs(query(collection(db, "users"), where("uid", "==", currentUser.uid)));
+  let nick = currentUser.email;
+  let role = "";
+  userSnap.forEach(d => {
+    nick = d.data().nickName || currentUser.email;
+    role = d.data().role || "passenger";
+  });
+  document.getElementById("nickNameDisplay").textContent = nick;
+  document.getElementById("roleDisplay").textContent = role;
 
   loadJobs();
 });
 
-/* ---------- BUTTONS ---------- */
-document.getElementById("createFareBtn").onclick = () => {
-  window.location.href = "createPassenger.html";
-};
-
-document.getElementById("driversBtn").onclick = () => {
-  window.location.href = "passengerDriver.html";
-};
-
-document.getElementById("profileBtn").onclick = () => {
-  window.location.href = "passengerProfile.html";
-};
-
-document.getElementById("helpBtn").onclick = () => {
-  window.location.href = "help.html";
-};
-
-document.getElementById("jobsBtn").onclick = () => {
-  loadJobs();
-};
-
-/* ---------- LOAD JOBS ---------- */
-async function loadJobs() {
+function loadJobs() {
+  const jobsContainer = document.getElementById("jobsContainer");
+  jobsContainer.innerHTML = "<h3>Loading Jobs...</h3>";
   const q = query(collection(db, "fares"), where("passengerUID", "==", currentUser.uid));
   onSnapshot(q, snap => {
-    jobsList.innerHTML = "";
-    if (snap.empty) {
-      jobsList.innerHTML = `<div class="gold">No jobs yet</div>`;
-      return;
-    }
-
+    jobsContainer.innerHTML = "<h3>Your Jobs:</h3>";
     snap.forEach(docSnap => {
-      const f = docSnap.data();
+      const j = docSnap.data();
       const div = document.createElement("div");
       div.className = "fare-card";
       div.innerHTML = `
-        <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
-        <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
-        <div class="fare-row"><span>Date/Time:</span><b>${f.time}</b></div>
-        <div class="fare-row"><span>Price:</span><b>${f.price}</b></div>
-        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+        <div class="fare-row"><span>Pickup:</span> <b>${j.pickup}</b></div>
+        <div class="fare-row"><span>Drop:</span> <b>${j.drop}</b></div>
+        <div class="fare-row"><span>Driver:</span> <b>${j.passengerName}</b></div>
+        <div class="fare-row"><span>Status:</span> <b>${j.status}</b></div>
       `;
-      jobsList.appendChild(div);
+      jobsContainer.appendChild(div);
     });
   });
 }
+
+// Button events
+document.getElementById("createFareBtn").onclick = () => location.href = "createPassenger.html";
+document.getElementById("driversBtn").onclick = () => location.href = "passengerDriver.html";
+document.getElementById("profileBtn").onclick = () => location.href = "passengerProfile.html";
+document.getElementById("jobsBtn").onclick = loadJobs;
+document.getElementById("helpBtn").onclick = () => location.href = "help.html";
+document.getElementById("logoutBtn").onclick = async () => {
+  await auth.signOut();
+  location.href = "index.html";
+};
