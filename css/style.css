@@ -381,3 +381,8 @@ html, body {
 .danger {
   background: crimson;
 }
+/* ---------- PASSENGER DASHBOARD BUTTON SPACING ---------- */
+#dashboardPassenger .lux-btn,
+.lux-main .lux-btn {
+  margin-bottom: 15px; /* space between buttons */
+}
