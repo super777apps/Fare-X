@@ -3,34 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fare-X | Create Fare (Passenger)</title>
+  <title>Fare-X | Create Fare</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+<div class="lux-header">
+  <div class="logo">Fare<span class="gold">-X</span></div>
+</div>
+
 <div class="lux-main">
 
-  <div class="auth-box">
-    <h1 class="auth-title">Create Fare</h1>
-    <div class="auth-sub">Send a ride request to your drivers</div>
-
-    <input id="pickup" type="text" placeholder="Pickup Location">
-    <input id="drop" type="text" placeholder="Drop Location">
-    <input id="datetime" type="datetime-local" placeholder="Date & Time">
-    <input id="price" type="number" placeholder="Price">
-
-    <select id="driverSelect">
-      <option value="">Select Driver</option>
-    </select>
-
-    <button id="createFareBtn" class="lux-btn full">Send to Driver</button>
-
+  <!-- TOP NAV BUTTON -->
+  <div style="margin-bottom:15px;">
+    <button onclick="location.href='dashboardPassenger.html'" class="lux-btn">
+      ← Dashboard
+    </button>
   </div>
+
+  <h2 class="section-title">Create Fare</h2>
+
+  <!-- FORM -->
+  <input id="pickup" type="text" placeholder="Pickup Location">
+
+  <input id="drop" type="text" placeholder="Drop Location">
+
+  <input id="datetime" type="datetime-local">
+
+  <input id="price" type="number" placeholder="Price">
+
+  <!-- DRIVER SELECT -->
+  <select id="driverSelect">
+    <option value="">Loading drivers...</option>
+  </select>
+
+  <!-- ACTION BUTTON -->
+  <button id="createFareBtn" class="lux-btn full">
+    Send to Driver
+  </button>
 
 </div>
 
-<script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/createFarePassenger.js"></script>
+<script type="module" src="js/createPassenger.js"></script>
 
 </body>
 </html>
