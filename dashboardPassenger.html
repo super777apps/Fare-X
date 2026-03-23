@@ -16,21 +16,26 @@
   </div>
 </div>
 
-<div class="lux-main" id="passengerMain">
+<div class="lux-main">
 
-  <!-- Dashboard buttons -->
-  <div class="dashboard-buttons" style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+  <!-- BUTTONS -->
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
     <button id="createFareBtn" class="lux-btn">Create Fare</button>
     <button id="driversBtn" class="lux-btn">Drivers</button>
     <button id="profileBtn" class="lux-btn">Profile</button>
+    <button id="helpBtn" class="lux-btn">Help</button>
     <button id="logoutBtn" class="lux-btn danger">Logout</button>
   </div>
 
-  <!-- Container for content -->
-  <div id="passengerContent"></div>
+  <!-- PAGE VIEW (NO FETCH → FIXES SPCK ERROR) -->
+  <div id="pageContainer" style="margin-bottom:25px;"></div>
+
+  <!-- JOBS ALWAYS VISIBLE -->
+  <h2 class="section-title">Your Jobs</h2>
+  <div id="jobsList" class="fare-list"></div>
 
 </div>
 
-<script type="module" src="js/passengerDashboard.js"></script>
+<script type="module" src="js/dashboardPassenger.js"></script>
 </body>
 </html>
