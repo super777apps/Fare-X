@@ -25,11 +25,12 @@ onAuthStateChanged(auth, user => {
   }
 
   currentUser = user;
-  loadMyDrivers();
+
+  loadDrivers(); // SAME AS CREATE PAGE
 });
 
-/* ---------- LOAD MY DRIVERS (FRIENDS) ---------- */
-function loadMyDrivers() {
+/* ---------- LOAD DRIVERS (SAME LOGIC AS DROPDOWN) ---------- */
+function loadDrivers() {
 
   const q = query(
     collection(db, "friends"),
@@ -41,27 +42,24 @@ function loadMyDrivers() {
     myDrivers = [];
 
     snap.forEach(docSnap => {
-      myDrivers.push({
-        id: docSnap.id,
-        ...docSnap.data()
-      });
+      myDrivers.push(docSnap.data());
     });
 
-    renderMyDrivers();
+    renderDrivers(myDrivers);
   });
 }
 
-/* ---------- RENDER MY DRIVERS ---------- */
-function renderMyDrivers() {
+/* ---------- RENDER ---------- */
+function renderDrivers(data) {
 
   list.innerHTML = "";
 
-  if (myDrivers.length === 0) {
-    list.innerHTML = `<div class="gold">No drivers added yet</div>`;
+  if (data.length === 0) {
+    list.innerHTML = `<div class="gold">No drivers added</div>`;
     return;
   }
 
-  myDrivers.forEach(d => {
+  data.forEach(f => {
 
     const div = document.createElement("div");
     div.className = "fare-card";
@@ -69,7 +67,7 @@ function renderMyDrivers() {
     div.innerHTML = `
       <div class="fare-row">
         <span>Driver:</span>
-        <b>${d.nickName || d.name || d.email}</b>
+        <b>${f.nickName || f.name || f.email}</b>
       </div>
     `;
 
@@ -77,32 +75,26 @@ function renderMyDrivers() {
   });
 }
 
-/* ---------- SEARCH ---------- */
+/* ---------- SEARCH + ADD ---------- */
 searchInput.addEventListener("input", async () => {
 
   const val = searchInput.value.trim().toLowerCase();
 
-  // If empty → show my drivers
+  // If empty → show existing drivers
   if (!val) {
-    renderMyDrivers();
+    renderDrivers(myDrivers);
     return;
   }
 
   list.innerHTML = `<div class="gold">Searching...</div>`;
 
-  /* 1️⃣ SEARCH IN MY DRIVERS */
-  const localResults = myDrivers.filter(d =>
-    (d.nickName || d.name || d.email || "")
-      .toLowerCase()
-      .includes(val)
-  );
+  /* SEARCH ALL USERS */
+  const snap = await getDocs(collection(db, "users"));
 
-  /* 2️⃣ SEARCH IN ALL USERS (DRIVERS ONLY) */
-  const usersSnap = await getDocs(collection(db, "users"));
+  let results = [];
 
-  let globalResults = [];
+  snap.forEach(docSnap => {
 
-  usersSnap.forEach(docSnap => {
     const u = docSnap.data();
 
     if (
@@ -110,40 +102,25 @@ searchInput.addEventListener("input", async () => {
       (u.nickName || "").toLowerCase().includes(val)
     ) {
 
-      // avoid duplicates
-      const exists = myDrivers.find(d => d.friendUID === docSnap.id);
+      const already = myDrivers.find(d => d.friendUID === docSnap.id);
 
-      if (!exists) {
-        globalResults.push({
-          uid: docSnap.id,
-          ...u
-        });
-      }
+      results.push({
+        uid: docSnap.id,
+        nickName: u.nickName,
+        already
+      });
     }
   });
 
-  /* ---------- SHOW RESULTS ---------- */
+  /* SHOW RESULTS */
   list.innerHTML = "";
 
-  // Show my drivers first
-  localResults.forEach(d => {
+  if (results.length === 0) {
+    list.innerHTML = `<div class="gold">No drivers found</div>`;
+    return;
+  }
 
-    const div = document.createElement("div");
-    div.className = "fare-card";
-
-    div.innerHTML = `
-      <div class="fare-row">
-        <span>Driver:</span>
-        <b>${d.nickName}</b>
-      </div>
-      <div class="gold">Already Added</div>
-    `;
-
-    list.appendChild(div);
-  });
-
-  // Show new drivers to add
-  globalResults.forEach(u => {
+  results.forEach(u => {
 
     const div = document.createElement("div");
     div.className = "fare-card";
@@ -154,37 +131,32 @@ searchInput.addEventListener("input", async () => {
         <b>${u.nickName}</b>
       </div>
 
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="addDriver('${u.uid}','${u.nickName}')">
-          Add Driver
-        </button>
-      </div>
+      ${
+        u.already
+        ? `<div class="gold">Already Added</div>`
+        : `
+        <div class="fare-actions">
+          <button class="lux-btn" onclick="addDriver('${u.uid}','${u.nickName}')">
+            Add Driver
+          </button>
+        </div>
+        `
+      }
     `;
 
     list.appendChild(div);
   });
-
-  if (localResults.length === 0 && globalResults.length === 0) {
-    list.innerHTML = `<div class="gold">No matching drivers</div>`;
-  }
 
 });
 
 /* ---------- ADD DRIVER ---------- */
 window.addDriver = async (uid, name) => {
 
-  try {
+  await addDoc(collection(db, "friends"), {
+    owner: currentUser.uid,
+    friendUID: uid,
+    nickName: name
+  });
 
-    await addDoc(collection(db, "friends"), {
-      owner: currentUser.uid,
-      friendUID: uid,
-      nickName: name
-    });
-
-    alert("Driver added");
-
-  } catch (err) {
-    console.error(err);
-    alert("Error adding driver");
-  }
+  alert("Driver added successfully");
 };
