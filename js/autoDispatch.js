@@ -1,62 +1,124 @@
-import { db } from "./firebase.js";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { auth, db } from "./firebase.js";
 
-/* AUTO DISPATCH NEAREST DRIVER */
-export async function dispatchNearest(jobId, lat, lng) {
-  const jobRef = doc(db, "fares", jobId);
-  const jobSnap = await getDoc(jobRef);
-  if (!jobSnap.exists()) return;
-  const job = jobSnap.data();
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  // Find nearest driver (excluding original driver)
-  const driversQ = query(collection(db, "users"), where("role", "==", "driver"));
-  const driversSnap = await getDocs(driversQ);
-  let nearestDriver = null;
-  let minDist = Infinity;
+import {
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  driversSnap.forEach(d => {
-    const f = d.data();
-    if (!f.lat || !f.lng || f.uid === job.originalDriverUID) return;
-    const dist = getDistance(lat, lng, f.lat, f.lng);
-    if (dist < minDist) {
-      minDist = dist;
-      nearestDriver = d;
+
+/* LOGIN */
+window.login = async () => {
+
+  try {
+
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+
+    if (!email || !pass) {
+      alert("Enter email & password");
+      return;
     }
-  });
 
-  if (!nearestDriver) return;
+    const res = await signInWithEmailAndPassword(auth, email, pass);
 
-  const assignedUID = nearestDriver.id;
+    await routeUser(res.user);
 
-  await updateDoc(jobRef, {
-    status: "assigned",
-    dispatchType: "auto",
-    assignedTo: assignedUID,
-    currentDriverUID: assignedUID,
-    chain: [...(job.chain || []), { from: job.originalDriverUID, to: assignedUID, time: Date.now() }],
-    dispatchStartedAt: serverTimestamp()
-  });
+  } catch (err) {
+    alert(err.message);
+  }
 
-  // Return to original driver after 12s if not accepted
-  setTimeout(async () => {
-    const snap2 = await getDoc(jobRef);
-    if (!snap2.exists()) return;
-    const f2 = snap2.data();
-    if (f2.status === "assigned" && f2.assignedTo === assignedUID) {
-      await updateDoc(jobRef, { status: "returned", currentDriverUID: f2.originalDriverUID, assignedTo: "" });
-    }
-  }, 12000);
+};
+
+
+/* SIGNUP DRIVER */
+window.signupDriver = async () => {
+
+  try {
+
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    const nick = document.getElementById("nickname").value;
+
+    if (!nick) return alert("Enter nickname");
+
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+
+    await setDoc(doc(db, "users", res.user.uid), {
+      uid: res.user.uid,
+      email,
+      nickname: nick,
+      role: "driver"
+    });
+
+    location.href = "dashboard-driver.html";
+
+  } catch (err) {
+    alert(err.message);
+  }
+
+};
+
+
+/* SIGNUP PASSENGER */
+window.signupPassenger = async () => {
+
+  try {
+
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    const nick = document.getElementById("nickname").value;
+
+    if (!nick) return alert("Enter nickname");
+
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+
+    await setDoc(doc(db, "users", res.user.uid), {
+      uid: res.user.uid,
+      email,
+      nickname: nick,
+      role: "passenger"
+    });
+
+    location.href = "dashboard-passenger.html";
+
+  } catch (err) {
+    alert(err.message);
+  }
+
+};
+
+
+/* ROUTE USER */
+async function routeUser(user) {
+
+  const snap = await getDoc(doc(db, "users", user.uid));
+
+  if (!snap.exists()) {
+    alert("User profile missing");
+    return;
+  }
+
+  const role = snap.data().role;
+
+  if (role === "driver") {
+    location.href = "dashboard-driver.html";
+  } else {
+    location.href = "dashboard-passenger.html";
+  }
+
 }
 
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-function deg2rad(deg) { return deg * (Math.PI / 180); }
+
+/* AUTO LOGIN */
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    await routeUser(user);
+  }
+});

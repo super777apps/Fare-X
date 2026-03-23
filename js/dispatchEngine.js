@@ -1,52 +1,64 @@
 import { db } from "./firebase.js";
-
 import {
-doc,
-updateDoc,
-getDoc,
-serverTimestamp
+  doc,
+  updateDoc,
+  getDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const TIMEOUT = 12000;
 
-export async function sendToFriend(jobId,friendUID,senderUID){
+/* SEND TO FRIEND */
+export async function sendToFriend(jobId, friendUID, senderUID) {
 
-const ref=doc(db,"fares",jobId);
-const snap=await getDoc(ref);
+  const ref = doc(db, "fares", jobId);
+  const snap = await getDoc(ref);
 
-const senderSnap=await getDoc(doc(db,"users",senderUID));
-const friendSnap=await getDoc(doc(db,"users",friendUID));
+  let chain = snap.data().chain || [];
 
-const senderName=senderSnap.data()?.nickname || "";
-const friendName=friendSnap.data()?.nickname || "";
+  chain.push({
+    from: senderUID,
+    to: friendUID,
+    time: Date.now()
+  });
 
-await updateDoc(ref,{
-status:"assigned",
-assignedTo:friendUID,
-currentDriverUID:friendUID,
-currentDriverName:friendName,
-lastSenderUID:senderUID,
-lastSenderName:senderName,
-dispatchStartedAt:serverTimestamp()
-});
+  await updateDoc(ref, {
+    status: "assigned",
+    assignedTo: friendUID,
+    currentDriverUID: friendUID,
+    lastSenderUID: senderUID,
+    dispatchType: "friend",
+    chain: chain,
+    dispatchStartedAt: serverTimestamp()
+  });
 
-setTimeout(async()=>{
-
-const s=await getDoc(ref);
-if(!s.exists()) return;
-
-if(s.data().status==="assigned"){
-
-await updateDoc(ref,{
-status:"returned",
-assignedTo:"",
-currentDriverUID:s.data().originalDriverUID,
-currentDriverName:s.data().originalDriverName,
-returnReason:"Timeout"
-});
-
+  startTimeout(jobId);
 }
 
-},TIMEOUT);
 
+/* AUTO RETURN TO ORIGINAL DRIVER */
+async function startTimeout(jobId) {
+
+  setTimeout(async () => {
+
+    const ref = doc(db, "fares", jobId);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) return;
+
+    const job = snap.data();
+
+    if (job.status === "assigned") {
+
+      await updateDoc(ref, {
+        status: "returned",
+        assignedTo: "",
+        currentDriverUID: job.originalDriverUID,
+        returnReason: "Timeout",
+        notifyOriginal: true
+      });
+
+    }
+
+  }, TIMEOUT);
 }

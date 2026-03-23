@@ -1,77 +1,74 @@
 import { auth, db } from "./firebase.js";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import {
-  doc,
-  setDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const emailInput = document.getElementById("emailInput");
 const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
-const registerBtn = document.getElementById("registerBtn");
+const registerDriverBtn = document.getElementById("registerDriverBtn");
+const registerPassengerBtn = document.getElementById("registerPassengerBtn");
 
-/* ---------------- LOGIN ---------------- */
-
-loginBtn.addEventListener("click", async () => {
+// Login
+loginBtn.onclick = async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
-
-  if (!email || !password) {
-    alert("Enter email and password");
-    return;
-  }
+  if (!email || !password) return alert("Fill all fields");
 
   try {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    await createUserIfNotExists(cred.user);
-    location.href = "dashboard.html";
-  } catch (err) {
-    alert(err.message);
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+    if (!userDoc.exists()) throw "User data missing";
+
+    const role = userDoc.data().role;
+    if (role === "driver") {
+      location.href = "dashboardDriver.html";
+    } else if (role === "passenger") {
+      location.href = "dashboardPassenger.html";
+    } else {
+      alert("Invalid user role");
+    }
+
+  } catch (e) {
+    alert("Login failed: " + e);
   }
-});
+};
 
-/* ---------------- REGISTER ---------------- */
-
-registerBtn.addEventListener("click", async () => {
+// Create Driver
+registerDriverBtn.onclick = async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
-
-  if (!email || !password) {
-    alert("Enter email and password");
-    return;
-  }
+  if (!email || !password) return alert("Fill all fields");
 
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await createUserIfNotExists(cred.user);
-    location.href = "dashboard.html";
-  } catch (err) {
-    alert(err.message);
+    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      email,
+      role: "driver",
+      nickname: "",
+      createdAt: new Date()
+    });
+    alert("Driver account created. You can login now.");
+  } catch (e) {
+    alert("Error creating driver: " + e);
   }
-});
+};
 
-/* ---------------- AUTO CREATE USER ---------------- */
+// Create Passenger
+registerPassengerBtn.onclick = async () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+  if (!email || !password) return alert("Fill all fields");
 
-async function createUserIfNotExists(user) {
-  const ref = doc(db, "users", user.uid);
-
-  await setDoc(ref, {
-    uid: user.uid,
-    email: user.email,
-    createdAt: serverTimestamp()
-  }, { merge: true });
-}
-
-/* ---------------- AUTO LOGIN ---------------- */
-
-onAuthStateChanged(auth, user => {
-  if (user && location.pathname.includes("index.html")) {
-    location.href = "dashboard.html";
+  try {
+    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      email,
+      role: "passenger",
+      nickname: "",
+      createdAt: new Date()
+    });
+    alert("Passenger account created. You can login now.");
+  } catch (e) {
+    alert("Error creating passenger: " + e);
   }
-});
+};
