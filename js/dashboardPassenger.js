@@ -31,7 +31,6 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  // Get nickname + role
   const snap = await getDoc(doc(db, "users", user.uid));
 
   if (snap.exists()) {
@@ -52,13 +51,19 @@ document.getElementById("logoutBtn").onclick = async () => {
   location.href = "index.html";
 };
 
-/* ---------- BUTTON NAVIGATION (NO FETCH) ---------- */
+/* ---------- NAVIGATION ---------- */
 document.getElementById("createFareBtn").onclick = () => openPage("createPassenger.html");
 document.getElementById("driversBtn").onclick = () => openPage("friends.html");
 document.getElementById("profileBtn").onclick = () => openPage("passengerProfile.html");
 document.getElementById("helpBtn").onclick = () => openPage("help.html");
 
-/* ---------- LOAD PAGE USING IFRAME (FIXES SPCK ERROR) ---------- */
+/* NEW JOB BUTTON */
+document.getElementById("jobsBtn").onclick = () => {
+  pageContainer.innerHTML = ""; // clear iframe
+  loadJobs(); // refresh jobs
+};
+
+/* ---------- PAGE LOADER ---------- */
 function openPage(url) {
   pageContainer.innerHTML = `
     <iframe src="${url}" 
