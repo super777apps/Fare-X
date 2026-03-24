@@ -1,27 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fare-X | Passenger Dashboard</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Passenger Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="lux-header">
   <div class="logo">Fare<span class="gold">-X</span></div>
-  <div id="passengerInfo" style="margin-left:auto; color:#d4af37; font-weight:600;"></div>
+
+  <div style="text-align:right;">
+    <div id="userName" style="font-weight:600;"></div>
+    <div id="userRole" style="font-size:12px; color:#d4af37;"></div>
+  </div>
 </div>
 
 <div class="lux-main">
 
-  <button id="createFareBtn" class="lux-btn full">Create Fare</button>
-  <button id="driversBtn" class="lux-btn full">Drivers</button>
-  <button id="profileBtn" class="lux-btn full">Profile</button>
-  <button id="helpBtn" class="lux-btn full">Help</button>
-  <button id="jobsBtn" class="lux-btn full">Jobs</button>
+  <!-- BUTTONS -->
+  <div style="display:flex; flex-direction:column; gap:14px;">
 
-  <div id="jobsList" class="fare-list" style="margin-top:20px;"></div>
+    <button id="createFareBtn" class="lux-btn full">Create Fare</button>
+    <button id="driversBtn" class="lux-btn full">Drivers</button>
+    <button id="profileBtn" class="lux-btn full">Profile</button>
+    <button id="jobsBtn" class="lux-btn full">Refresh Jobs</button>
+    <button id="helpBtn" class="lux-btn full">Help</button>
+
+    <!-- LOGOUT -->
+    <button id="logoutBtn" class="lux-btn full danger">Logout</button>
+
+  </div>
+
+  <!-- JOBS -->
+  <h2 class="section-title" style="margin-top:30px;">My Jobs</h2>
+  <div id="jobsList" class="fare-list"></div>
 
 </div>
 
