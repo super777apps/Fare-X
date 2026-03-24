@@ -16,7 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
-let currentMode = "current"; // current or past
+let currentMode = "current";
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
@@ -28,7 +28,6 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  /* LOAD USER INFO */
   const snap = await getDoc(doc(db, "users", user.uid));
 
   let name = user.email;
@@ -43,7 +42,7 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById("userName").textContent = name;
   document.getElementById("userRole").textContent = role;
 
-  listenJobs(); // default load
+  listenJobs();
 });
 
 /* ---------- LOGOUT ---------- */
