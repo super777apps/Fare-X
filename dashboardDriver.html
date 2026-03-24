@@ -10,21 +10,34 @@
 
 <div class="lux-header">
   <div class="logo">Fare<span class="gold">-X</span></div>
-  <div id="userInfo"></div>
+
+  <div style="text-align:right;">
+    <div id="userName" style="font-weight:600;"></div>
+    <div id="userRole" style="font-size:12px; color:#d4af37;"></div>
+  </div>
+
   <button id="logoutBtn" class="lux-btn">Logout</button>
 </div>
 
 <div class="lux-main">
-  <button onclick="location.href='create.html'" class="lux-btn full">Create Fare</button>
-  <button onclick="location.href='drivers.html'" class="lux-btn full">Friends / Drivers</button>
-  <button onclick="location.href='profile.html'" class="lux-btn full">Profile</button>
-  <button onclick="location.href='pool.html'" class="lux-btn full">Broadcast Pool</button>
+
+  <div style="display:flex; flex-direction:column; gap:14px;">
+
+    <button onclick="location.href='create.html'" class="lux-btn full">Create Fare</button>
+    <button onclick="location.href='drivers.html'" class="lux-btn full">Friends / Drivers</button>
+    <button onclick="location.href='profile.html'" class="lux-btn full">Profile</button>
+
+    <button id="currentJobsBtn" class="lux-btn full">Current Jobs</button>
+    <button id="pastJobsBtn" class="lux-btn full">Past Jobs</button>
+    <button onclick="location.href='help.html'" class="lux-btn full">Help</button>
+
+  </div>
 
   <h2 class="section-title">Jobs</h2>
   <div id="jobList" class="fare-list"></div>
+
 </div>
 
-<script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/dashboardDriver.js"></script>
 </body>
 </html>
