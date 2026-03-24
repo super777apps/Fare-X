@@ -8,37 +8,22 @@
 </head>
 <body>
 
-<div class="lux-header">
-  <div class="logo">Fare<span class="gold">-X</span></div>
-</div>
-
 <div class="lux-main">
+  <button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">← Back to Dashboard</button>
+  <h2 style="text-align:center; margin:20px 0;">Create Fare</h2>
 
-  
-  <h2 class="section-title">Create Fare</h2>
+  <input type="text" id="pickup" placeholder="Pickup Location">
+  <input type="text" id="drop" placeholder="Drop Location">
+  <input type="datetime-local" id="datetime">
+  <input type="text" id="price" placeholder="Fare Price">
 
-  <!-- FORM -->
-  <input id="pickup" type="text" placeholder="Pickup Location">
-
-  <input id="drop" type="text" placeholder="Drop Location">
-
-  <input id="datetime" type="datetime-local">
-
-  <input id="price" type="number" placeholder="Price">
-
-  <!-- DRIVER SELECT -->
   <select id="driverSelect">
-    <option value="">Loading drivers...</option>
+    <option value="">Select Driver</option>
   </select>
 
-  <!-- ACTION BUTTON -->
-  <button id="createFareBtn" class="lux-btn full">
-    Send to Driver
-  </button>
-
+  <button id="createFareBtn" class="lux-btn full">Send to Driver</button>
 </div>
 
 <script type="module" src="js/createPassenger.js"></script>
-
 </body>
 </html>
