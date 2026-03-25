@@ -13,7 +13,9 @@
   <div class="logo">Fare<span class="gold">-X</span></div>
 
   <!-- ✅ FIXED BACK BUTTON -->
-  <button onclick="goBack()" class="lux-btn">Dashboard</button>
+  <button onclick="goDashboard()" class="lux-btn">
+    ← Back
+  </button>
 </div>
 
 <div class="lux-main">
@@ -39,14 +41,10 @@
 <script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/friends.js"></script>
 
-<!-- BACK FIX -->
+<!-- ✅ HARD NAVIGATION FIX -->
 <script>
-function goBack() {
-  if (document.referrer.includes("dashboardDriver")) {
-    window.history.back();
-  } else {
-    location.href = "dashboardDriver.html";
-  }
+function goDashboard() {
+  window.location.href = "dashboardDriver.html";
 }
 </script>
 
