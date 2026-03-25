@@ -9,7 +9,8 @@ import {
   onSnapshot,
   serverTimestamp,
   doc,
-  getDoc
+  getDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -20,8 +21,9 @@ let currentUserData = null;
 const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
 const btn = document.getElementById("createFareBtn");
+const longBtn = document.getElementById("longSendBtn");
 
-/* AUTH */
+/* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async user => {
   if (!user) return location.href = "index.html";
 
@@ -40,12 +42,17 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-/* SHOW FRIEND SELECT */
+/* ---------- SHOW FRIEND SELECT + LONG BUTTON ---------- */
 sendType.addEventListener("change", () => {
-  friendSelect.style.display = sendType.value === "friend" ? "block" : "none";
+
+  const isFriend = sendType.value === "friend";
+
+  friendSelect.style.display = isFriend ? "block" : "none";
+  longBtn.style.display = isFriend ? "block" : "none";
+
 });
 
-/* LOAD FRIENDS / DRIVERS */
+/* ---------- LOAD FRIENDS ---------- */
 function loadFriends(uid) {
 
   const q = query(collection(db, "friends"), where("owner", "==", uid));
@@ -67,10 +74,8 @@ function loadFriends(uid) {
   });
 }
 
-/* CREATE JOB */
-btn.onclick = async () => {
-
-  if (!currentUserData) return alert("User not ready");
+/* ---------- COMMON JOB DATA ---------- */
+function getJobData() {
 
   const pickup = document.getElementById("pickup").value.trim();
   const drop = document.getElementById("drop").value.trim();
@@ -78,10 +83,11 @@ btn.onclick = async () => {
   const price = document.getElementById("price").value.trim();
 
   if (!pickup || !drop || !time || !price) {
-    return alert("Fill all fields");
+    alert("Fill all fields");
+    return null;
   }
 
-  const data = {
+  return {
     pickup,
     drop,
     time,
@@ -98,14 +104,20 @@ btn.onclick = async () => {
 
     role: currentUserData.role,
 
-    status: "broadcast",
-    dispatchType: "pool",
-
     assignedTo: "",
     returnReason: "",
 
     createdAt: serverTimestamp()
   };
+}
+
+/* ---------- NORMAL SEND ---------- */
+btn.onclick = async () => {
+
+  if (!currentUserData) return alert("User not ready");
+
+  const data = getJobData();
+  if (!data) return;
 
   /* SEND TO FRIEND */
   if (sendType.value === "friend") {
@@ -113,22 +125,51 @@ btn.onclick = async () => {
     const friendUID = friendSelect.value;
     if (!friendUID) return alert("Select driver");
 
+    data.status = "assigned";
+    data.dispatchType = "normal";
+
     const ref = await addDoc(collection(db, "fares"), data);
 
     await sendToFriend(ref.id, friendUID, currentUser.uid);
 
     alert("Sent to driver");
-    location.href = "dashboard.html";
+    location.href = "dashboardDriver.html";
     return;
   }
 
-  /* DRIVER ONLY → POOL */
+  /* POOL */
   if (currentUserData.role === "driver") {
+
+    data.status = "broadcast";
+    data.dispatchType = "pool";
 
     await addDoc(collection(db, "fares"), data);
 
     alert("Broadcast created");
-    location.href = "dashboard.html";
+    location.href = "dashboardDriver.html";
   }
 
+};
+
+/* ---------- LONG SEND (NEW FEATURE) ---------- */
+longBtn.onclick = async () => {
+
+  if (!currentUserData) return alert("User not ready");
+
+  const data = getJobData();
+  if (!data) return;
+
+  const friendUID = friendSelect.value;
+  if (!friendUID) return alert("Select driver");
+
+  // NEW STATUS
+  data.status = "waiting response";
+  data.dispatchType = "long";
+
+  const ref = await addDoc(collection(db, "fares"), data);
+
+  await sendToFriend(ref.id, friendUID, currentUser.uid);
+
+  alert("Sent (waiting for response)");
+  location.href = "dashboardDriver.html";
 };

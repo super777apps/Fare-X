@@ -18,6 +18,11 @@ import {
 let currentUser = null;
 let currentMode = "current";
 
+// 🔊 Sounds
+const jobSound = new Audio("assets/job.mp3");
+const acceptSound = new Audio("assets/accept.mp3");
+const declineSound = new Audio("assets/decline.mp3");
+
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
 
@@ -72,12 +77,20 @@ function listenJobs() {
   if (currentMode === "current") {
     q = query(
       collection(db, "fares"),
-      where("status", "in", ["requested", "assigned", "accepted", "returned"])
+      where("status", "in", [
+        "assigned",
+        "waiting response",
+        "accepted"
+      ])
     );
   } else {
     q = query(
       collection(db, "fares"),
-      where("status", "in", ["completed", "deleted"])
+      where("status", "in", [
+        "declined",
+        "completed",
+        "deleted"
+      ])
     );
   }
 
@@ -94,20 +107,25 @@ function listenJobs() {
 
       const f = d.data();
 
+      const isMine = f.currentDriverUID === currentUser.uid;
+
       const div = document.createElement("div");
       div.className = "fare-card";
+
+      /* 🔊 SOUND CONTROL */
+      if (isMine && f.status === "waiting response") {
+        jobSound.currentTime = 0;
+        jobSound.play(); // only once per update
+      }
 
       div.innerHTML = `
         <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
         <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
         <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
         <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
-        <div class="fare-row"><span>Original Driver:</span><b>${f.createdBy || "-"}</b></div>
+        <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
 
-        <div class="fare-actions">
-          <button class="lux-btn" onclick="editJob('${d.id}')">Edit</button>
-          <button class="lux-btn danger" onclick="deleteJob('${d.id}')">Delete</button>
-        </div>
+        ${renderActions(d.id, f, isMine)}
       `;
 
       box.appendChild(div);
@@ -115,6 +133,81 @@ function listenJobs() {
 
   });
 }
+
+/* ---------- ACTION BUTTONS ---------- */
+function renderActions(id, f, isMine) {
+
+  // ❌ Past jobs → no actions
+  if (["declined", "completed", "deleted"].includes(f.status)) {
+    return `<div class="gold">Past Job</div>`;
+  }
+
+  // 🔵 Waiting response → Accept / Reject
+  if (isMine && f.status === "waiting response") {
+    return `
+      <div class="fare-actions">
+        <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
+        <button class="cancel-btn" onclick="rejectJob('${id}')">Reject</button>
+      </div>
+    `;
+  }
+
+  // 🟢 Accepted → allow progress
+  if (isMine && f.status === "accepted") {
+    return `
+      <div class="fare-actions">
+        <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
+        <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
+        <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
+      </div>
+    `;
+  }
+
+  // 🟡 Sender side → can edit / delete
+  if (f.createdUid === currentUser.uid && f.status === "waiting response") {
+    return `
+      <div class="fare-actions">
+        <button class="lux-btn" onclick="editJob('${id}')">Edit</button>
+        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+/* ---------- ACTION HANDLERS ---------- */
+
+window.acceptJob = async (id) => {
+
+  await updateDoc(doc(db, "fares", id), {
+    status: "accepted",
+    currentDriverUID: currentUser.uid
+  });
+
+  acceptSound.play();
+};
+
+window.rejectJob = async (id) => {
+
+  await updateDoc(doc(db, "fares", id), {
+    status: "declined"
+  });
+
+  declineSound.play();
+};
+
+window.markArrived = async (id) => {
+  await updateDoc(doc(db, "fares", id), { status: "arrived" });
+};
+
+window.markStarted = async (id) => {
+  await updateDoc(doc(db, "fares", id), { status: "in progress" });
+};
+
+window.markCompleted = async (id) => {
+  await updateDoc(doc(db, "fares", id), { status: "completed" });
+};
 
 /* ---------- EDIT ---------- */
 window.editJob = (id) => {
@@ -124,11 +217,11 @@ window.editJob = (id) => {
 /* ---------- DELETE ---------- */
 window.deleteJob = async (id) => {
 
-  if (!confirm("Delete this job?")) return;
+  if (!confirm("Cancel this job?")) return;
 
   await updateDoc(doc(db, "fares", id), {
     status: "deleted"
   });
 
-  alert("Job deleted");
+  alert("Job cancelled");
 };
