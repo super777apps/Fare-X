@@ -11,7 +11,12 @@
 
 <header class="lux-header">
 <h1 class="logo">Fare<span class="gold">-X</span></h1>
-<a href="dashboard.html" class="lux-btn">Back</a>
+
+<!-- ✅ FIXED BACK BUTTON -->
+<button onclick="location.href='dashboardDriver.html'" class="lux-btn">
+← Back
+</button>
+
 </header>
 
 <main class="lux-main">
@@ -21,9 +26,7 @@
 <h2>Create New Fare</h2>
 
 <input id="pickup" placeholder="Pickup location">
-
 <input id="drop" placeholder="Drop location">
-
 <input id="datetime" type="datetime-local">
 
 <select id="priceType">
@@ -32,7 +35,6 @@
 </select>
 
 <input id="price" placeholder="Price">
-
 <textarea id="note" placeholder="Notes (optional)"></textarea>
 
 <select id="sendType">
@@ -45,8 +47,14 @@
 <option value="">Select Driver</option>
 </select>
 
+<!-- MAIN BUTTON -->
 <button id="createFareBtn" class="lux-btn full">
 Send Fare
+</button>
+
+<!-- ✅ NEW BUTTON -->
+<button id="longSendBtn" class="lux-btn full" style="display:none;">
+Send Fare Until Cancelled / Accepted
 </button>
 
 </div>
@@ -54,7 +62,7 @@ Send Fare
 </main>
 
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=2"></script>
+<script type="module" src="js/create.js?v=3"></script>
 
 </body>
 </html>
