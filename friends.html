@@ -3,31 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Friends | Fare-X</title>
+  <title>Fare-X | Drivers</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<header class="lux-header">
-  <h1 class="logo">Fare<span class="gold">-X</span></h1>
-  <a href="dashboard.html" class="lux-btn">Dashboard</a>
-</header>
+<!-- HEADER -->
+<div class="lux-header">
+  <div class="logo">Fare<span class="gold">-X</span></div>
 
-<main class="lux-main">
+  <!-- ✅ FIXED BACK BUTTON -->
+  <button onclick="goBack()" class="lux-btn">Dashboard</button>
+</div>
 
-<h2 class="section-title">Driver Network</h2>
+<div class="lux-main">
 
-<input id="searchInput" placeholder="Search by nickname, email or car number">
+  <h2 class="section-title">My Drivers</h2>
 
-<div id="searchResults" class="fare-list"></div>
+  <!-- SEARCH -->
+  <input id="searchInput" placeholder="Search driver by nickname">
 
-<h2 class="section-title" style="margin-top:30px">My Friends</h2>
+  <button id="searchBtn" class="lux-btn full">
+    Search Driver
+  </button>
 
-<div id="friendList" class="fare-list"></div>
+  <!-- SEARCH RESULTS -->
+  <div id="searchResults" class="fare-list"></div>
 
-</main>
+  <!-- MY DRIVERS -->
+  <h2 class="section-title">Your Drivers</h2>
+  <div id="driversList" class="fare-list"></div>
+
+</div>
+
 <script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/friends.js"></script>
+
+<!-- BACK FIX -->
+<script>
+function goBack() {
+  if (document.referrer.includes("dashboardDriver")) {
+    window.history.back();
+  } else {
+    location.href = "dashboardDriver.html";
+  }
+}
+</script>
 
 </body>
 </html>
