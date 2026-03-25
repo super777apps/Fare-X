@@ -1,88 +1,128 @@
 import { db, auth } from "./firebase.js";
-import {
-  collection, query, where, onSnapshot,
-  addDoc, getDocs
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const searchInput = document.getElementById("searchInput");
-const searchResults = document.getElementById("searchResults");
-const friendList = document.getElementById("friendList");
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
 
 /* ---------- AUTH ---------- */
-
 onAuthStateChanged(auth, user => {
-  if(!user) location.href="index.html";
+
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
+
   currentUser = user;
-  loadFriends();
+
+  loadMyDrivers();
 });
 
-/* ---------- SEARCH DRIVERS ---------- */
+/* ---------- LOAD MY DRIVERS ---------- */
+function loadMyDrivers() {
 
-searchInput.oninput = async () => {
-  const text = searchInput.value.trim().toLowerCase();
-  searchResults.innerHTML = "";
-  if(text.length < 2) return;
+  const box = document.getElementById("driversList");
 
-  const snap = await getDocs(collection(db,"drivers"));
+  const q = query(
+    collection(db, "friends"),
+    where("owner", "==", currentUser.uid)
+  );
+
+  onSnapshot(q, snap => {
+
+    box.innerHTML = "";
+
+    if (snap.empty) {
+      box.innerHTML = `<div class="gold">No drivers added</div>`;
+      return;
+    }
+
+    snap.forEach(docSnap => {
+
+      const f = docSnap.data();
+
+      const div = document.createElement("div");
+      div.className = "fare-card";
+
+      div.innerHTML = `
+        <div class="fare-row">
+          <span>Driver:</span>
+          <b>${f.nickName || f.name || f.email}</b>
+        </div>
+      `;
+
+      box.appendChild(div);
+    });
+
+  });
+}
+
+/* ---------- SEARCH DRIVER ---------- */
+document.getElementById("searchBtn").onclick = async () => {
+
+  const text = document.getElementById("searchInput").value.trim().toLowerCase();
+
+  if (!text) return alert("Enter nickname");
+
+  const box = document.getElementById("searchResults");
+  box.innerHTML = "Searching...";
+
+  const snap = await getDocs(collection(db, "users"));
+
+  box.innerHTML = "";
+
+  let found = false;
 
   snap.forEach(docSnap => {
-    const d = docSnap.data();
-    if(d.uid === currentUser.uid) return;
 
-    const match =
-      d.nickname?.toLowerCase().includes(text) ||
-      d.email?.toLowerCase().includes(text) ||
-      d.carNumber?.toLowerCase().includes(text);
+    const u = docSnap.data();
 
-    if(match){
+    if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
+
+      found = true;
+
       const div = document.createElement("div");
-      div.className="fare-card";
-      div.innerHTML=`
-        <div class="fare-row"><span>Nick :</span><b>${d.nickname}</b></div>
-        <div class="fare-row"><span>Car :</span><b>${d.carBrand} - ${d.carNumber}</b></div>
-        <div class="fare-row"><span>Email :</span><b>${d.email}</b></div>
-        <button class="lux-btn full" onclick="addFriend('${d.uid}','${d.nickname}','${d.email}')">Add Friend</button>
+      div.className = "fare-card";
+
+      div.innerHTML = `
+        <div class="fare-row">
+          <span>Driver:</span>
+          <b>${u.nickName}</b>
+        </div>
+
+        <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
+          Add Driver
+        </button>
       `;
-      searchResults.appendChild(div);
+
+      box.appendChild(div);
     }
+
   });
+
+  if (!found) {
+    box.innerHTML = `<div class="gold">No driver found</div>`;
+  }
 };
 
-/* ---------- ADD FRIEND ---------- */
+/* ---------- ADD DRIVER ---------- */
+window.addDriver = async (driverUID, name) => {
 
-window.addFriend = async(uid,name,email) => {
-
-  await addDoc(collection(db,"friends"),{
+  await addDoc(collection(db, "friends"), {
     owner: currentUser.uid,
-    friendUID: uid,
-    name: name,
-    email: email
+    friendUID: driverUID,
+    nickName: name
   });
 
-  alert("Friend added successfully 🤝");
-  loadFriends();
+  alert("Driver added");
 };
-
-/* ---------- LOAD FRIEND LIST ---------- */
-
-function loadFriends(){
-  onSnapshot(
-    query(collection(db,"friends"), where("owner","==",currentUser.uid)),
-    snap => {
-      friendList.innerHTML = "";
-      snap.forEach(doc => {
-        const f = doc.data();
-        const div = document.createElement("div");
-        div.className="fare-card";
-        div.innerHTML=`
-          <div class="fare-row"><span>Nick :</span><b>${f.name}</b></div>
-          <div class="fare-row"><span>Email :</span><b>${f.email}</b></div>
-        `;
-        friendList.appendChild(div);
-      });
-    }
-  );
-}
