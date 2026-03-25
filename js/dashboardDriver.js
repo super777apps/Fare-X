@@ -19,11 +19,45 @@ import {
 let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
+let watchId = null; // ✅ GPS tracker
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
 const acceptSound = new Audio("assets/accept.mp3");
 const declineSound = new Audio("assets/decline.mp3");
+
+/* ---------- GPS TRACKING ---------- */
+function startLocationTracking() {
+
+  if (!navigator.geolocation) {
+    alert("GPS not supported");
+    return;
+  }
+
+  watchId = navigator.geolocation.watchPosition(async (pos) => {
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      location: { lat, lng },
+      lastActive: serverTimestamp()
+    });
+
+  }, (err) => {
+    console.error(err);
+  }, {
+    enableHighAccuracy: true
+  });
+
+}
+
+function stopLocationTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
@@ -45,9 +79,11 @@ onAuthStateChanged(auth, async (user) => {
     name = u.nickName || user.email;
     role = u.role || "driver";
 
-    // ✅ GET ONLINE STATUS
     isOnline = u.online || false;
     updateOnlineUI();
+
+    // ✅ resume GPS if already online
+    if (isOnline) startLocationTracking();
   }
 
   document.getElementById("userName").textContent = name;
@@ -68,10 +104,16 @@ toggleBtn.onclick = async () => {
     lastActive: serverTimestamp()
   });
 
+  if (isOnline) {
+    startLocationTracking();   // ✅ START GPS
+  } else {
+    stopLocationTracking();    // ❌ STOP GPS
+  }
+
   updateOnlineUI();
 };
 
-/* ---------- UPDATE ONLINE UI ---------- */
+/* ---------- UPDATE UI ---------- */
 function updateOnlineUI() {
 
   const statusText = document.getElementById("onlineStatus");
@@ -90,10 +132,11 @@ function updateOnlineUI() {
 /* ---------- LOGOUT ---------- */
 document.getElementById("logoutBtn").onclick = async () => {
 
-  // ✅ SET OFFLINE ON LOGOUT
   await updateDoc(doc(db, "users", currentUser.uid), {
     online: false
   });
+
+  stopLocationTracking(); // ✅ stop GPS
 
   await signOut(auth);
   location.href = "index.html";
@@ -149,13 +192,11 @@ function listenJobs() {
     snap.forEach(d => {
 
       const f = d.data();
-
       const isMine = f.currentDriverUID === currentUser.uid;
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
-      /* 🔊 SOUND CONTROL */
       if (isMine && f.status === "waiting response") {
         jobSound.currentTime = 0;
         jobSound.play();
@@ -177,10 +218,10 @@ function listenJobs() {
   });
 }
 
-/* ---------- ACTION BUTTONS ---------- */
+/* ---------- ACTIONS ---------- */
 function renderActions(id, f, isMine) {
 
-  if (["declined", "completed", "deleted"].includes(f.status)) {
+  if (["declined","completed","deleted"].includes(f.status)) {
     return `<div class="gold">Past Job</div>`;
   }
 
@@ -215,45 +256,30 @@ function renderActions(id, f, isMine) {
   return "";
 }
 
-/* ---------- ACTION HANDLERS ---------- */
-
+/* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
-  await updateDoc(doc(db, "fares", id), {
-    status: "accepted",
-    currentDriverUID: currentUser.uid
+  await updateDoc(doc(db,"fares",id),{
+    status:"accepted",
+    currentDriverUID:currentUser.uid
   });
   acceptSound.play();
 };
 
 window.rejectJob = async (id) => {
-  await updateDoc(doc(db, "fares", id), {
-    status: "declined"
+  await updateDoc(doc(db,"fares",id),{
+    status:"declined"
   });
   declineSound.play();
 };
 
-window.markArrived = async (id) => {
-  await updateDoc(doc(db, "fares", id), { status: "arrived" });
-};
+window.markArrived = async id => updateDoc(doc(db,"fares",id),{status:"arrived"});
+window.markStarted = async id => updateDoc(doc(db,"fares",id),{status:"in progress"});
+window.markCompleted = async id => updateDoc(doc(db,"fares",id),{status:"completed"});
 
-window.markStarted = async (id) => {
-  await updateDoc(doc(db, "fares", id), { status: "in progress" });
-};
+window.editJob = id => location.href=`create.html?id=${id}`;
 
-window.markCompleted = async (id) => {
-  await updateDoc(doc(db, "fares", id), { status: "completed" });
-};
-
-window.editJob = (id) => {
-  location.href = `create.html?id=${id}`;
-};
-
-window.deleteJob = async (id) => {
-  if (!confirm("Cancel this job?")) return;
-
-  await updateDoc(doc(db, "fares", id), {
-    status: "deleted"
-  });
-
+window.deleteJob = async id => {
+  if(!confirm("Cancel this job?")) return;
+  await updateDoc(doc(db,"fares",id),{status:"deleted"});
   alert("Job cancelled");
 };

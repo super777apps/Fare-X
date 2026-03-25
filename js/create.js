@@ -10,7 +10,8 @@ import {
   serverTimestamp,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -25,16 +26,16 @@ const longBtn = document.getElementById("longSendBtn");
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async user => {
+
   if (!user) return location.href = "index.html";
 
   currentUser = user;
 
-  const snap = await getDoc(doc(db, "users", user.uid));
+  const snap = await getDoc(doc(db,"users",user.uid));
   currentUserData = snap.data();
 
   loadFriends(user.uid);
 
-  // Passenger restriction
   if (currentUserData.role === "passenger") {
     sendType.value = "friend";
     sendType.disabled = true;
@@ -42,40 +43,89 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-/* ---------- SHOW FRIEND SELECT + LONG BUTTON ---------- */
+/* ---------- SHOW UI ---------- */
 sendType.addEventListener("change", () => {
 
   const isFriend = sendType.value === "friend";
 
   friendSelect.style.display = isFriend ? "block" : "none";
   longBtn.style.display = isFriend ? "block" : "none";
-
 });
 
 /* ---------- LOAD FRIENDS ---------- */
-function loadFriends(uid) {
+function loadFriends(uid){
 
-  const q = query(collection(db, "friends"), where("owner", "==", uid));
+  const q = query(collection(db,"friends"),where("owner","==",uid));
 
-  onSnapshot(q, snap => {
+  onSnapshot(q,snap=>{
+    friendSelect.innerHTML='<option value="">Select Driver</option>';
 
-    friendSelect.innerHTML = '<option value="">Select Driver</option>';
-
-    snap.forEach(d => {
-      const f = d.data();
-
-      const opt = document.createElement("option");
-      opt.value = f.friendUID;
-      opt.textContent = f.name || f.email;
-
+    snap.forEach(d=>{
+      const f=d.data();
+      const opt=document.createElement("option");
+      opt.value=f.friendUID;
+      opt.textContent=f.name || f.email;
       friendSelect.appendChild(opt);
     });
-
   });
 }
 
-/* ---------- COMMON JOB DATA ---------- */
-function getJobData() {
+/* ---------- DISTANCE ---------- */
+function getDistance(lat1, lon1, lat2, lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+/* ---------- AUTO DISPATCH ---------- */
+async function autoDispatch(jobId){
+
+  const snap=await getDocs(
+    query(collection(db,"users"),
+      where("role","==","driver"),
+      where("online","==",true)
+    )
+  );
+
+  let nearest=null;
+  let min=Infinity;
+
+  const pickupLat=31.5204;
+  const pickupLng=74.3587;
+
+  snap.forEach(docSnap=>{
+    const d=docSnap.data();
+    if(!d.location) return;
+
+    const dist=getDistance(
+      pickupLat,pickupLng,
+      d.location.lat,d.location.lng
+    );
+
+    if(dist<min){
+      min=dist;
+      nearest={id:docSnap.id,...d};
+    }
+  });
+
+  if(!nearest){
+    alert("No online drivers");
+    return;
+  }
+
+  await updateDoc(doc(db,"fares",jobId),{
+    currentDriverUID:nearest.id,
+    currentDriverName:nearest.nickName,
+    status:"waiting response"
+  });
+}
+
+/* ---------- CREATE ---------- */
+btn.onclick = async () => {
 
   const pickup = document.getElementById("pickup").value.trim();
   const drop = document.getElementById("drop").value.trim();
@@ -83,93 +133,45 @@ function getJobData() {
   const price = document.getElementById("price").value.trim();
 
   if (!pickup || !drop || !time || !price) {
-    alert("Fill all fields");
-    return null;
+    return alert("Fill all fields");
   }
 
-  return {
-    pickup,
-    drop,
-    time,
-    price,
-
+  const data = {
+    pickup, drop, time, price,
     createdUid: currentUser.uid,
     createdBy: currentUser.email,
-
-    originalDriverUID: currentUser.uid,
-    originalDriverName: currentUserData.nickname,
-
-    currentDriverUID: currentUser.uid,
-    currentDriverName: currentUserData.nickname,
-
-    role: currentUserData.role,
-
-    assignedTo: "",
-    returnReason: "",
-
     createdAt: serverTimestamp()
   };
-}
 
-/* ---------- NORMAL SEND ---------- */
-btn.onclick = async () => {
-
-  if (!currentUserData) return alert("User not ready");
-
-  const data = getJobData();
-  if (!data) return;
-
-  /* SEND TO FRIEND */
+  /* FRIEND */
   if (sendType.value === "friend") {
 
     const friendUID = friendSelect.value;
     if (!friendUID) return alert("Select driver");
 
     data.status = "assigned";
-    data.dispatchType = "normal";
 
-    const ref = await addDoc(collection(db, "fares"), data);
+    const ref = await addDoc(collection(db,"fares"),data);
 
     await sendToFriend(ref.id, friendUID, currentUser.uid);
 
     alert("Sent to driver");
-    location.href = "dashboardDriver.html";
+    location.href="dashboardDriver.html";
     return;
   }
 
-  /* POOL */
-  if (currentUserData.role === "driver") {
+  /* AUTO */
+  if (sendType.value === "auto") {
 
-    data.status = "broadcast";
-    data.dispatchType = "pool";
+    const ref = await addDoc(collection(db,"fares"),{
+      ...data,
+      status:"searching"
+    });
 
-    await addDoc(collection(db, "fares"), data);
+    await autoDispatch(ref.id);
 
-    alert("Broadcast created");
-    location.href = "dashboardDriver.html";
+    alert("Auto dispatch started");
+    location.href="dashboardDriver.html";
   }
 
-};
-
-/* ---------- LONG SEND (NEW FEATURE) ---------- */
-longBtn.onclick = async () => {
-
-  if (!currentUserData) return alert("User not ready");
-
-  const data = getJobData();
-  if (!data) return;
-
-  const friendUID = friendSelect.value;
-  if (!friendUID) return alert("Select driver");
-
-  // NEW STATUS
-  data.status = "waiting response";
-  data.dispatchType = "long";
-
-  const ref = await addDoc(collection(db, "fares"), data);
-
-  await sendToFriend(ref.id, friendUID, currentUser.uid);
-
-  alert("Sent (waiting for response)");
-  location.href = "dashboardDriver.html";
 };
