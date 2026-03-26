@@ -26,28 +26,30 @@ let pickupLng = null;
 let dropLat = null;
 let dropLng = null;
 
-/* ---------- ADD SUGGESTION BOX ---------- */
+/* ---------- SUGGESTION BOX ---------- */
 function createSuggestionBox(input) {
   const box = document.createElement("div");
+
+  box.style.position = "absolute";
   box.style.background = "#111";
   box.style.color = "#fff";
-  box.style.position = "absolute";
   box.style.zIndex = "999";
   box.style.width = input.offsetWidth + "px";
   box.style.borderRadius = "8px";
   box.style.maxHeight = "150px";
   box.style.overflowY = "auto";
 
+  input.parentNode.style.position = "relative";
   input.parentNode.appendChild(box);
+
   return box;
 }
 
 const pickupBox = createSuggestionBox(pickupInput);
 const dropBox = createSuggestionBox(dropInput);
 
-/* ---------- NOMINATIM SEARCH ---------- */
+/* ---------- SEARCH ADDRESS ---------- */
 async function searchAddress(query) {
-
   if (query.length < 3) return [];
 
   const res = await fetch(
@@ -57,8 +59,18 @@ async function searchAddress(query) {
   return await res.json();
 }
 
+/* ---------- REVERSE GEOCODE ---------- */
+async function reverseGeocode(lat, lng) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+  );
+
+  const data = await res.json();
+  return data.display_name || `${lat}, ${lng}`;
+}
+
 /* ---------- RENDER SUGGESTIONS ---------- */
-function renderSuggestions(list, box, isPickup) {
+function renderSuggestions(list, box, type) {
 
   box.innerHTML = "";
 
@@ -71,18 +83,20 @@ function renderSuggestions(list, box, isPickup) {
 
     div.onclick = () => {
 
-      if (isPickup) {
-        pickupInput.value = item.display_name;
-        pickupLat = parseFloat(item.lat);
-        pickupLng = parseFloat(item.lon);
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
 
-        setMapLocation(pickupLat, pickupLng);
+      if (type === "pickup") {
+        pickupInput.value = item.display_name;
+        pickupLat = lat;
+        pickupLng = lng;
       } else {
         dropInput.value = item.display_name;
-        dropLat = parseFloat(item.lat);
-        dropLng = parseFloat(item.lon);
+        dropLat = lat;
+        dropLng = lng;
       }
 
+      setMapLocation(lat, lng);
       box.innerHTML = "";
     };
 
@@ -93,12 +107,12 @@ function renderSuggestions(list, box, isPickup) {
 /* ---------- INPUT EVENTS ---------- */
 pickupInput.addEventListener("input", async () => {
   const results = await searchAddress(pickupInput.value);
-  renderSuggestions(results, pickupBox, true);
+  renderSuggestions(results, pickupBox, "pickup");
 });
 
 dropInput.addEventListener("input", async () => {
   const results = await searchAddress(dropInput.value);
-  renderSuggestions(results, dropBox, false);
+  renderSuggestions(results, dropBox, "drop");
 });
 
 /* ---------- MAP ---------- */
@@ -116,24 +130,22 @@ function initMap() {
 
     map.on('click', async function(e) {
 
-      pickupLat = e.latlng.lat;
-      pickupLng = e.latlng.lng;
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
 
-      setMapLocation(pickupLat, pickupLng);
+      pickupLat = lat;
+      pickupLng = lng;
 
-      // reverse geocode → address
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickupLat}&lon=${pickupLng}`
-      );
+      setMapLocation(lat, lng);
 
-      const data = await res.json();
-      pickupInput.value = data.display_name || `${pickupLat}, ${pickupLng}`;
+      // ✅ ALWAYS convert to ADDRESS (fix your issue)
+      pickupInput.value = await reverseGeocode(lat, lng);
     });
 
   }, 300);
 }
 
-/* ---------- SET MAP LOCATION ---------- */
+/* ---------- SET MAP ---------- */
 function setMapLocation(lat, lng) {
 
   map.setView([lat, lng], 15);
@@ -152,20 +164,18 @@ gpsBtn.onclick = () => {
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
 
-    pickupLat = pos.coords.latitude;
-    pickupLng = pos.coords.longitude;
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-    setMapLocation(pickupLat, pickupLng);
+    pickupLat = lat;
+    pickupLng = lng;
 
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickupLat}&lon=${pickupLng}`
-    );
+    setMapLocation(lat, lng);
 
-    const data = await res.json();
-    pickupInput.value = data.display_name || `${pickupLat}, ${pickupLng}`;
+    pickupInput.value = await reverseGeocode(lat, lng);
 
   }, () => {
-    alert("Location permission denied → allow location in browser settings");
+    alert("Enable location permission in browser settings");
   });
 };
 
@@ -192,9 +202,7 @@ onAuthStateChanged(auth, async user => {
 
 /* ---------- UI ---------- */
 sendType.addEventListener("change", () => {
-
   const isFriend = sendType.value === "friend";
-
   friendSelect.style.display = isFriend ? "block" : "none";
   longBtn.style.display = isFriend ? "block" : "none";
 });
@@ -301,6 +309,10 @@ btn.onclick = async () => {
     drop,
     time,
     price,
+    pickupLat,
+    pickupLng,
+    dropLat,
+    dropLng,
     createdUid: currentUser.uid,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
