@@ -11,26 +11,26 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-#pickupMap {
-  height: 300px;
+.mapBox {
+  height: 250px;
   width: 100%;
   margin: 10px 0;
   border-radius: 10px;
 }
 
-/* ✅ NEW: suggestion dropdown */
-#suggestions {
+/* Suggestions */
+#suggestions, #dropSuggestions {
   background:#111;
   border-radius:8px;
   margin-top:5px;
   max-height:150px;
   overflow:auto;
 }
-#suggestions div {
+#suggestions div, #dropSuggestions div {
   padding:8px;
   cursor:pointer;
 }
-#suggestions div:hover {
+#suggestions div:hover, #dropSuggestions div:hover {
   background:#222;
 }
 </style>
@@ -52,16 +52,23 @@
 
 <h2>Create New Fare</h2>
 
+<!-- ================= PICKUP ================= -->
 <input id="pickup" placeholder="Pickup location">
-
-<!-- ✅ NEW suggestions -->
 <div id="suggestions"></div>
 
-<div id="pickupMap"></div>
+<div id="pickupMap" class="mapBox"></div>
 
-<button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
+<button id="gpsBtn" class="lux-btn full">
+Use My Current Location
+</button>
 
+<!-- ================= DROP ================= -->
 <input id="drop" placeholder="Drop location">
+<div id="dropSuggestions"></div>
+
+<!-- ✅ NEW DROP MAP -->
+<div id="dropMap" class="mapBox"></div>
+
 <input id="datetime" type="datetime-local">
 
 <select id="priceType">
@@ -70,6 +77,7 @@
 </select>
 
 <input id="price" placeholder="Price">
+
 <textarea id="note" placeholder="Notes (optional)"></textarea>
 
 <select id="sendType">
@@ -82,7 +90,9 @@
 <option value="">Select Driver</option>
 </select>
 
-<button id="createFareBtn" class="lux-btn full">Send Fare</button>
+<button id="createFareBtn" class="lux-btn full">
+Send Fare
+</button>
 
 <button id="longSendBtn" class="lux-btn full" style="display:none;">
 Send Fare Until Cancelled / Accepted
@@ -91,10 +101,11 @@ Send Fare Until Cancelled / Accepted
 </div>
 </main>
 
+<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=7"></script>
+<script type="module" src="js/create.js?v=8"></script>
 
 </body>
 </html>
