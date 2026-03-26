@@ -4,14 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fare-X | Create Fare</title>
+
 <link rel="stylesheet" href="css/style.css">
 
 <!-- ✅ Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
- integrity="sha256-o9N1j6kJ0bY+0b3rLQwb6IoXq0I8bJYgC5Xp2S5r0+o=" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-  #pickupMap { height: 250px; margin: 10px 0; border:1px solid #ccc; border-radius:6px; }
+#pickupMap {
+  height: 300px;
+  width: 100%;
+  margin: 10px 0;
+  border-radius: 10px;
+}
 </style>
 </head>
 
@@ -19,7 +24,10 @@
 
 <header class="lux-header">
 <h1 class="logo">Fare<span class="gold">-X</span></h1>
-<button onclick="location.href='dashboardDriver.html'" class="lux-btn">← Back</button>
+
+<button onclick="location.href='dashboardDriver.html'" class="lux-btn">
+← Back
+</button>
 </header>
 
 <main class="lux-main">
@@ -29,7 +37,13 @@
 <h2>Create New Fare</h2>
 
 <input id="pickup" placeholder="Pickup location">
-<div id="pickupMap"></div> <!-- ✅ Leaflet Map -->
+
+<!-- ✅ MAP -->
+<div id="pickupMap"></div>
+
+<!-- ✅ GPS BUTTON -->
+<button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
+
 <input id="drop" placeholder="Drop location">
 <input id="datetime" type="datetime-local">
 
@@ -52,18 +66,19 @@
 </select>
 
 <button id="createFareBtn" class="lux-btn full">Send Fare</button>
-<button id="longSendBtn" class="lux-btn full" style="display:none;">Send Fare Until Cancelled / Accepted</button>
+
+<button id="longSendBtn" class="lux-btn full" style="display:none;">
+Send Fare Until Cancelled / Accepted
+</button>
 
 </div>
-
 </main>
 
 <!-- ✅ Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
- integrity="sha256-o9N1j6kJ0bY+0b3rLQwb6IoXq0I8bJYgC5Xp2S5r0+o=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=5"></script>
+<script type="module" src="js/create.js?v=6"></script>
 
 </body>
 </html>
