@@ -20,34 +20,102 @@ const gpsBtn = document.getElementById("gpsBtn");
 const pickupInput = document.getElementById("pickup");
 const dropInput = document.getElementById("drop");
 
-let map, marker, dropMarker;
-let pickupLat = null, pickupLng = null;
-let dropLat = null, dropLng = null;
+let map, marker;
+let pickupLat = null;
+let pickupLng = null;
+let dropLat = null;
+let dropLng = null;
 
-/* ---------- REVERSE GEO (COORD → ADDRESS) ---------- */
-async function getAddress(lat, lng) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-    );
-    const data = await res.json();
-    return data.display_name || `${lat}, ${lng}`;
-  } catch {
-    return `${lat}, ${lng}`;
-  }
+/* ---------- SUGGESTION BOX ---------- */
+function createSuggestionBox(input) {
+  const box = document.createElement("div");
+
+  box.style.position = "absolute";
+  box.style.background = "#111";
+  box.style.color = "#fff";
+  box.style.zIndex = "999";
+  box.style.width = input.offsetWidth + "px";
+  box.style.borderRadius = "8px";
+  box.style.maxHeight = "150px";
+  box.style.overflowY = "auto";
+
+  input.parentNode.style.position = "relative";
+  input.parentNode.appendChild(box);
+
+  return box;
 }
 
+const pickupBox = createSuggestionBox(pickupInput);
+const dropBox = createSuggestionBox(dropInput);
+
 /* ---------- SEARCH ADDRESS ---------- */
-async function searchAddress(queryText) {
-  if (!queryText || queryText.length < 3) return [];
+async function searchAddress(query) {
+  if (query.length < 3) return [];
 
   const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${queryText}`
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
   );
+
   return await res.json();
 }
 
-/* ---------- INIT MAP ---------- */
+/* ---------- REVERSE GEOCODE ---------- */
+async function reverseGeocode(lat, lng) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+  );
+
+  const data = await res.json();
+  return data.display_name || `${lat}, ${lng}`;
+}
+
+/* ---------- RENDER SUGGESTIONS ---------- */
+function renderSuggestions(list, box, type) {
+
+  box.innerHTML = "";
+
+  list.forEach(item => {
+
+    const div = document.createElement("div");
+    div.style.padding = "8px";
+    div.style.cursor = "pointer";
+    div.textContent = item.display_name;
+
+    div.onclick = () => {
+
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+
+      if (type === "pickup") {
+        pickupInput.value = item.display_name;
+        pickupLat = lat;
+        pickupLng = lng;
+      } else {
+        dropInput.value = item.display_name;
+        dropLat = lat;
+        dropLng = lng;
+      }
+
+      setMapLocation(lat, lng);
+      box.innerHTML = "";
+    };
+
+    box.appendChild(div);
+  });
+}
+
+/* ---------- INPUT EVENTS ---------- */
+pickupInput.addEventListener("input", async () => {
+  const results = await searchAddress(pickupInput.value);
+  renderSuggestions(results, pickupBox, "pickup");
+});
+
+dropInput.addEventListener("input", async () => {
+  const results = await searchAddress(dropInput.value);
+  renderSuggestions(results, dropBox, "drop");
+});
+
+/* ---------- MAP ---------- */
 function initMap() {
 
   setTimeout(() => {
@@ -62,22 +130,33 @@ function initMap() {
 
     map.on('click', async function(e) {
 
-      pickupLat = e.latlng.lat;
-      pickupLng = e.latlng.lng;
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
 
-      if (marker) map.removeLayer(marker);
-      marker = L.marker([pickupLat, pickupLng]).addTo(map);
+      pickupLat = lat;
+      pickupLng = lng;
 
-      // ✅ ALWAYS SHOW ADDRESS
-      pickupInput.value = "Loading address...";
-      pickupInput.value = await getAddress(pickupLat, pickupLng);
+      setMapLocation(lat, lng);
+
+      // ✅ ALWAYS convert to ADDRESS (fix your issue)
+      pickupInput.value = await reverseGeocode(lat, lng);
     });
 
   }, 300);
 }
 
+/* ---------- SET MAP ---------- */
+function setMapLocation(lat, lng) {
+
+  map.setView([lat, lng], 15);
+
+  if (marker) map.removeLayer(marker);
+
+  marker = L.marker([lat, lng]).addTo(map);
+}
+
 /* ---------- GPS ---------- */
-gpsBtn.onclick = async () => {
+gpsBtn.onclick = () => {
 
   if (!navigator.geolocation) {
     return alert("GPS not supported");
@@ -85,55 +164,20 @@ gpsBtn.onclick = async () => {
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
 
-    pickupLat = pos.coords.latitude;
-    pickupLng = pos.coords.longitude;
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-    map.setView([pickupLat, pickupLng], 15);
+    pickupLat = lat;
+    pickupLng = lng;
 
-    if (marker) map.removeLayer(marker);
-    marker = L.marker([pickupLat, pickupLng]).addTo(map);
+    setMapLocation(lat, lng);
 
-    pickupInput.value = "Loading address...";
-    pickupInput.value = await getAddress(pickupLat, pickupLng);
+    pickupInput.value = await reverseGeocode(lat, lng);
 
   }, () => {
-    alert("⚠️ Location permission denied\n\nAllow location in browser settings");
+    alert("Enable location permission in browser settings");
   });
 };
-
-/* ---------- AUTO SUGGEST PICKUP ---------- */
-pickupInput.addEventListener("input", async () => {
-
-  const results = await searchAddress(pickupInput.value);
-
-  if (results.length > 0) {
-    const r = results[0];
-
-    pickupLat = parseFloat(r.lat);
-    pickupLng = parseFloat(r.lon);
-
-    map.setView([pickupLat, pickupLng], 15);
-
-    if (marker) map.removeLayer(marker);
-    marker = L.marker([pickupLat, pickupLng]).addTo(map);
-  }
-});
-
-/* ---------- AUTO SUGGEST DROP ---------- */
-dropInput.addEventListener("input", async () => {
-
-  const results = await searchAddress(dropInput.value);
-
-  if (results.length > 0) {
-    const r = results[0];
-
-    dropLat = parseFloat(r.lat);
-    dropLng = parseFloat(r.lon);
-
-    if (dropMarker) map.removeLayer(dropMarker);
-    dropMarker = L.marker([dropLat, dropLng]).addTo(map);
-  }
-});
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async user => {
@@ -174,9 +218,11 @@ function loadFriends(uid) {
 
     snap.forEach(d => {
       const f = d.data();
+
       const opt = document.createElement("option");
       opt.value = f.friendUID;
       opt.textContent = f.name || f.email;
+
       friendSelect.appendChild(opt);
     });
 
@@ -202,7 +248,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 async function autoDispatch(jobId) {
 
   if (!pickupLat || !pickupLng) {
-    alert("Select pickup");
+    alert("Select pickup on map");
     return;
   }
 
@@ -261,12 +307,12 @@ btn.onclick = async () => {
   const data = {
     pickup,
     drop,
+    time,
+    price,
     pickupLat,
     pickupLng,
     dropLat,
     dropLng,
-    time,
-    price,
     createdUid: currentUser.uid,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
