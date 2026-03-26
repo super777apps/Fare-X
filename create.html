@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="css/style.css">
 
-<!-- ✅ Leaflet CSS -->
+<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
@@ -16,6 +16,22 @@
   width: 100%;
   margin: 10px 0;
   border-radius: 10px;
+}
+
+/* ✅ NEW: suggestion dropdown */
+#suggestions {
+  background:#111;
+  border-radius:8px;
+  margin-top:5px;
+  max-height:150px;
+  overflow:auto;
+}
+#suggestions div {
+  padding:8px;
+  cursor:pointer;
+}
+#suggestions div:hover {
+  background:#222;
 }
 </style>
 </head>
@@ -38,10 +54,11 @@
 
 <input id="pickup" placeholder="Pickup location">
 
-<!-- ✅ MAP -->
+<!-- ✅ NEW suggestions -->
+<div id="suggestions"></div>
+
 <div id="pickupMap"></div>
 
-<!-- ✅ GPS BUTTON -->
 <button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
 
 <input id="drop" placeholder="Drop location">
@@ -74,11 +91,10 @@ Send Fare Until Cancelled / Accepted
 </div>
 </main>
 
-<!-- ✅ Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=6"></script>
+<script type="module" src="js/create.js?v=7"></script>
 
 </body>
 </html>
