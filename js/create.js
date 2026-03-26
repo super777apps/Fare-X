@@ -2,16 +2,8 @@ import { db, auth } from "./firebase.js";
 import { sendToFriend } from "./dispatchEngine.js";
 
 import {
-  collection,
-  addDoc,
-  query,
-  where,
-  onSnapshot,
-  serverTimestamp,
-  doc,
-  getDoc,
-  updateDoc,
-  getDocs
+  collection, addDoc, query, where, onSnapshot,
+  serverTimestamp, doc, getDoc, updateDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -23,12 +15,33 @@ const sendType = document.getElementById("sendType");
 const friendSelect = document.getElementById("friendSelect");
 const btn = document.getElementById("createFareBtn");
 const longBtn = document.getElementById("longSendBtn");
+const pickupInput = document.getElementById("pickup");
+
+let map, marker, pickupLat, pickupLng;
+
+/* ---------- INIT MAP ---------- */
+function initMap() {
+  map = L.map('pickupMap').setView([31.5204, 74.3587], 13); // default Lahore
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // click map to set pickup
+  map.on('click', function(e) {
+    pickupLat = e.latlng.lat;
+    pickupLng = e.latlng.lng;
+
+    if(marker) map.removeLayer(marker);
+    marker = L.marker([pickupLat, pickupLng]).addTo(map);
+
+    pickupInput.value = `Lat: ${pickupLat.toFixed(5)}, Lng: ${pickupLng.toFixed(5)}`;
+  });
+}
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async user => {
-
   if (!user) return location.href = "index.html";
-
   currentUser = user;
 
   const snap = await getDoc(doc(db,"users",user.uid));
@@ -41,25 +54,22 @@ onAuthStateChanged(auth, async user => {
     sendType.disabled = true;
     friendSelect.style.display = "block";
   }
+
+  initMap();
 });
 
 /* ---------- SHOW UI ---------- */
 sendType.addEventListener("change", () => {
-
   const isFriend = sendType.value === "friend";
-
   friendSelect.style.display = isFriend ? "block" : "none";
   longBtn.style.display = isFriend ? "block" : "none";
 });
 
 /* ---------- LOAD FRIENDS ---------- */
 function loadFriends(uid){
-
   const q = query(collection(db,"friends"),where("owner","==",uid));
-
   onSnapshot(q,snap=>{
     friendSelect.innerHTML='<option value="">Select Driver</option>';
-
     snap.forEach(d=>{
       const f=d.data();
       const opt=document.createElement("option");
@@ -83,7 +93,6 @@ function getDistance(lat1, lon1, lat2, lon2){
 
 /* ---------- AUTO DISPATCH ---------- */
 async function autoDispatch(jobId){
-
   const snap=await getDocs(
     query(collection(db,"users"),
       where("role","==","driver"),
@@ -94,18 +103,16 @@ async function autoDispatch(jobId){
   let nearest=null;
   let min=Infinity;
 
-  const pickupLat=31.5204;
-  const pickupLng=74.3587;
+  if(!pickupLat || !pickupLng) {
+    alert("Select pickup location on map");
+    return;
+  }
 
   snap.forEach(docSnap=>{
     const d=docSnap.data();
     if(!d.location) return;
 
-    const dist=getDistance(
-      pickupLat,pickupLng,
-      d.location.lat,d.location.lng
-    );
-
+    const dist=getDistance(pickupLat,pickupLng,d.location.lat,d.location.lng);
     if(dist<min){
       min=dist;
       nearest={id:docSnap.id,...d};
@@ -119,22 +126,22 @@ async function autoDispatch(jobId){
 
   await updateDoc(doc(db,"fares",jobId),{
     currentDriverUID:nearest.id,
-    currentDriverName:nearest.nickName,
-    status:"waiting response"
+    currentDriverName:nearest.nickName || nearest.email,
+    status:"waiting response",
+    pickupLat,
+    pickupLng
   });
 }
 
-/* ---------- CREATE ---------- */
+/* ---------- CREATE FARE ---------- */
 btn.onclick = async () => {
 
-  const pickup = document.getElementById("pickup").value.trim();
+  const pickup = pickupInput.value.trim();
   const drop = document.getElementById("drop").value.trim();
   const time = document.getElementById("datetime").value;
   const price = document.getElementById("price").value.trim();
 
-  if (!pickup || !drop || !time || !price) {
-    return alert("Fill all fields");
-  }
+  if (!pickup || !drop || !time || !price) return alert("Fill all fields");
 
   const data = {
     pickup, drop, time, price,
@@ -144,34 +151,37 @@ btn.onclick = async () => {
   };
 
   /* FRIEND */
-  if (sendType.value === "friend") {
-
+  if(sendType.value==="friend"){
     const friendUID = friendSelect.value;
-    if (!friendUID) return alert("Select driver");
-
-    data.status = "assigned";
-
+    if(!friendUID) return alert("Select driver");
+    data.status="assigned";
     const ref = await addDoc(collection(db,"fares"),data);
-
     await sendToFriend(ref.id, friendUID, currentUser.uid);
-
     alert("Sent to driver");
     location.href="dashboardDriver.html";
     return;
   }
 
-  /* AUTO */
-  if (sendType.value === "auto") {
-
+  /* AUTO DISPATCH */
+  if(sendType.value==="auto"){
     const ref = await addDoc(collection(db,"fares"),{
       ...data,
       status:"searching"
     });
-
     await autoDispatch(ref.id);
-
     alert("Auto dispatch started");
     location.href="dashboardDriver.html";
+    return;
   }
 
+  /* POOL */
+  if(sendType.value==="pool"){
+    await addDoc(collection(db,"fares"),{
+      ...data,
+      status:"broadcast"
+    });
+    alert("Broadcast created");
+    location.href="dashboardDriver.html";
+    return;
+  }
 };
