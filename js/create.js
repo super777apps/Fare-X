@@ -18,17 +18,30 @@ const longBtn = document.getElementById("longSendBtn");
 const gpsBtn = document.getElementById("gpsBtn");
 
 const pickupInput = document.getElementById("pickup");
+const suggestionBox = document.getElementById("suggestions");
 
 let map, marker;
 let pickupLat = null;
 let pickupLng = null;
 
-/* ---------- INIT MAP (SYDNEY DEFAULT) ---------- */
+/* ---------- ADDRESS FROM LAT LNG ---------- */
+async function getAddress(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await res.json();
+    return data.display_name || `${lat}, ${lng}`;
+  } catch {
+    return `${lat}, ${lng}`;
+  }
+}
+
+/* ---------- MAP ---------- */
 function initMap() {
 
   setTimeout(() => {
 
-    // ✅ Sydney default
     map = L.map('pickupMap').setView([-33.8688, 151.2093], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -37,8 +50,7 @@ function initMap() {
 
     map.invalidateSize();
 
-    // 📍 CLICK TO DROP PIN
-    map.on('click', function(e) {
+    map.on('click', async function(e) {
 
       pickupLat = e.latlng.lat;
       pickupLng = e.latlng.lng;
@@ -47,21 +59,20 @@ function initMap() {
 
       marker = L.marker([pickupLat, pickupLng]).addTo(map);
 
-      pickupInput.value =
-        pickupLat.toFixed(5) + ", " + pickupLng.toFixed(5);
+      pickupInput.value = "Loading address...";
+
+      const address = await getAddress(pickupLat, pickupLng);
+
+      pickupInput.value = address;
     });
 
   }, 300);
 }
 
-/* ---------- GPS BUTTON ---------- */
+/* ---------- GPS ---------- */
 gpsBtn.onclick = () => {
 
-  if (!navigator.geolocation) {
-    return alert("GPS not supported");
-  }
-
-  navigator.geolocation.getCurrentPosition((pos) => {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
 
     pickupLat = pos.coords.latitude;
     pickupLng = pos.coords.longitude;
@@ -72,13 +83,59 @@ gpsBtn.onclick = () => {
 
     marker = L.marker([pickupLat, pickupLng]).addTo(map);
 
-    pickupInput.value =
-      pickupLat.toFixed(5) + ", " + pickupLng.toFixed(5);
+    pickupInput.value = "Loading address...";
+
+    const address = await getAddress(pickupLat, pickupLng);
+
+    pickupInput.value = address;
 
   }, () => {
     alert("Location permission denied");
   });
 };
+
+/* ---------- SEARCH SUGGESTIONS ---------- */
+pickupInput.addEventListener("input", async () => {
+
+  const queryText = pickupInput.value;
+
+  if (queryText.length < 3) {
+    suggestionBox.innerHTML = "";
+    return;
+  }
+
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${queryText}`
+  );
+
+  const data = await res.json();
+
+  suggestionBox.innerHTML = "";
+
+  data.slice(0,5).forEach(place => {
+
+    const div = document.createElement("div");
+    div.textContent = place.display_name;
+
+    div.onclick = () => {
+
+      pickupLat = parseFloat(place.lat);
+      pickupLng = parseFloat(place.lon);
+
+      map.setView([pickupLat, pickupLng], 15);
+
+      if (marker) map.removeLayer(marker);
+
+      marker = L.marker([pickupLat, pickupLng]).addTo(map);
+
+      pickupInput.value = place.display_name;
+      suggestionBox.innerHTML = "";
+    };
+
+    suggestionBox.appendChild(div);
+  });
+
+});
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async user => {
@@ -217,7 +274,6 @@ btn.onclick = async () => {
     createdAt: serverTimestamp()
   };
 
-  /* FRIEND */
   if (sendType.value === "friend") {
 
     const friendUID = friendSelect.value;
@@ -234,7 +290,6 @@ btn.onclick = async () => {
     return;
   }
 
-  /* AUTO */
   if (sendType.value === "auto") {
 
     const ref = await addDoc(collection(db, "fares"), {
@@ -248,7 +303,6 @@ btn.onclick = async () => {
     location.href = "dashboardDriver.html";
   }
 
-  /* POOL */
   if (sendType.value === "pool") {
 
     await addDoc(collection(db, "fares"), {
