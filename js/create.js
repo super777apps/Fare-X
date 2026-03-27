@@ -8,177 +8,247 @@ import {
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* ---------------- STATE ---------------- */
-let map, marker;
+/* ---------- STATE ---------- */
+let currentUser, currentUserData;
 
-let pickupLat = null, pickupLng = null;
-let dropLat = null, dropLng = null;
+let pickupLat=null, pickupLng=null;
+let dropLat=null, dropLng=null;
 
-let currentUser = null;
+let pickupMap, dropMap;
+let pickupMarker, dropMarker;
 
-/* ---------------- ELEMENTS ---------------- */
+/* ---------- ELEMENTS ---------- */
 const pickupInput = document.getElementById("pickup");
 const dropInput = document.getElementById("drop");
-const suggestionsBox = document.getElementById("suggestions");
+
+const pickupBox = document.getElementById("pickupSuggestions");
+const dropBox = document.getElementById("dropSuggestions");
+
 const gpsBtn = document.getElementById("gpsBtn");
+const sendType = document.getElementById("sendType");
+const friendSelect = document.getElementById("friendSelect");
+const btn = document.getElementById("createFareBtn");
+const longBtn = document.getElementById("longSendBtn");
 
-/* ---------------- DEBOUNCE ---------------- */
-function debounce(fn, delay = 350) {
+/* ---------- DEBOUNCE ---------- */
+function debounce(fn, delay=500){
   let t;
-  return (...args) => {
+  return (...args)=>{
     clearTimeout(t);
-    t = setTimeout(() => fn(...args), delay);
-  };
-}
-
-/* ---------------- MAP INIT ---------------- */
-function initMap() {
-
-  map = L.map("pickupMap").setView([-33.8688, 151.2093], 13);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(map);
-
-  map.on("click", async (e) => {
-
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
-
-    pickupLat = lat;
-    pickupLng = lng;
-
-    setMarker(lat, lng);
-
-    const address = await reverseGeocode(lat, lng);
-
-    pickupInput.value = address;   // ✅ FIXED: always address
-  });
-}
-
-/* ---------------- MARKER ---------------- */
-function setMarker(lat, lng) {
-
-  if (marker) map.removeLayer(marker);
-
-  marker = L.marker([lat, lng]).addTo(map);
-
-  map.setView([lat, lng], 15);
-}
-
-/* ---------------- REVERSE GEOCODE ---------------- */
-async function reverseGeocode(lat, lng) {
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-    );
-
-    const data = await res.json();
-    return data.display_name || "Selected Location";
-
-  } catch {
-    return "Selected Location";
+    t=setTimeout(()=>fn(...args),delay);
   }
 }
 
-/* ---------------- SEARCH ADDRESS ---------------- */
-async function searchAddress(q) {
-
-  if (q.length < 3) return [];
+/* ---------- SEARCH ---------- */
+async function searchAddress(q){
+  if(q.length < 3) return [];
 
   const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}`
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
   );
 
   return await res.json();
 }
 
-/* ---------------- SHOW SUGGESTIONS ---------------- */
-function showSuggestions(list, input, type) {
-
-  suggestionsBox.innerHTML = "";
-
-  if (!list.length) {
-    suggestionsBox.style.display = "none";
-    return;
+/* ---------- REVERSE ---------- */
+async function reverseGeocode(lat,lng){
+  try{
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await res.json();
+    return data.display_name || "Selected location";
+  }catch{
+    return "Selected location";
   }
+}
 
-  suggestionsBox.style.display = "block";
+/* ---------- MAP INIT ---------- */
+function initMaps(){
 
-  list.forEach(item => {
+  pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
+  dropMap = L.map('dropMap').setView([31.52,74.35],13);
 
-    const div = document.createElement("div");
-    div.textContent = item.display_name;
+  const tile='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    div.onclick = () => {
+  L.tileLayer(tile).addTo(pickupMap);
+  L.tileLayer(tile).addTo(dropMap);
 
-      input.value = item.display_name;
+  /* pickup click */
+  pickupMap.on('click', async e=>{
+    pickupLat=e.latlng.lat;
+    pickupLng=e.latlng.lng;
 
-      const lat = parseFloat(item.lat);
-      const lng = parseFloat(item.lon);
+    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
 
-      if (type === "pickup") {
-        pickupLat = lat;
-        pickupLng = lng;
-        setMarker(lat, lng);
-      }
+    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+  });
 
-      if (type === "drop") {
-        dropLat = lat;
-        dropLng = lng;
-      }
+  /* drop click */
+  dropMap.on('click', async e=>{
+    dropLat=e.latlng.lat;
+    dropLng=e.latlng.lng;
 
-      suggestionsBox.style.display = "none";
-    };
+    if(dropMarker) dropMap.removeLayer(dropMarker);
+    dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
 
-    suggestionsBox.appendChild(div);
+    dropInput.value = await reverseGeocode(dropLat,dropLng);
   });
 }
 
-/* ---------------- INPUT EVENTS ---------------- */
-pickupInput.addEventListener("input", debounce(async () => {
+/* ---------- SUGGESTIONS ---------- */
+function showSuggestions(list, box, input, type){
 
-  const list = await searchAddress(pickupInput.value);
-  showSuggestions(list, pickupInput, "pickup");
+  box.innerHTML="";
+  box.style.display="block";
 
-}));
+  list.forEach(item=>{
+    const div=document.createElement("div");
+    div.textContent=item.display_name;
 
-dropInput.addEventListener("input", debounce(async () => {
+    div.onclick=()=>{
+      input.value=item.display_name;
 
-  const list = await searchAddress(dropInput.value);
-  showSuggestions(list, dropInput, "drop");
+      const lat=parseFloat(item.lat);
+      const lng=parseFloat(item.lon);
 
-}));
+      if(type==="pickup"){
+        pickupLat=lat; pickupLng=lng;
+        pickupMap.setView([lat,lng],15);
+        if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+        pickupMarker=L.marker([lat,lng]).addTo(pickupMap);
+      }
 
-/* ---------------- GPS ---------------- */
-gpsBtn.onclick = () => {
+      if(type==="drop"){
+        dropLat=lat; dropLng=lng;
+        dropMap.setView([lat,lng],15);
+        if(dropMarker) dropMap.removeLayer(dropMarker);
+        dropMarker=L.marker([lat,lng]).addTo(dropMap);
+      }
 
-  navigator.geolocation.getCurrentPosition(async (pos) => {
+      box.innerHTML="";
+    };
 
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    pickupLat = lat;
-    pickupLng = lng;
-
-    setMarker(lat, lng);
-
-    pickupInput.value = await reverseGeocode(lat, lng);
-
-  }, () => {
-    alert("Please allow GPS permission");
+    box.appendChild(div);
   });
+}
 
+/* ---------- INPUT EVENTS ---------- */
+pickupInput.addEventListener("input", debounce(async ()=>{
+  const list = await searchAddress(pickupInput.value);
+  showSuggestions(list,pickupBox,pickupInput,"pickup");
+}));
+
+dropInput.addEventListener("input", debounce(async ()=>{
+  const list = await searchAddress(dropInput.value);
+  showSuggestions(list,dropBox,dropInput,"drop");
+}));
+
+/* ---------- GPS ---------- */
+gpsBtn.onclick=()=>{
+  navigator.geolocation.getCurrentPosition(async pos=>{
+
+    pickupLat=pos.coords.latitude;
+    pickupLng=pos.coords.longitude;
+
+    pickupMap.setView([pickupLat,pickupLng],15);
+
+    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+
+    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+
+  },()=>alert("Enable location permission"));
 };
 
-/* ---------------- AUTH ---------------- */
-onAuthStateChanged(auth, async (user) => {
+/* ---------- AUTH ---------- */
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="index.html";
 
-  if (!user) return location.href = "index.html";
+  currentUser=user;
 
-  currentUser = user;
+  const snap=await getDoc(doc(db,"users",user.uid));
+  currentUserData=snap.data();
 
-  initMap();
+  loadFriends(user.uid);
 
+  if(currentUserData.role==="passenger"){
+    sendType.value="friend";
+    sendType.disabled=true;
+    friendSelect.style.display="block";
+  }
+
+  initMaps();
 });
+
+/* ---------- UI ---------- */
+sendType.addEventListener("change", ()=>{
+  const isFriend = sendType.value==="friend";
+  friendSelect.style.display=isFriend?"block":"none";
+  longBtn.style.display=isFriend?"block":"none";
+});
+
+/* ---------- FRIENDS ---------- */
+function loadFriends(uid){
+  const q=query(collection(db,"friends"),where("owner","==",uid));
+
+  onSnapshot(q,snap=>{
+    friendSelect.innerHTML='<option value="">Select Driver</option>';
+    snap.forEach(d=>{
+      const f=d.data();
+      const opt=document.createElement("option");
+      opt.value=f.friendUID;
+      opt.textContent=f.name||f.email;
+      friendSelect.appendChild(opt);
+    });
+  });
+}
+
+/* ---------- CREATE ---------- */
+btn.onclick=async()=>{
+
+  const pickup=pickupInput.value.trim();
+  const drop=dropInput.value.trim();
+  const time=document.getElementById("datetime").value;
+  const price=document.getElementById("price").value.trim();
+
+  if(!pickup||!drop||!time||!price){
+    return alert("Fill all fields");
+  }
+
+  const data={
+    pickup, drop,
+    pickupLat, pickupLng,
+    dropLat, dropLng,
+    time, price,
+    createdUid: currentUser.uid,
+    createdBy: currentUser.email,
+    createdAt: serverTimestamp()
+  };
+
+  if(sendType.value==="friend"){
+    const friendUID=friendSelect.value;
+    if(!friendUID) return alert("Select driver");
+
+    data.status="assigned";
+
+    const ref=await addDoc(collection(db,"fares"),data);
+    await sendToFriend(ref.id,friendUID,currentUser.uid);
+
+    alert("Sent to driver");
+    location.href="dashboardDriver.html";
+  }
+
+  if(sendType.value==="pool"){
+    await addDoc(collection(db,"fares"),{...data,status:"broadcast"});
+    alert("Broadcast created");
+    location.href="dashboardDriver.html";
+  }
+
+  if(sendType.value==="auto"){
+    await addDoc(collection(db,"fares"),{...data,status:"searching"});
+    alert("Auto dispatch started");
+    location.href="dashboardDriver.html";
+  }
+};
