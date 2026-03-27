@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Route View</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+#map {
+  height: 400px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="lux-header">
+  <button onclick="location.href='dashboardDriver.html'" class="lux-btn">← Back</button>
+  <div class="logo">Route View</div>
+</div>
+
+<div class="lux-main">
+
+  <h3 id="info"></h3>
+
+  <div id="map"></div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/mapView.js?v=1"></script>
+
+</body>
+</html>
