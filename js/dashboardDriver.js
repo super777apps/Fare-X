@@ -82,7 +82,6 @@ onAuthStateChanged(auth, async (user) => {
     isOnline = u.online || false;
     updateOnlineUI();
 
-    // ✅ resume GPS if already online
     if (isOnline) startLocationTracking();
   }
 
@@ -105,9 +104,9 @@ toggleBtn.onclick = async () => {
   });
 
   if (isOnline) {
-    startLocationTracking();   // ✅ START GPS
+    startLocationTracking();
   } else {
-    stopLocationTracking();    // ❌ STOP GPS
+    stopLocationTracking();
   }
 
   updateOnlineUI();
@@ -136,7 +135,7 @@ document.getElementById("logoutBtn").onclick = async () => {
     online: false
   });
 
-  stopLocationTracking(); // ✅ stop GPS
+  stopLocationTracking();
 
   await signOut(auth);
   location.href = "index.html";
@@ -218,15 +217,25 @@ function listenJobs() {
   });
 }
 
+/* ---------- VIEW ROUTE ---------- */
+window.viewRoute = (id) => {
+  location.href = `mapView.html?id=${id}`;
+};
+
 /* ---------- ACTIONS ---------- */
 function renderActions(id, f, isMine) {
 
+  const viewBtn = `
+    <button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>
+  `;
+
   if (["declined","completed","deleted"].includes(f.status)) {
-    return `<div class="gold">Past Job</div>`;
+    return viewBtn + `<div class="gold">Past Job</div>`;
   }
 
   if (isMine && f.status === "waiting response") {
     return `
+      ${viewBtn}
       <div class="fare-actions">
         <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
         <button class="cancel-btn" onclick="rejectJob('${id}')">Reject</button>
@@ -236,6 +245,7 @@ function renderActions(id, f, isMine) {
 
   if (isMine && f.status === "accepted") {
     return `
+      ${viewBtn}
       <div class="fare-actions">
         <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
         <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
@@ -246,6 +256,7 @@ function renderActions(id, f, isMine) {
 
   if (f.createdUid === currentUser.uid && f.status === "waiting response") {
     return `
+      ${viewBtn}
       <div class="fare-actions">
         <button class="lux-btn" onclick="editJob('${id}')">Edit</button>
         <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
@@ -253,7 +264,7 @@ function renderActions(id, f, isMine) {
     `;
   }
 
-  return "";
+  return viewBtn;
 }
 
 /* ---------- HANDLERS ---------- */

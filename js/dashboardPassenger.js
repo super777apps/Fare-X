@@ -5,19 +5,18 @@ import {
   query,
   where,
   onSnapshot,
-  doc,
-  getDoc
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  onAuthStateChanged,
-  signOut
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
 
 /* ---------- AUTH ---------- */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, user => {
 
   if (!user) {
     location.href = "index.html";
@@ -26,86 +25,40 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  /* LOAD USER PROFILE */
-  const snap = await getDoc(doc(db, "users", user.uid));
-
-  let name = user.email;
-  let role = "Passenger";
-
-  if (snap.exists()) {
-    const u = snap.data();
-    name = u.nickName || user.email;
-    role = u.role || "passenger";
-  }
-
-  document.getElementById("userName").textContent = name;
-  document.getElementById("userRole").textContent = role;
-
-  /* LOAD JOBS AUTOMATICALLY */
-  listenJobs();
+  loadMyDrivers();
 });
 
-/* ---------- BUTTONS ---------- */
+/* ---------- LOAD DRIVERS ---------- */
+function loadMyDrivers() {
 
-document.getElementById("createFareBtn").onclick = () => {
-  location.href = "createPassenger.html";
-};
-
-document.getElementById("driversBtn").onclick = () => {
-  location.href = "passengerDriver.html";
-};
-
-document.getElementById("profileBtn").onclick = () => {
-  location.href = "passengerProfile.html";
-};
-
-document.getElementById("helpBtn").onclick = () => {
-  location.href = "help.html";
-};
-
-document.getElementById("jobsBtn").onclick = () => {
-  listenJobs();
-};
-
-/* LOGOUT */
-document.getElementById("logoutBtn").onclick = async () => {
-  await signOut(auth);
-  location.href = "index.html";
-};
-
-/* ---------- JOBS (LIVE AUTO LOAD) ---------- */
-
-function listenJobs() {
+  const box = document.getElementById("driversList");
 
   const q = query(
-    collection(db, "fares"),
-    where("passengerUID", "==", currentUser.uid)
+    collection(db, "friends"),
+    where("owner", "==", currentUser.uid)
   );
-
-  const box = document.getElementById("jobsList");
 
   onSnapshot(q, snap => {
 
     box.innerHTML = "";
 
     if (snap.empty) {
-      box.innerHTML = `<div class="gold">No jobs yet</div>`;
+      box.innerHTML = `<div class="gold">No drivers added</div>`;
       return;
     }
 
-    snap.forEach(d => {
+    snap.forEach(docSnap => {
 
-      const f = d.data();
+      const f = docSnap.data();
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
       div.innerHTML = `
-        <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
-        <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
-        <div class="fare-row"><span>Time:</span><b>${f.time}</b></div>
-        <div class="fare-row"><span>Price:</span><b>${f.price}</b></div>
-        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+        <div class="fare-row">
+          <span>Driver:</span>
+          <b>${f.nickName || f.name || f.email}</b>
+        </div>
       `;
 
       box.appendChild(div);
@@ -113,3 +66,63 @@ function listenJobs() {
 
   });
 }
+
+/* ---------- SEARCH DRIVER ---------- */
+document.getElementById("searchBtn").onclick = async () => {
+
+  const text = document.getElementById("searchInput").value.trim().toLowerCase();
+
+  if (!text) return alert("Enter nickname");
+
+  const box = document.getElementById("searchResults");
+  box.innerHTML = "Searching...";
+
+  const snap = await getDocs(collection(db, "users"));
+
+  box.innerHTML = "";
+
+  let found = false;
+
+  snap.forEach(docSnap => {
+
+    const u = docSnap.data();
+
+    if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
+
+      found = true;
+
+      const div = document.createElement("div");
+      div.className = "fare-card";
+
+      div.innerHTML = `
+        <div class="fare-row">
+          <span>Driver:</span>
+          <b>${u.nickName}</b>
+        </div>
+
+        <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
+          Add Driver
+        </button>
+      `;
+
+      box.appendChild(div);
+    }
+
+  });
+
+  if (!found) {
+    box.innerHTML = `<div class="gold">No driver found</div>`;
+  }
+};
+
+/* ---------- ADD DRIVER ---------- */
+window.addDriver = async (driverUID, name) => {
+
+  await addDoc(collection(db, "friends"), {
+    owner: currentUser.uid,
+    friendUID: driverUID,
+    nickName: name
+  });
+
+  alert("Driver added");
+};
