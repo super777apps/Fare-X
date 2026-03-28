@@ -8,7 +8,10 @@ const loginBtn = document.getElementById("loginBtn");
 const registerDriverBtn = document.getElementById("registerDriverBtn");
 const registerPassengerBtn = document.getElementById("registerPassengerBtn");
 
-// Login
+/* ✅ OPTIONAL ADMIN BUTTON (only if exists in HTML) */
+const registerAdminBtn = document.getElementById("registerAdminBtn");
+
+/* ---------- LOGIN ---------- */
 loginBtn.onclick = async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -20,11 +23,17 @@ loginBtn.onclick = async () => {
     if (!userDoc.exists()) throw "User data missing";
 
     const role = userDoc.data().role;
+
     if (role === "driver") {
       location.href = "dashboardDriver.html";
-    } else if (role === "passenger") {
+    } 
+    else if (role === "passenger") {
       location.href = "dashboardPassenger.html";
-    } else {
+    } 
+    else if (role === "admin") {   // ✅ NEW
+      location.href = "admin.html";
+    } 
+    else {
       alert("Invalid user role");
     }
 
@@ -33,7 +42,7 @@ loginBtn.onclick = async () => {
   }
 };
 
-// Create Driver
+/* ---------- CREATE DRIVER ---------- */
 registerDriverBtn.onclick = async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -53,7 +62,7 @@ registerDriverBtn.onclick = async () => {
   }
 };
 
-// Create Passenger
+/* ---------- CREATE PASSENGER ---------- */
 registerPassengerBtn.onclick = async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -72,3 +81,25 @@ registerPassengerBtn.onclick = async () => {
     alert("Error creating passenger: " + e);
   }
 };
+
+/* ---------- ✅ CREATE ADMIN (OPTIONAL) ---------- */
+if (registerAdminBtn) {
+  registerAdminBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!email || !password) return alert("Fill all fields");
+
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "users", userCred.user.uid), {
+        email,
+        role: "admin",
+        nickname: "Admin",
+        createdAt: new Date()
+      });
+      alert("Admin account created");
+    } catch (e) {
+      alert("Error creating admin: " + e);
+    }
+  };
+}

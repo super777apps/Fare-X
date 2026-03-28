@@ -19,14 +19,41 @@ import {
 let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
-let watchId = null; // ✅ GPS tracker
+let watchId = null;
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
 const acceptSound = new Audio("assets/accept.mp3");
 const declineSound = new Audio("assets/decline.mp3");
 
-/* ---------- GPS TRACKING ---------- */
+/* =========================================================
+   ✅ NEW: ETA CALCULATION (simple fallback)
+========================================================= */
+function calculateETA(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI/180;
+  const dLng = (lng2 - lng1) * Math.PI/180;
+
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLng/2)**2;
+
+  const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  // assume avg 40km/h
+  const timeMinutes = Math.round((distance / 40) * 60);
+
+  return {
+    distance: distance.toFixed(2) + " km",
+    eta: timeMinutes + " min"
+  };
+}
+
+/* =========================================================
+   GPS TRACKING (UNCHANGED + ENHANCED)
+========================================================= */
 function startLocationTracking() {
 
   if (!navigator.geolocation) {
@@ -49,7 +76,6 @@ function startLocationTracking() {
   }, {
     enableHighAccuracy: true
   });
-
 }
 
 function stopLocationTracking() {
@@ -59,7 +85,9 @@ function stopLocationTracking() {
   }
 }
 
-/* ---------- AUTH ---------- */
+/* =========================================================
+   AUTH (UNCHANGED)
+========================================================= */
 onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
@@ -91,7 +119,9 @@ onAuthStateChanged(auth, async (user) => {
   listenJobs();
 });
 
-/* ---------- ONLINE TOGGLE ---------- */
+/* =========================================================
+   ONLINE TOGGLE (UNCHANGED)
+========================================================= */
 const toggleBtn = document.getElementById("toggleOnlineBtn");
 
 toggleBtn.onclick = async () => {
@@ -103,16 +133,15 @@ toggleBtn.onclick = async () => {
     lastActive: serverTimestamp()
   });
 
-  if (isOnline) {
-    startLocationTracking();
-  } else {
-    stopLocationTracking();
-  }
+  if (isOnline) startLocationTracking();
+  else stopLocationTracking();
 
   updateOnlineUI();
 };
 
-/* ---------- UPDATE UI ---------- */
+/* =========================================================
+   UI (UNCHANGED)
+========================================================= */
 function updateOnlineUI() {
 
   const statusText = document.getElementById("onlineStatus");
@@ -128,7 +157,9 @@ function updateOnlineUI() {
   }
 }
 
-/* ---------- LOGOUT ---------- */
+/* =========================================================
+   LOGOUT (UNCHANGED)
+========================================================= */
 document.getElementById("logoutBtn").onclick = async () => {
 
   await updateDoc(doc(db, "users", currentUser.uid), {
@@ -141,7 +172,9 @@ document.getElementById("logoutBtn").onclick = async () => {
   location.href = "index.html";
 };
 
-/* ---------- BUTTONS ---------- */
+/* =========================================================
+   BUTTONS (UNCHANGED)
+========================================================= */
 document.getElementById("currentJobsBtn").onclick = () => {
   currentMode = "current";
   listenJobs();
@@ -152,7 +185,9 @@ document.getElementById("pastJobsBtn").onclick = () => {
   listenJobs();
 };
 
-/* ---------- JOB LISTENER ---------- */
+/* =========================================================
+   JOB LISTENER (ENHANCED)
+========================================================= */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
@@ -188,7 +223,7 @@ function listenJobs() {
       return;
     }
 
-    snap.forEach(d => {
+    snap.forEach(async d => {
 
       const f = d.data();
       const isMine = f.currentDriverUID === currentUser.uid;
@@ -201,12 +236,38 @@ function listenJobs() {
         jobSound.play();
       }
 
+      /* ===============================
+         ✅ NEW: ETA DISPLAY
+      =============================== */
+      let etaHTML = "";
+
+      if (isMine && f.pickupLat && f.pickupLng) {
+        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+        const driverLoc = userSnap.data()?.location;
+
+        if (driverLoc) {
+          const calc = calculateETA(
+            driverLoc.lat,
+            driverLoc.lng,
+            f.pickupLat,
+            f.pickupLng
+          );
+
+          etaHTML = `
+            <div class="fare-row"><span>Distance:</span><b>${calc.distance}</b></div>
+            <div class="fare-row"><span>ETA:</span><b>${calc.eta}</b></div>
+          `;
+        }
+      }
+
       div.innerHTML = `
         <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
         <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
         <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
         <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
         <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
+
+        ${etaHTML}
 
         ${renderActions(d.id, f, isMine)}
       `;
@@ -217,12 +278,16 @@ function listenJobs() {
   });
 }
 
-/* ---------- VIEW ROUTE ---------- */
+/* =========================================================
+   VIEW ROUTE (UNCHANGED)
+========================================================= */
 window.viewRoute = (id) => {
   location.href = `mapView.html?id=${id}`;
 };
 
-/* ---------- ACTIONS ---------- */
+/* =========================================================
+   ACTIONS (UNCHANGED)
+========================================================= */
 function renderActions(id, f, isMine) {
 
   const viewBtn = `
@@ -267,7 +332,9 @@ function renderActions(id, f, isMine) {
   return viewBtn;
 }
 
-/* ---------- HANDLERS ---------- */
+/* =========================================================
+   HANDLERS (UNCHANGED)
+========================================================= */
 window.acceptJob = async (id) => {
   await updateDoc(doc(db,"fares",id),{
     status:"accepted",
