@@ -2,35 +2,43 @@ import { db, auth } from "./firebase.js";
 
 import {
   collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  getDoc
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+/* ---------- MAP ---------- */
+let map;
+let markers = [];
+
+/* ---------- INIT MAP ---------- */
+function initMap() {
+
+  map = L.map('map').setView([31.52, 74.35], 12); // Lahore default
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+}
 
 /* ---------- AUTH ---------- */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, user => {
 
   if (!user) {
     location.href = "index.html";
     return;
   }
 
-  const snap = await getDoc(doc(db, "users", user.uid));
-
-  if (!snap.exists() || snap.data().role !== "admin") {
-    alert("Access denied");
-    location.href = "dashboardDriver.html";
-    return;
-  }
-
+  initMap();
   loadUsers();
   loadJobs();
+  liveDrivers();
 });
 
-/* ---------- LOAD USERS ---------- */
+/* ---------- USERS ---------- */
 function loadUsers() {
 
   const box = document.getElementById("usersList");
@@ -47,18 +55,10 @@ function loadUsers() {
       div.className = "fare-card";
 
       div.innerHTML = `
-        <div class="fare-row"><span>Email:</span><b>${u.email}</b></div>
+        <div class="fare-row"><span>Email:</span><b>${u.email || "-"}</b></div>
+        <div class="fare-row"><span>Name:</span><b>${u.nickName || "-"}</b></div>
         <div class="fare-row"><span>Role:</span><b>${u.role}</b></div>
-        <div class="fare-row"><span>Status:</span>
-          <b style="color:${u.online ? '#00e676' : '#ff5252'}">
-            ${u.online ? "Online" : "Offline"}
-          </b>
-        </div>
-
-        <div class="fare-actions">
-          <button class="lux-btn" onclick="blockUser('${docSnap.id}')">Block</button>
-          <button class="lux-btn" onclick="unblockUser('${docSnap.id}')">Unblock</button>
-        </div>
+        <div class="fare-row"><span>Online:</span><b>${u.online ? "Yes" : "No"}</b></div>
       `;
 
       box.appendChild(div);
@@ -67,7 +67,7 @@ function loadUsers() {
   });
 }
 
-/* ---------- LOAD JOBS ---------- */
+/* ---------- JOBS ---------- */
 function loadJobs() {
 
   const box = document.getElementById("jobsList");
@@ -87,12 +87,8 @@ function loadJobs() {
         <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
         <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
         <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
-
-        <div class="fare-actions">
-          <button class="lux-btn danger" onclick="cancelJob('${docSnap.id}')">
-            Force Cancel
-          </button>
-        </div>
+        <div class="fare-row"><span>Driver:</span><b>${f.currentDriverName || "-"}</b></div>
+        <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
       `;
 
       box.appendChild(div);
@@ -101,24 +97,32 @@ function loadJobs() {
   });
 }
 
-/* ---------- ACTIONS ---------- */
-window.blockUser = async (uid) => {
-  await updateDoc(doc(db, "users", uid), {
-    blocked: true
-  });
-  alert("User blocked");
-};
+/* ---------- LIVE DRIVERS ---------- */
+function liveDrivers() {
 
-window.unblockUser = async (uid) => {
-  await updateDoc(doc(db, "users", uid), {
-    blocked: false
-  });
-  alert("User unblocked");
-};
+  onSnapshot(collection(db, "users"), snap => {
 
-window.cancelJob = async (id) => {
-  await updateDoc(doc(db, "fares", id), {
-    status: "deleted"
+    // clear old markers
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    snap.forEach(docSnap => {
+
+      const u = docSnap.data();
+
+      if (u.role === "driver" && u.online && u.location) {
+
+        const m = L.marker([u.location.lat, u.location.lng])
+          .addTo(map)
+          .bindPopup(`
+            <b>${u.nickName || u.email}</b><br>
+            Online Driver
+          `);
+
+        markers.push(m);
+      }
+
+    });
+
   });
-  alert("Job cancelled by admin");
-};
+}
