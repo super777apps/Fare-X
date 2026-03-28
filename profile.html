@@ -1,38 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Profile</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Profile</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+.form-box {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:15px;
+}
+</style>
 </head>
+
 <body>
 
-<header class="lux-header">
-  <h1>Profile</h1>
-  <a href="dashboard.html" class="lux-btn">Back</a>
-</header>
+<!-- HEADER -->
+<div class="lux-header">
+  <button onclick="goBack()" class="lux-btn">← Back</button>
+  <div class="logo">Fare<span class="gold">-X</span></div>
+</div>
 
 <div class="lux-main">
 
-  <div class="fare-card">
+  <h2 class="section-title">Driver Profile</h2>
 
-    <label>Nickname</label>
-    <input id="nickname" placeholder="Enter nickname">
+  <div class="form-box">
 
-    <label>Role</label>
-    <select id="role">
-      <option value="driver">Driver</option>
-      <option value="passenger">Passenger</option>
-    </select>
+    <input id="firstName" placeholder="First Name">
+    <input id="middleName" placeholder="Middle Name">
+    <input id="dob" type="date">
 
-    <br><br>
+    <input id="resAddress" placeholder="Residential Address">
+    <input id="postalAddress" placeholder="Postal Address">
 
-    <button id="saveBtn" class="lux-btn full">Save</button>
+    <input id="licenceNo" placeholder="Driving Licence Number">
+    <input id="taxiLicence" placeholder="Taxi / Hire Licence Number">
+
+    <input id="carReg" placeholder="Car Registration Number">
+    <input id="carMake" placeholder="Car Make & Model">
+    <input id="carYear" placeholder="Car Model Year">
+
+    <button id="saveBtn" class="lux-btn full">Save Profile</button>
 
   </div>
 
 </div>
 
-<script type="module" src="js/profile.js"></script>
+<script type="module" src="js/profile.js?v=2"></script>
+
+<script>
+function goBack(){
+  // detect role (simple fallback)
+  const role = localStorage.getItem("role");
+
+  if(role === "passenger"){
+    location.href = "dashboardPassenger.html";
+  } else {
+    location.href = "dashboardDriver.html";
+  }
+}
+</script>
 
 </body>
 </html>
