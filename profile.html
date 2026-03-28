@@ -27,10 +27,17 @@
 
 <div class="lux-main">
 
-  <h2 class="section-title">Driver Profile</h2>
+  <h2 class="section-title">Profile</h2>
 
   <div class="form-box">
 
+    <!-- ✅ NEW -->
+    <input id="nickName" placeholder="Nickname">
+
+    <!-- ✅ NEW (readonly email) -->
+    <input id="email" placeholder="Email" readonly>
+
+    <!-- EXISTING -->
     <input id="firstName" placeholder="First Name">
     <input id="middleName" placeholder="Middle Name">
     <input id="dob" type="date">
@@ -51,11 +58,10 @@
 
 </div>
 
-<script type="module" src="js/profile.js?v=2"></script>
+<script type="module" src="js/profile.js?v=3"></script>
 
 <script>
 function goBack(){
-  // detect role (simple fallback)
   const role = localStorage.getItem("role");
 
   if(role === "passenger"){
