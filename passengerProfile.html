@@ -1,14 +1,56 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Passenger Profile</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+.form-box {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:20px;
+}
+</style>
 </head>
 
 <body>
-  
-</body>
 
+<!-- HEADER -->
+<div class="lux-header">
+  <div class="logo">Fare<span class="gold">-X</span></div>
+
+  <button onclick="location.href='dashboardPassenger.html'" class="lux-btn">
+    ← Back
+  </button>
+</div>
+
+<div class="lux-main">
+
+  <h2 style="text-align:center;">Passenger Profile</h2>
+
+  <div class="form-box">
+
+    <input id="firstName" placeholder="First Name">
+    <input id="middleName" placeholder="Middle Name">
+    <input id="lastName" placeholder="Last Name">
+    <input id="nickName" placeholder="Nick Name">
+
+    <input id="phone" placeholder="Phone Number">
+    <input id="email" placeholder="Email Address" disabled>
+
+    <input id="address" placeholder="Address">
+
+    <button id="saveBtn" class="lux-btn full">Save Profile</button>
+
+  </div>
+
+</div>
+
+<script type="module" src="js/passengerProfile.js"></script>
+
+</body>
 </html>
