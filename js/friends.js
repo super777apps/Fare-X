@@ -14,6 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
+let myDrivers = []; // ✅ store already added drivers
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, user => {
@@ -41,6 +42,7 @@ function loadMyDrivers() {
   onSnapshot(q, snap => {
 
     box.innerHTML = "";
+    myDrivers = []; // ✅ reset list
 
     if (snap.empty) {
       box.innerHTML = `<div class="gold">No drivers added</div>`;
@@ -51,13 +53,15 @@ function loadMyDrivers() {
 
       const f = docSnap.data();
 
+      myDrivers.push(f.friendUID); // ✅ store for filtering
+
       const div = document.createElement("div");
       div.className = "fare-card";
 
       div.innerHTML = `
         <div class="fare-row">
           <span>Driver:</span>
-          <b>${f.nickName || f.name || f.email}</b>
+          <b>${f.nickName || f.name || f.email || "Driver"}</b>
         </div>
       `;
 
@@ -87,7 +91,18 @@ document.getElementById("searchBtn").onclick = async () => {
 
     const u = docSnap.data();
 
-    if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
+    // ✅ SAFE FIELDS
+    const nick = (u.nickName || "").toLowerCase();
+    const name = (u.name || "").toLowerCase();
+    const email = (u.email || "").toLowerCase();
+
+    const match =
+      nick.includes(text) ||
+      name.includes(text) ||
+      email.includes(text);
+
+    // ✅ ONLY DRIVERS + NOT ALREADY ADDED
+    if (u.role === "driver" && match && !myDrivers.includes(docSnap.id)) {
 
       found = true;
 
@@ -97,10 +112,10 @@ document.getElementById("searchBtn").onclick = async () => {
       div.innerHTML = `
         <div class="fare-row">
           <span>Driver:</span>
-          <b>${u.nickName}</b>
+          <b>${u.nickName || u.name || u.email || "Driver"}</b>
         </div>
 
-        <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
+        <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName || u.name || u.email}')">
           Add Driver
         </button>
       `;
