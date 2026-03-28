@@ -3,25 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fare-X | Passenger Create</title>
+<title>Fare-X | Create Fare</title>
 
 <link rel="stylesheet" href="css/style.css">
 
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 .map {
   height: 250px;
+  min-height: 250px;
+  width: 100%;
   margin: 10px 0;
   border-radius: 10px;
 }
 
+/* suggestion */
 .suggestions {
   background:#111;
   border-radius:8px;
   max-height:150px;
   overflow:auto;
   margin-top:5px;
+  position: relative;
+  z-index: 999;
 }
 .suggestions div {
   padding:8px;
@@ -38,7 +44,7 @@
 <div class="lux-main">
 
 <button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">
-← Back to Dashboard
+← Back
 </button>
 
 <h2 style="text-align:center; margin:20px 0;">Create Fare</h2>
@@ -47,8 +53,7 @@
 <input id="pickup" placeholder="Pickup location">
 <div id="pickupSuggestions" class="suggestions"></div>
 <div id="pickupMap" class="map"></div>
-
-<button id="gpsBtn" class="lux-btn full">Use Current Location</button>
+<button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
 
 <!-- DROP -->
 <input id="drop" placeholder="Drop location">
@@ -67,7 +72,8 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="js/createPassenger.js?v=FINAL"></script>
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/createPassenger.js?v=FIX"></script>
 
 </body>
 </html>
