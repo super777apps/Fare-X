@@ -1,29 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fare-X | Create Fare</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Passenger Create</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+.map {
+  height: 250px;
+  margin: 10px 0;
+  border-radius: 10px;
+}
+
+.suggestions {
+  background:#111;
+  border-radius:8px;
+  max-height:150px;
+  overflow:auto;
+  margin-top:5px;
+}
+.suggestions div {
+  padding:8px;
+  cursor:pointer;
+}
+.suggestions div:hover {
+  background:#222;
+}
+</style>
 </head>
+
 <body>
 
 <div class="lux-main">
-  <button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">← Back to Dashboard</button>
-  <h2 style="text-align:center; margin:20px 0;">Create Fare</h2>
 
-  <input type="text" id="pickup" placeholder="Pickup Location">
-  <input type="text" id="drop" placeholder="Drop Location">
-  <input type="datetime-local" id="datetime">
-  <input type="text" id="price" placeholder="Fare Price">
+<button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">
+← Back to Dashboard
+</button>
 
-  <select id="driverSelect">
-    <option value="">Select Driver</option>
-  </select>
+<h2 style="text-align:center; margin:20px 0;">Create Fare</h2>
 
-  <button id="createFareBtn" class="lux-btn full">Send to Driver</button>
+<!-- PICKUP -->
+<input id="pickup" placeholder="Pickup location">
+<div id="pickupSuggestions" class="suggestions"></div>
+<div id="pickupMap" class="map"></div>
+
+<button id="gpsBtn" class="lux-btn full">Use Current Location</button>
+
+<!-- DROP -->
+<input id="drop" placeholder="Drop location">
+<div id="dropSuggestions" class="suggestions"></div>
+<div id="dropMap" class="map"></div>
+
+<input id="datetime" type="datetime-local">
+<input id="price" placeholder="Fare Price">
+
+<select id="driverSelect">
+<option value="">Select Driver</option>
+</select>
+
+<button id="createFareBtn" class="lux-btn full">Send to Driver</button>
+
 </div>
 
-<script type="module" src="js/createPassenger.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="js/createPassenger.js?v=FINAL"></script>
+
 </body>
 </html>
