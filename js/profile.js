@@ -11,6 +11,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 /* ---------- ELEMENTS ---------- */
+const nickName = document.getElementById("nickName"); // ✅ NEW
+const emailField = document.getElementById("email");  // ✅ NEW
+
 const firstName = document.getElementById("firstName");
 const middleName = document.getElementById("middleName");
 const dob = document.getElementById("dob");
@@ -39,6 +42,9 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
+  // ✅ SET EMAIL
+  emailField.value = user.email || "";
+
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
 
@@ -47,6 +53,9 @@ onAuthStateChanged(auth, async (user) => {
 
     // save role locally (for back button)
     localStorage.setItem("role", d.role || "driver");
+
+    // ✅ NEW
+    nickName.value = d.nickName || "";
 
     firstName.value = d.firstName || "";
     middleName.value = d.middleName || "";
@@ -73,6 +82,9 @@ saveBtn.onclick = async () => {
   try {
 
     await updateDoc(doc(db, "users", currentUser.uid), {
+
+      // ✅ NEW
+      nickName: nickName.value.trim(),
 
       firstName: firstName.value.trim(),
       middleName: middleName.value.trim(),
