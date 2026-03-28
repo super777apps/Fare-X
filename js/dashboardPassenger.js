@@ -54,23 +54,39 @@ onAuthStateChanged(auth, async user => {
 
   currentUser = user;
 
-  // ✅ SHOW NAME
-  const nameBox = document.getElementById("userName");
-  const roleBox = document.getElementById("userRole");
+  document.getElementById("userName").textContent = user.email;
+  document.getElementById("userRole").textContent = "Passenger";
 
-  if (nameBox) nameBox.textContent = user.email;
-  if (roleBox) roleBox.textContent = "Passenger";
-
+  setupButtons();   // ✅ FIXED
   listenMyJobs();
 });
 
 /* =========================================================
-   LOGOUT FIX
+   BUTTONS FIX
 ========================================================= */
-const logoutBtn = document.getElementById("logoutBtn");
+function setupButtons() {
 
-if (logoutBtn) {
-  logoutBtn.onclick = async () => {
+  document.getElementById("createFareBtn").onclick = () => {
+    location.href = "createPassenger.html";
+  };
+
+  document.getElementById("driversBtn").onclick = () => {
+    location.href = "friends.html";
+  };
+
+  document.getElementById("profileBtn").onclick = () => {
+    location.href = "profile.html";
+  };
+
+  document.getElementById("helpBtn").onclick = () => {
+    location.href = "help.html";
+  };
+
+  document.getElementById("jobsBtn").onclick = () => {
+    listenMyJobs();
+  };
+
+  document.getElementById("logoutBtn").onclick = async () => {
     await signOut(auth);
     location.href = "index.html";
   };
@@ -82,7 +98,6 @@ if (logoutBtn) {
 function listenMyJobs() {
 
   const box = document.getElementById("jobsList");
-  if (!box) return;
 
   const q = query(
     collection(db, "fares"),
@@ -156,7 +171,7 @@ window.viewRoute = async (jobId) => {
 
   }, 300);
 
-  /* -------- DISTANCE -------- */
+  /* -------- DISTANCE + ETA -------- */
   const dist = getDistance(
     job.pickupLat, job.pickupLng,
     job.dropLat, job.dropLng
@@ -214,57 +229,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 /* =========================================================
-   SAFE SEARCH DRIVER (NO CRASH)
-========================================================= */
-const searchBtn = document.getElementById("searchBtn");
-
-if (searchBtn) {
-  searchBtn.onclick = async () => {
-
-    const input = document.getElementById("searchInput");
-    const box = document.getElementById("searchResults");
-
-    if (!input || !box) return;
-
-    const text = input.value.trim().toLowerCase();
-    if (!text) return alert("Enter nickname");
-
-    box.innerHTML = "Searching...";
-
-    const snap = await getDocs(collection(db, "users"));
-
-    box.innerHTML = "";
-
-    snap.forEach(docSnap => {
-
-      const u = docSnap.data();
-
-      if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
-
-        const div = document.createElement("div");
-        div.className = "fare-card";
-
-        div.innerHTML = `
-          <div class="fare-row">
-            <span>Driver:</span>
-            <b>${u.nickName}</b>
-          </div>
-
-          <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
-            Add Driver
-          </button>
-        `;
-
-        box.appendChild(div);
-      }
-
-    });
-
-  };
-}
-
-/* =========================================================
-   ADD DRIVER
+   SEARCH DRIVER
 ========================================================= */
 window.addDriver = async (driverUID, name) => {
 
