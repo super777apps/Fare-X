@@ -12,21 +12,32 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
 
 /* =========================================================
-   ✅ NEW: ROUTE SCREEN ELEMENTS
+   ROUTE SCREEN
 ========================================================= */
 const routeBox = document.createElement("div");
 routeBox.style.display = "none";
+routeBox.style.position = "fixed";
+routeBox.style.top = "0";
+routeBox.style.left = "0";
+routeBox.style.width = "100%";
+routeBox.style.height = "100%";
+routeBox.style.background = "#000";
+routeBox.style.zIndex = "9999";
+routeBox.style.padding = "10px";
+
 routeBox.innerHTML = `
   <button onclick="closeRoute()" class="lux-btn full">← Back</button>
   <div id="routeMap" style="height:300px; margin-top:10px;"></div>
-  <div id="routeInfo" style="margin-top:10px;"></div>
+  <div id="routeInfo" style="margin-top:10px; color:#fff;"></div>
 `;
+
 document.body.appendChild(routeBox);
 
 let routeMap, routeLine, driverMarker;
@@ -34,7 +45,7 @@ let routeMap, routeLine, driverMarker;
 /* =========================================================
    AUTH
 ========================================================= */
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
 
   if (!user) {
     location.href = "index.html";
@@ -43,55 +54,30 @@ onAuthStateChanged(auth, user => {
 
   currentUser = user;
 
-  loadMyDrivers();
-  listenMyJobs(); // ✅ NEW
+  // ✅ SHOW NAME
+  const nameBox = document.getElementById("userName");
+  const roleBox = document.getElementById("userRole");
+
+  if (nameBox) nameBox.textContent = user.email;
+  if (roleBox) roleBox.textContent = "Passenger";
+
+  listenMyJobs();
 });
 
 /* =========================================================
-   LOAD DRIVERS (UNCHANGED)
+   LOGOUT FIX
 ========================================================= */
-function loadMyDrivers() {
+const logoutBtn = document.getElementById("logoutBtn");
 
-  const box = document.getElementById("driversList");
-
-  if (!box) return;
-
-  const q = query(
-    collection(db, "friends"),
-    where("owner", "==", currentUser.uid)
-  );
-
-  onSnapshot(q, snap => {
-
-    box.innerHTML = "";
-
-    if (snap.empty) {
-      box.innerHTML = `<div class="gold">No drivers added</div>`;
-      return;
-    }
-
-    snap.forEach(docSnap => {
-
-      const f = docSnap.data();
-
-      const div = document.createElement("div");
-      div.className = "fare-card";
-
-      div.innerHTML = `
-        <div class="fare-row">
-          <span>Driver:</span>
-          <b>${f.nickName || f.name || f.email}</b>
-        </div>
-      `;
-
-      box.appendChild(div);
-    });
-
-  });
+if (logoutBtn) {
+  logoutBtn.onclick = async () => {
+    await signOut(auth);
+    location.href = "index.html";
+  };
 }
 
 /* =========================================================
-   ✅ NEW: LISTEN MY JOBS
+   LISTEN JOBS
 ========================================================= */
 function listenMyJobs() {
 
@@ -136,7 +122,7 @@ function listenMyJobs() {
 }
 
 /* =========================================================
-   ✅ NEW: VIEW ROUTE
+   VIEW ROUTE
 ========================================================= */
 window.viewRoute = async (jobId) => {
 
@@ -150,21 +136,25 @@ window.viewRoute = async (jobId) => {
 
   routeBox.style.display = "block";
 
-  if (!routeMap) {
-    routeMap = L.map('routeMap').setView([job.pickupLat, job.pickupLng], 13);
+  setTimeout(() => {
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-      .addTo(routeMap);
-  }
+    if (!routeMap) {
+      routeMap = L.map('routeMap').setView([job.pickupLat, job.pickupLng], 13);
 
-  if (routeLine) routeMap.removeLayer(routeLine);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+        .addTo(routeMap);
+    }
 
-  routeLine = L.polyline([
-    [job.pickupLat, job.pickupLng],
-    [job.dropLat, job.dropLng]
-  ]).addTo(routeMap);
+    if (routeLine) routeMap.removeLayer(routeLine);
 
-  routeMap.fitBounds(routeLine.getBounds());
+    routeLine = L.polyline([
+      [job.pickupLat, job.pickupLng],
+      [job.dropLat, job.dropLng]
+    ]).addTo(routeMap);
+
+    routeMap.fitBounds(routeLine.getBounds());
+
+  }, 300);
 
   /* -------- DISTANCE -------- */
   const dist = getDistance(
@@ -172,12 +162,12 @@ window.viewRoute = async (jobId) => {
     job.dropLat, job.dropLng
   );
 
-  const eta = (dist / 40 * 60).toFixed(0); // avg 40km/h
+  const eta = (dist / 40 * 60).toFixed(0);
 
   document.getElementById("routeInfo").innerHTML =
     `Distance: ${dist.toFixed(2)} km<br>ETA: ${eta} min`;
 
-  /* -------- DRIVER LIVE TRACK -------- */
+  /* -------- LIVE DRIVER -------- */
   if (job.currentDriverUID) {
 
     onSnapshot(doc(db, "users", job.currentDriverUID), snap => {
@@ -207,7 +197,7 @@ window.closeRoute = () => {
 };
 
 /* =========================================================
-   DISTANCE FUNCTION
+   DISTANCE
 ========================================================= */
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -224,57 +214,57 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 /* =========================================================
-   SEARCH DRIVER (UNCHANGED)
+   SAFE SEARCH DRIVER (NO CRASH)
 ========================================================= */
-document.getElementById("searchBtn").onclick = async () => {
+const searchBtn = document.getElementById("searchBtn");
 
-  const text = document.getElementById("searchInput").value.trim().toLowerCase();
+if (searchBtn) {
+  searchBtn.onclick = async () => {
 
-  if (!text) return alert("Enter nickname");
+    const input = document.getElementById("searchInput");
+    const box = document.getElementById("searchResults");
 
-  const box = document.getElementById("searchResults");
-  box.innerHTML = "Searching...";
+    if (!input || !box) return;
 
-  const snap = await getDocs(collection(db, "users"));
+    const text = input.value.trim().toLowerCase();
+    if (!text) return alert("Enter nickname");
 
-  box.innerHTML = "";
+    box.innerHTML = "Searching...";
 
-  let found = false;
+    const snap = await getDocs(collection(db, "users"));
 
-  snap.forEach(docSnap => {
+    box.innerHTML = "";
 
-    const u = docSnap.data();
+    snap.forEach(docSnap => {
 
-    if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
+      const u = docSnap.data();
 
-      found = true;
+      if (u.role === "driver" && u.nickName?.toLowerCase().includes(text)) {
 
-      const div = document.createElement("div");
-      div.className = "fare-card";
+        const div = document.createElement("div");
+        div.className = "fare-card";
 
-      div.innerHTML = `
-        <div class="fare-row">
-          <span>Driver:</span>
-          <b>${u.nickName}</b>
-        </div>
+        div.innerHTML = `
+          <div class="fare-row">
+            <span>Driver:</span>
+            <b>${u.nickName}</b>
+          </div>
 
-        <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
-          Add Driver
-        </button>
-      `;
+          <button class="lux-btn full" onclick="addDriver('${docSnap.id}','${u.nickName}')">
+            Add Driver
+          </button>
+        `;
 
-      box.appendChild(div);
-    }
+        box.appendChild(div);
+      }
 
-  });
+    });
 
-  if (!found) {
-    box.innerHTML = `<div class="gold">No driver found</div>`;
-  }
-};
+  };
+}
 
 /* =========================================================
-   ADD DRIVER (UNCHANGED)
+   ADD DRIVER
 ========================================================= */
 window.addDriver = async (driverUID, name) => {
 
