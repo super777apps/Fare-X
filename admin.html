@@ -7,42 +7,54 @@
 
 <link rel="stylesheet" href="css/style.css">
 
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <style>
+.map {
+  height: 300px;
+  margin: 10px 0;
+  border-radius: 10px;
+}
+
 .section {
-  margin-top:20px;
+  margin-top: 20px;
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="lux-header">
-  <div class="logo">Fare<span class="gold">-X</span></div>
+<header class="lux-header">
+  <h1 class="logo">Fare<span class="gold">-X</span> Admin</h1>
+  <button onclick="location.href='index.html'" class="lux-btn">Logout</button>
+</header>
 
-  <button onclick="location.href='dashboardDriver.html'" class="lux-btn">
-    ← Back
-  </button>
-</div>
+<main class="lux-main">
 
-<div class="lux-main">
+  <h2>Admin Dashboard</h2>
 
-<h2>Admin Panel</h2>
+  <!-- USERS -->
+  <div class="section">
+    <h3>All Users</h3>
+    <div id="usersList" class="fare-list"></div>
+  </div>
 
-<!-- USERS -->
-<div class="section">
-  <h3>Users</h3>
-  <div id="usersList"></div>
-</div>
+  <!-- JOBS -->
+  <div class="section">
+    <h3>All Jobs</h3>
+    <div id="jobsList" class="fare-list"></div>
+  </div>
 
-<!-- JOBS -->
-<div class="section">
-  <h3>All Jobs</h3>
-  <div id="jobsList"></div>
-</div>
+  <!-- MAP -->
+  <div class="section">
+    <h3>Live Drivers Map</h3>
+    <div id="map" class="map"></div>
+  </div>
 
-</div>
+</main>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/admin.js?v=1"></script>
 
