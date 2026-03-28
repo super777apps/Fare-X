@@ -75,7 +75,7 @@ function setupButtons() {
   };
 
   document.getElementById("profileBtn").onclick = () => {
-    location.href = "profile.html";
+    location.href = "passengerProfile.html";
   };
 
   document.getElementById("helpBtn").onclick = () => {
