@@ -14,6 +14,19 @@
   gap:10px;
   margin-top:20px;
 }
+
+.profile-pic-box {
+  text-align:center;
+  margin-top:15px;
+}
+
+.profile-pic-box img {
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #ccc;
+}
 </style>
 </head>
 
@@ -31,6 +44,13 @@
 <div class="lux-main">
 
   <h2 style="text-align:center;">Passenger Profile</h2>
+
+  <!-- ✅ PROFILE IMAGE -->
+  <div class="profile-pic-box">
+    <img id="profileImage" src="https://via.placeholder.com/120">
+    <br><br>
+    <input type="file" id="photoInput" accept="image/*" capture="environment">
+  </div>
 
   <div class="form-box">
 
