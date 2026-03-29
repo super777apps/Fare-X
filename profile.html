@@ -9,17 +9,18 @@
 
 <style>
 .form-box {
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-top:15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 .preview-img{
-  width:100%;
-  max-height:150px;
-  object-fit:cover;
-  border-radius:8px;
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f2f2f2;
 }
 </style>
 </head>
@@ -41,9 +42,8 @@
     <input id="email" placeholder="Email" readonly>
 
     <input id="firstName" placeholder="First Name">
-    <input id="middleName" placeholder="Last Name">
+    <input id="middleName" placeholder="Last Name (Surname)">
 
-    <!-- ✅ DOB LABEL FIX -->
     <label>DOB</label>
     <input id="dob" type="date">
 
@@ -60,27 +60,27 @@
     <!-- 📸 PHOTOS -->
 
     <label>Driver Profile Photo</label>
-    <input type="file" id="profilePhoto" accept="image/*" capture="environment">
+    <input type="file" id="profilePhoto" accept="image/*">
     <img id="profilePhotoPreview" class="preview-img">
 
     <label>Licence Front</label>
-    <input type="file" id="licenceFront" accept="image/*" capture="environment">
+    <input type="file" id="licenceFront" accept="image/*">
     <img id="licenceFrontPreview" class="preview-img">
 
     <label>Licence Back</label>
-    <input type="file" id="licenceBack" accept="image/*" capture="environment">
+    <input type="file" id="licenceBack" accept="image/*">
     <img id="licenceBackPreview" class="preview-img">
 
     <label>Taxi Licence Photo</label>
-    <input type="file" id="taxiPhoto" accept="image/*" capture="environment">
+    <input type="file" id="taxiPhoto" accept="image/*">
     <img id="taxiPhotoPreview" class="preview-img">
 
     <label>Car Registration Photo</label>
-    <input type="file" id="carRegPhoto" accept="image/*" capture="environment">
+    <input type="file" id="carRegPhoto" accept="image/*">
     <img id="carRegPhotoPreview" class="preview-img">
 
     <label>Car Front Photo (with plate)</label>
-    <input type="file" id="carFrontPhoto" accept="image/*" capture="environment">
+    <input type="file" id="carFrontPhoto" accept="image/*">
     <img id="carFrontPhotoPreview" class="preview-img">
 
     <button id="saveBtn" class="lux-btn full">Save Profile</button>
@@ -94,6 +94,7 @@
 <script>
 function goBack(){
   const role = localStorage.getItem("role");
+
   if(role === "passenger"){
     location.href = "dashboardPassenger.html";
   } else {
