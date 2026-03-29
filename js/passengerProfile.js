@@ -21,7 +21,12 @@ const address = document.getElementById("address");
 
 const saveBtn = document.getElementById("saveBtn");
 
+/* ✅ NEW */
+const photoInput = document.getElementById("photoInput");
+const profileImage = document.getElementById("profileImage");
+
 let currentUser = null;
+let uploadedImageUrl = "";
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
@@ -33,7 +38,7 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  email.value = user.email; // always show email
+  email.value = user.email;
 
   loadProfile();
 });
@@ -53,7 +58,47 @@ async function loadProfile() {
   nickName.value = data.nickName || "";
   phone.value = data.phone || "";
   address.value = data.address || "";
+
+  /* ✅ LOAD IMAGE */
+  if (data.photoUrl) {
+    profileImage.src = data.photoUrl;
+    uploadedImageUrl = data.photoUrl;
+  }
 }
+
+/* ---------- IMAGE UPLOAD ---------- */
+photoInput.addEventListener("change", async (e) => {
+
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Preview instantly
+  profileImage.src = URL.createObjectURL(file);
+
+  try {
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    /* 🔥 REPLACE THESE */
+    formData.append("upload_preset", "YOUR_UPLOAD_PRESET");
+
+    const res = await fetch("https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    uploadedImageUrl = data.secure_url;
+
+    alert("Photo uploaded");
+
+  } catch (err) {
+    console.error(err);
+    alert("Image upload failed");
+  }
+});
 
 /* ---------- SAVE PROFILE ---------- */
 saveBtn.onclick = async () => {
@@ -64,7 +109,10 @@ saveBtn.onclick = async () => {
     lastName: lastName.value.trim(),
     nickName: nickName.value.trim(),
     phone: phone.value.trim(),
-    address: address.value.trim()
+    address: address.value.trim(),
+
+    /* ✅ SAVE IMAGE */
+    photoUrl: uploadedImageUrl
   };
 
   try {
