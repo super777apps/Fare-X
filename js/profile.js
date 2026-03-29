@@ -12,9 +12,9 @@ import {
 
 /* CLOUDINARY */
 const CLOUD_NAME = "dgvlsenks";
-const UPLOAD_PRESET = "farex_driver"; // ✅ UPDATED
+const UPLOAD_PRESET = "farex_driver";
 
-/* ELEMENTS */
+/* ---------- ELEMENTS ---------- */
 const nickName = document.getElementById("nickName");
 const emailField = document.getElementById("email");
 
@@ -34,7 +34,7 @@ const carYear = document.getElementById("carYear");
 
 const saveBtn = document.getElementById("saveBtn");
 
-/* PHOTO INPUTS */
+/* ---------- PHOTO INPUTS ---------- */
 const photos = {
   profilePhoto: document.getElementById("profilePhoto"),
   licenceFront: document.getElementById("licenceFront"),
@@ -47,10 +47,12 @@ const photos = {
 let currentUser = null;
 let uploaded = {};
 
-/* PREVIEW */
+/* ---------- IMAGE PREVIEW WHEN SELECT ---------- */
 Object.keys(photos).forEach(key => {
   const input = photos[key];
   const preview = document.getElementById(key + "Preview");
+
+  if (!input || !preview) return;
 
   input.addEventListener("change", () => {
     const file = input.files[0];
@@ -60,7 +62,7 @@ Object.keys(photos).forEach(key => {
   });
 });
 
-/* UPLOAD FUNCTION */
+/* ---------- UPLOAD TO CLOUDINARY ---------- */
 async function uploadImage(file){
   const formData = new FormData();
   formData.append("file", file);
@@ -75,7 +77,7 @@ async function uploadImage(file){
   return data.secure_url;
 }
 
-/* AUTH */
+/* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
@@ -84,15 +86,21 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUser = user;
+
+  // show email
   emailField.value = user.email || "";
 
-  const snap = await getDoc(doc(db, "users", user.uid));
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
 
   if (snap.exists()) {
+
     const d = snap.data();
 
+    // save role for back button
     localStorage.setItem("role", d.role || "driver");
 
+    /* ---------- LOAD TEXT DATA ---------- */
     nickName.value = d.nickName || "";
     firstName.value = d.firstName || "";
     middleName.value = d.middleName || "";
@@ -107,25 +115,48 @@ onAuthStateChanged(auth, async (user) => {
     carReg.value = d.carReg || "";
     carMake.value = d.carMake || "";
     carYear.value = d.carYear || "";
+
+    /* ---------- ✅ FIX: LOAD SAVED IMAGES ---------- */
+    if (d.profilePhoto) {
+      document.getElementById("profilePhotoPreview").src = d.profilePhoto;
+    }
+    if (d.licenceFront) {
+      document.getElementById("licenceFrontPreview").src = d.licenceFront;
+    }
+    if (d.licenceBack) {
+      document.getElementById("licenceBackPreview").src = d.licenceBack;
+    }
+    if (d.taxiPhoto) {
+      document.getElementById("taxiPhotoPreview").src = d.taxiPhoto;
+    }
+    if (d.carRegPhoto) {
+      document.getElementById("carRegPhotoPreview").src = d.carRegPhoto;
+    }
+    if (d.carFrontPhoto) {
+      document.getElementById("carFrontPhotoPreview").src = d.carFrontPhoto;
+    }
   }
 
 });
 
-/* SAVE */
+/* ---------- SAVE PROFILE ---------- */
 saveBtn.onclick = async () => {
 
   if (!currentUser) return;
 
   try {
 
-    /* UPLOAD ALL IMAGES */
+    /* ---------- UPLOAD NEW IMAGES ---------- */
     for (const key in photos) {
-      const file = photos[key].files[0];
+
+      const file = photos[key]?.files[0];
+
       if (file) {
         uploaded[key] = await uploadImage(file);
       }
     }
 
+    /* ---------- SAVE TO FIRESTORE ---------- */
     await updateDoc(doc(db, "users", currentUser.uid), {
 
       nickName: nickName.value.trim(),
