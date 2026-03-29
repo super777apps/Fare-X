@@ -10,8 +10,16 @@
 
 <div class="lux-main">
   <!-- 🔹 FIXED: Back button now calls safe JS function -->
-  <button onclick="goBack()" class="lux-btn full">← Back to Dashboard</button>
+  <<button onclick="goBack()" class="lux-btn full">← Back to Dashboard</button>
 
+<script>
+function goBack() {
+  // Clear any accidental driver state
+  sessionStorage.clear();
+
+  window.location.replace("dashboardPassenger.html");
+}
+</script>
   <h2 style="text-align:center; margin:20px 0;">My Drivers</h2>
 
   <input type="text" id="driverSearch" placeholder="Search for driver by nickname">
