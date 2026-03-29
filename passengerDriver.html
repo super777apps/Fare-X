@@ -9,7 +9,9 @@
 <body>
 
 <div class="lux-main">
-  <button onclick="location.href='dashboardPassenger.html'" class="lux-btn full">← Back to Dashboard</button>
+  <!-- 🔹 FIXED: Back button now calls safe JS function -->
+  <button onclick="goBack()" class="lux-btn full">← Back to Dashboard</button>
+
   <h2 style="text-align:center; margin:20px 0;">My Drivers</h2>
 
   <input type="text" id="driverSearch" placeholder="Search for driver by nickname">
@@ -17,5 +19,14 @@
 </div>
 
 <script type="module" src="js/passengerDriver.js"></script>
+
+<!-- 🔹 SAFE JS BACK FUNCTION -->
+<script>
+  function goBack() {
+    // Force navigation to passenger dashboard (no driver redirect)
+    window.location.href = "dashboardPassenger.html";
+  }
+</script>
+
 </body>
 </html>
