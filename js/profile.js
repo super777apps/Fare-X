@@ -10,9 +10,13 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* ---------- ELEMENTS ---------- */
-const nickName = document.getElementById("nickName"); // ✅ NEW
-const emailField = document.getElementById("email");  // ✅ NEW
+/* CLOUDINARY */
+const CLOUD_NAME = "dgvlsenks";
+const UPLOAD_PRESET = "farex_driver"; // ✅ UPDATED
+
+/* ELEMENTS */
+const nickName = document.getElementById("nickName");
+const emailField = document.getElementById("email");
 
 const firstName = document.getElementById("firstName");
 const middleName = document.getElementById("middleName");
@@ -30,9 +34,48 @@ const carYear = document.getElementById("carYear");
 
 const saveBtn = document.getElementById("saveBtn");
 
-let currentUser = null;
+/* PHOTO INPUTS */
+const photos = {
+  profilePhoto: document.getElementById("profilePhoto"),
+  licenceFront: document.getElementById("licenceFront"),
+  licenceBack: document.getElementById("licenceBack"),
+  taxiPhoto: document.getElementById("taxiPhoto"),
+  carRegPhoto: document.getElementById("carRegPhoto"),
+  carFrontPhoto: document.getElementById("carFrontPhoto")
+};
 
-/* ---------- AUTH ---------- */
+let currentUser = null;
+let uploaded = {};
+
+/* PREVIEW */
+Object.keys(photos).forEach(key => {
+  const input = photos[key];
+  const preview = document.getElementById(key + "Preview");
+
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (file) {
+      preview.src = URL.createObjectURL(file);
+    }
+  });
+});
+
+/* UPLOAD FUNCTION */
+async function uploadImage(file){
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  return data.secure_url;
+}
+
+/* AUTH */
 onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
@@ -41,22 +84,16 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUser = user;
-
-  // ✅ SET EMAIL
   emailField.value = user.email || "";
 
-  const ref = doc(db, "users", user.uid);
-  const snap = await getDoc(ref);
+  const snap = await getDoc(doc(db, "users", user.uid));
 
   if (snap.exists()) {
     const d = snap.data();
 
-    // save role locally (for back button)
     localStorage.setItem("role", d.role || "driver");
 
-    // ✅ NEW
     nickName.value = d.nickName || "";
-
     firstName.value = d.firstName || "";
     middleName.value = d.middleName || "";
     dob.value = d.dob || "";
@@ -74,16 +111,23 @@ onAuthStateChanged(auth, async (user) => {
 
 });
 
-/* ---------- SAVE ---------- */
+/* SAVE */
 saveBtn.onclick = async () => {
 
   if (!currentUser) return;
 
   try {
 
+    /* UPLOAD ALL IMAGES */
+    for (const key in photos) {
+      const file = photos[key].files[0];
+      if (file) {
+        uploaded[key] = await uploadImage(file);
+      }
+    }
+
     await updateDoc(doc(db, "users", currentUser.uid), {
 
-      // ✅ NEW
       nickName: nickName.value.trim(),
 
       firstName: firstName.value.trim(),
@@ -98,7 +142,9 @@ saveBtn.onclick = async () => {
 
       carReg: carReg.value.trim(),
       carMake: carMake.value.trim(),
-      carYear: carYear.value.trim()
+      carYear: carYear.value.trim(),
+
+      ...uploaded
 
     });
 
