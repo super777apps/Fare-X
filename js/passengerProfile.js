@@ -3,7 +3,8 @@ import { db, auth } from "./firebase.js";
 import {
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -21,12 +22,12 @@ const address = document.getElementById("address");
 
 const saveBtn = document.getElementById("saveBtn");
 
-/* ✅ NEW */
+/* ---------- NEW IMAGE ELEMENTS ---------- */
 const photoInput = document.getElementById("photoInput");
 const profileImage = document.getElementById("profileImage");
 
 let currentUser = null;
-let uploadedImageUrl = "";
+let uploadedImageUrl = ""; // safe default
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
@@ -59,70 +60,85 @@ async function loadProfile() {
   phone.value = data.phone || "";
   address.value = data.address || "";
 
-  /* ✅ LOAD IMAGE */
+  /* ---------- LOAD IMAGE ---------- */
   if (data.photoUrl) {
     profileImage.src = data.photoUrl;
     uploadedImageUrl = data.photoUrl;
   }
 }
 
-/* ---------- IMAGE UPLOAD ---------- */
+/* ---------- IMAGE UPLOAD (CLOUDINARY SAFE) ---------- */
 photoInput.addEventListener("change", async (e) => {
 
   const file = e.target.files[0];
   if (!file) return;
 
-  // Preview instantly
+  // instant preview
   profileImage.src = URL.createObjectURL(file);
+
+  uploadedImageUrl = ""; // reset before upload
 
   try {
 
     const formData = new FormData();
     formData.append("file", file);
 
-    /* 🔥 REPLACE THESE */
-    formData.append("upload_preset", "YOUR_UPLOAD_PRESET");
+    formData.append("upload_preset", "Farex_passenger");
 
-    const res = await fetch("https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload", {
-      method: "POST",
-      body: formData
-    });
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/dgvlsenks/image/upload",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
 
-    const data = await res.json();
+    const result = await res.json();
 
-    uploadedImageUrl = data.secure_url;
+    if (!result.secure_url) {
+      throw new Error("Cloudinary upload failed");
+    }
 
-    alert("Photo uploaded");
+    uploadedImageUrl = result.secure_url;
+
+    console.log("UPLOAD SUCCESS:", uploadedImageUrl);
+
+    alert("Photo uploaded successfully");
 
   } catch (err) {
-    console.error(err);
+    console.error("UPLOAD ERROR:", err);
     alert("Image upload failed");
   }
 });
 
-/* ---------- SAVE PROFILE ---------- */
+/* ---------- SAVE PROFILE (FIXED SAFE) ---------- */
 saveBtn.onclick = async () => {
-
-  const data = {
-    firstName: firstName.value.trim(),
-    middleName: middleName.value.trim(),
-    lastName: lastName.value.trim(),
-    nickName: nickName.value.trim(),
-    phone: phone.value.trim(),
-    address: address.value.trim(),
-
-    /* ✅ SAVE IMAGE */
-    photoUrl: uploadedImageUrl
-  };
 
   try {
 
-    await updateDoc(doc(db, "users", currentUser.uid), data);
+    const data = {
+      firstName: firstName.value.trim(),
+      middleName: middleName.value.trim(),
+      lastName: lastName.value.trim(),
+      nickName: nickName.value.trim(),
+      phone: phone.value.trim(),
+      address: address.value.trim()
+    };
+
+    // only add photo if available
+    if (uploadedImageUrl && uploadedImageUrl !== "") {
+      data.photoUrl = uploadedImageUrl;
+    }
+
+    // safer than updateDoc (prevents missing document error)
+    await setDoc(doc(db, "users", currentUser.uid), data, {
+      merge: true
+    });
 
     alert("Profile updated successfully");
 
   } catch (err) {
-    console.error(err);
+    console.error("SAVE ERROR:", err);
     alert("Error saving profile");
   }
 };
