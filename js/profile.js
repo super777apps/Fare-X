@@ -10,7 +10,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/fi
 let currentUser = null;
 
 /* =========================
-   CLOUDINARY UPLOAD (FIXED)
+   CLOUDINARY UPLOAD
 ========================= */
 async function uploadToCloudinary(file) {
   try {
@@ -18,20 +18,15 @@ async function uploadToCloudinary(file) {
     formData.append("file", file);
     formData.append("upload_preset", "farex_driver");
 
-    const response = await fetch(
+    const res = await fetch(
       "https://api.cloudinary.com/v1_1/dgvlsenks/image/upload",
-      {
-        method: "POST",
-        body: formData
-      }
+      { method: "POST", body: formData }
     );
 
-    const data = await response.json();
+    const data = await res.json();
 
-    console.log("Cloudinary response:", data);
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Cloudinary upload failed");
+    if (!res.ok) {
+      throw new Error(data.error?.message || "Upload failed");
     }
 
     return data.secure_url;
@@ -44,7 +39,7 @@ async function uploadToCloudinary(file) {
 }
 
 /* =========================
-   AUTH CHECK
+   AUTH
 ========================= */
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -57,27 +52,40 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 /* =========================
-   SAVE PROFILE
+   SAVE PROFILE (ALL PHOTOS FIXED)
 ========================= */
 document.getElementById("saveBtn").addEventListener("click", async () => {
   try {
     const ref = doc(db, "users", currentUser.uid);
     const oldData = (await getDoc(ref)).data() || {};
 
+    // 🔥 KEEP OLD IMAGES
     let profilePhotoUrl = oldData.profilePhotoUrl || "";
+    let licenceFrontUrl = oldData.licenceFrontUrl || "";
+    let licenceBackUrl = oldData.licenceBackUrl || "";
+    let taxiPhotoUrl = oldData.taxiPhotoUrl || "";
+    let carRegPhotoUrl = oldData.carRegPhotoUrl || "";
+    let carFrontPhotoUrl = oldData.carFrontPhotoUrl || "";
 
-    const file = document.getElementById("profilePhoto").files[0];
+    // 🔥 ONLY UPLOAD IF NEW FILE SELECTED
 
-    // 🔥 ONLY UPLOAD IF FILE EXISTS
-    if (file) {
-      const uploaded = await uploadToCloudinary(file);
-      if (uploaded) {
-        profilePhotoUrl = uploaded;
-      } else {
-        alert("Profile NOT saved because image upload failed.");
-        return;
-      }
-    }
+    const profileFile = document.getElementById("profilePhoto").files[0];
+    if (profileFile) profilePhotoUrl = await uploadToCloudinary(profileFile);
+
+    const lf = document.getElementById("licenceFront").files[0];
+    if (lf) licenceFrontUrl = await uploadToCloudinary(lf);
+
+    const lb = document.getElementById("licenceBack").files[0];
+    if (lb) licenceBackUrl = await uploadToCloudinary(lb);
+
+    const taxi = document.getElementById("taxiPhoto").files[0];
+    if (taxi) taxiPhotoUrl = await uploadToCloudinary(taxi);
+
+    const reg = document.getElementById("carRegPhoto").files[0];
+    if (reg) carRegPhotoUrl = await uploadToCloudinary(reg);
+
+    const carFront = document.getElementById("carFrontPhoto").files[0];
+    if (carFront) carFrontPhotoUrl = await uploadToCloudinary(carFront);
 
     await setDoc(ref, {
       nickName: document.getElementById("nickName").value,
@@ -93,7 +101,13 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
       carMake: document.getElementById("carMake").value,
       carYear: document.getElementById("carYear").value,
 
-      profilePhotoUrl: profilePhotoUrl
+      // 🔥 ALL IMAGES SAVED PROPERLY
+      profilePhotoUrl,
+      licenceFrontUrl,
+      licenceBackUrl,
+      taxiPhotoUrl,
+      carRegPhotoUrl,
+      carFrontPhotoUrl
     }, { merge: true });
 
     alert("Profile saved successfully");
@@ -105,7 +119,7 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
 });
 
 /* =========================
-   LOAD PROFILE
+   LOAD PROFILE (ALL IMAGES FIXED)
 ========================= */
 async function loadProfile() {
   try {
@@ -129,10 +143,24 @@ async function loadProfile() {
     document.getElementById("carMake").value = data.carMake || "";
     document.getElementById("carYear").value = data.carYear || "";
 
-    // 🔥 IMAGE RESTORE FIX
-    if (data.profilePhotoUrl) {
+    // 🔥 RESTORE ALL IMAGES
+    if (data.profilePhotoUrl)
       document.getElementById("profilePhotoPreview").src = data.profilePhotoUrl;
-    }
+
+    if (data.licenceFrontUrl)
+      document.getElementById("licenceFrontPreview").src = data.licenceFrontUrl;
+
+    if (data.licenceBackUrl)
+      document.getElementById("licenceBackPreview").src = data.licenceBackUrl;
+
+    if (data.taxiPhotoUrl)
+      document.getElementById("taxiPhotoPreview").src = data.taxiPhotoUrl;
+
+    if (data.carRegPhotoUrl)
+      document.getElementById("carRegPhotoPreview").src = data.carRegPhotoUrl;
+
+    if (data.carFrontPhotoUrl)
+      document.getElementById("carFrontPhotoPreview").src = data.carFrontPhotoUrl;
 
   } catch (err) {
     console.error("LOAD ERROR:", err);
