@@ -71,8 +71,8 @@ function setupButtons() {
   };
 
   document.getElementById("driversBtn").onclick = () => {
-    location.href = "friends.html";
-  };
+  location.href = "passengerDriver.html";
+};
 
   document.getElementById("profileBtn").onclick = () => {
     location.href = "passengerProfile.html";
