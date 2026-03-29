@@ -61,6 +61,8 @@ onAuthStateChanged(auth, async user => {
   listenMyJobs();
 });
 
+sessionStorage.setItem("currentMode", "passenger");
+
 /* =========================================================
    BUTTONS FIX
 ========================================================= */

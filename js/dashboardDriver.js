@@ -21,6 +21,15 @@ let currentMode = "current";
 let isOnline = false;
 let watchId = null;
 
+const isPassengerPage = document.referrer.includes("passenger");
+
+if (isPassengerPage) {
+  console.log("Blocked wrong redirect to driver dashboard");
+  // STOP accidental access from passenger flow
+  window.location.replace("dashboardPassenger.html");
+}
+
+
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
 const acceptSound = new Audio("assets/accept.mp3");
