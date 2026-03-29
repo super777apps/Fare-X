@@ -1,74 +1,23 @@
 import { db, auth } from "./firebase.js";
-
 import {
   doc,
-  getDoc,
-  updateDoc
+  setDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-/* CLOUDINARY */
-const CLOUD_NAME = "dgvlsenks";
-const UPLOAD_PRESET = "farex_driver";
-
-/* ---------- ELEMENTS ---------- */
-const nickName = document.getElementById("nickName");
-const emailField = document.getElementById("email");
-
-const firstName = document.getElementById("firstName");
-const middleName = document.getElementById("middleName");
-const dob = document.getElementById("dob");
-
-const resAddress = document.getElementById("resAddress");
-const postalAddress = document.getElementById("postalAddress");
-
-const licenceNo = document.getElementById("licenceNo");
-const taxiLicence = document.getElementById("taxiLicence");
-
-const carReg = document.getElementById("carReg");
-const carMake = document.getElementById("carMake");
-const carYear = document.getElementById("carYear");
-
-const saveBtn = document.getElementById("saveBtn");
-
-/* ---------- PHOTO INPUTS ---------- */
-const photos = {
-  profilePhoto: document.getElementById("profilePhoto"),
-  licenceFront: document.getElementById("licenceFront"),
-  licenceBack: document.getElementById("licenceBack"),
-  taxiPhoto: document.getElementById("taxiPhoto"),
-  carRegPhoto: document.getElementById("carRegPhoto"),
-  carFrontPhoto: document.getElementById("carFrontPhoto")
-};
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
-let uploaded = {};
 
-/* ---------- IMAGE PREVIEW WHEN SELECT ---------- */
-Object.keys(photos).forEach(key => {
-  const input = photos[key];
-  const preview = document.getElementById(key + "Preview");
-
-  if (!input || !preview) return;
-
-  input.addEventListener("change", () => {
-    const file = input.files[0];
-    if (file) {
-      preview.src = URL.createObjectURL(file);
-    }
-  });
-});
-
-/* ---------- UPLOAD TO CLOUDINARY ---------- */
-async function uploadImage(file){
+/* =========================
+   CLOUDINARY UPLOAD
+========================= */
+async function uploadToCloudinary(file) {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
+  formData.append("upload_preset", "farex_driver"); // your preset
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+  const res = await fetch("https://api.cloudinary.com/v1_1/dgvlsenks/image/upload", {
     method: "POST",
     body: formData
   });
@@ -77,113 +26,84 @@ async function uploadImage(file){
   return data.secure_url;
 }
 
-/* ---------- AUTH ---------- */
+/* =========================
+   AUTH + LOAD PROFILE
+========================= */
 onAuthStateChanged(auth, async (user) => {
-
   if (!user) {
     location.href = "index.html";
     return;
   }
 
   currentUser = user;
-
-  // show email
-  emailField.value = user.email || "";
-
-  const ref = doc(db, "users", user.uid);
-  const snap = await getDoc(ref);
-
-  if (snap.exists()) {
-
-    const d = snap.data();
-
-    // save role for back button
-    localStorage.setItem("role", d.role || "driver");
-
-    /* ---------- LOAD TEXT DATA ---------- */
-    nickName.value = d.nickName || "";
-    firstName.value = d.firstName || "";
-    middleName.value = d.middleName || "";
-    dob.value = d.dob || "";
-
-    resAddress.value = d.resAddress || "";
-    postalAddress.value = d.postalAddress || "";
-
-    licenceNo.value = d.licenceNo || "";
-    taxiLicence.value = d.taxiLicence || "";
-
-    carReg.value = d.carReg || "";
-    carMake.value = d.carMake || "";
-    carYear.value = d.carYear || "";
-
-    /* ---------- ✅ FIX: LOAD SAVED IMAGES ---------- */
-    if (d.profilePhoto) {
-      document.getElementById("profilePhotoPreview").src = d.profilePhoto;
-    }
-    if (d.licenceFront) {
-      document.getElementById("licenceFrontPreview").src = d.licenceFront;
-    }
-    if (d.licenceBack) {
-      document.getElementById("licenceBackPreview").src = d.licenceBack;
-    }
-    if (d.taxiPhoto) {
-      document.getElementById("taxiPhotoPreview").src = d.taxiPhoto;
-    }
-    if (d.carRegPhoto) {
-      document.getElementById("carRegPhotoPreview").src = d.carRegPhoto;
-    }
-    if (d.carFrontPhoto) {
-      document.getElementById("carFrontPhotoPreview").src = d.carFrontPhoto;
-    }
-  }
-
+  await loadProfile();
 });
 
-/* ---------- SAVE PROFILE ---------- */
-saveBtn.onclick = async () => {
-
+/* =========================
+   SAVE PROFILE (FIXED)
+========================= */
+document.getElementById("saveBtn").addEventListener("click", async () => {
   if (!currentUser) return;
 
-  try {
+  const ref = doc(db, "users", currentUser.uid);
+  const oldData = (await getDoc(ref)).data() || {};
 
-    /* ---------- UPLOAD NEW IMAGES ---------- */
-    for (const key in photos) {
+  const profileFile = document.getElementById("profilePhoto").files[0];
 
-      const file = photos[key]?.files[0];
+  let profilePhotoUrl = oldData.profilePhotoUrl || "";
 
-      if (file) {
-        uploaded[key] = await uploadImage(file);
-      }
-    }
-
-    /* ---------- SAVE TO FIRESTORE ---------- */
-    await updateDoc(doc(db, "users", currentUser.uid), {
-
-      nickName: nickName.value.trim(),
-
-      firstName: firstName.value.trim(),
-      middleName: middleName.value.trim(),
-      dob: dob.value,
-
-      resAddress: resAddress.value.trim(),
-      postalAddress: postalAddress.value.trim(),
-
-      licenceNo: licenceNo.value.trim(),
-      taxiLicence: taxiLicence.value.trim(),
-
-      carReg: carReg.value.trim(),
-      carMake: carMake.value.trim(),
-      carYear: carYear.value.trim(),
-
-      ...uploaded
-
-    });
-
-    alert("Profile updated successfully");
-
-  } catch (err) {
-    console.error(err);
-    alert("Error saving profile");
+  // 🔥 ONLY UPLOAD IF NEW FILE SELECTED
+  if (profileFile) {
+    profilePhotoUrl = await uploadToCloudinary(profileFile);
   }
 
-};
+  await setDoc(ref, {
+    nickName: document.getElementById("nickName").value,
+    email: document.getElementById("email").value,
+    firstName: document.getElementById("firstName").value,
+    middleName: document.getElementById("middleName").value,
+    dob: document.getElementById("dob").value,
+    resAddress: document.getElementById("resAddress").value,
+    postalAddress: document.getElementById("postalAddress").value,
+    licenceNo: document.getElementById("licenceNo").value,
+    taxiLicence: document.getElementById("taxiLicence").value,
+    carReg: document.getElementById("carReg").value,
+    carMake: document.getElementById("carMake").value,
+    carYear: document.getElementById("carYear").value,
+
+    // 🔥 ONLY UPDATE IF EXISTS
+    profilePhotoUrl: profilePhotoUrl
+  }, { merge: true });
+
+  alert("Profile saved");
+});
+
+/* =========================
+   LOAD PROFILE (FIXED)
+========================= */
+async function loadProfile() {
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+
+  document.getElementById("nickName").value = data.nickName || "";
+  document.getElementById("email").value = data.email || "";
+  document.getElementById("firstName").value = data.firstName || "";
+  document.getElementById("middleName").value = data.middleName || "";
+  document.getElementById("dob").value = data.dob || "";
+  document.getElementById("resAddress").value = data.resAddress || "";
+  document.getElementById("postalAddress").value = data.postalAddress || "";
+  document.getElementById("licenceNo").value = data.licenceNo || "";
+  document.getElementById("taxiLicence").value = data.taxiLicence || "";
+  document.getElementById("carReg").value = data.carReg || "";
+  document.getElementById("carMake").value = data.carMake || "";
+  document.getElementById("carYear").value = data.carYear || "";
+
+  // 🔥 IMAGE RESTORE
+  if (data.profilePhotoUrl) {
+    document.getElementById("profilePhotoPreview").src = data.profilePhotoUrl;
+  }
+}
