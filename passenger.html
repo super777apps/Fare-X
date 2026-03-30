@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Passengers</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+.search-box {
+  margin-bottom: 10px;
+}
+
+.result-item {
+  padding:10px;
+  border-bottom:1px solid #222;
+  cursor:pointer;
+}
+
+.result-item:hover {
+  background:#111;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="lux-header">
+  <button onclick="goBack()" class="lux-btn">← Back</button>
+  <div class="logo">Fare<span class="gold">-X</span></div>
+</div>
+
+<div class="lux-main">
+
+  <h2 class="section-title">Passengers</h2>
+
+  <!-- SEARCH -->
+  <input id="searchInput" class="search-box" placeholder="Search passenger by email">
+
+  <div id="searchResults"></div>
+
+  <h3 class="section-title">My Passengers</h3>
+  <div id="passengerList" class="fare-list"></div>
+
+</div>
+
+<script type="module" src="js/passengers.js"></script>
+
+<script>
+function goBack(){
+  location.href = "dashboardDriver.html";
+}
+</script>
+
+</body>
+</html>

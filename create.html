@@ -69,14 +69,24 @@
 <input id="price" placeholder="Price">
 <textarea id="note" placeholder="Notes (optional)"></textarea>
 
+<!-- ✅ SEND TYPE -->
 <select id="sendType">
 <option value="pool">Broadcast Pool</option>
 <option value="friend">Send to Driver</option>
 <option value="auto">Nearest Driver (Auto Dispatch)</option>
+
+<!-- ✅ NEW OPTION ADDED -->
+<option value="selfPassenger">Send to Myself + Passenger</option>
 </select>
 
+<!-- EXISTING -->
 <select id="friendSelect" style="display:none">
 <option value="">Select Driver</option>
+</select>
+
+<!-- ✅ NEW PASSENGER SELECT (ADDED ONLY) -->
+<select id="passengerSelect" style="display:none">
+<option value="">Select Passenger</option>
 </select>
 
 <button id="createFareBtn" class="lux-btn full">Send Fare</button>
@@ -90,7 +100,7 @@ Send Fare Until Cancelled / Accepted
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=FINAL"></script>
+<script type="module" src="js/create.js?v=SELF_PASSENGER"></script>
 
 </body>
 </html>
