@@ -30,6 +30,9 @@ const friendSelect = document.getElementById("friendSelect");
 const btn = document.getElementById("createFareBtn");
 const longBtn = document.getElementById("longSendBtn");
 
+/* ✅ NEW: passenger select */
+let passengerSelect = document.getElementById("passengerSelect");
+
 /* ---------- DEBOUNCE ---------- */
 function debounce(fn, delay=500){
   let t;
@@ -74,7 +77,6 @@ function initMaps(){
   L.tileLayer(tile).addTo(pickupMap);
   L.tileLayer(tile).addTo(dropMap);
 
-  /* pickup click */
   pickupMap.on('click', async e=>{
     pickupLat=e.latlng.lat;
     pickupLng=e.latlng.lng;
@@ -85,7 +87,6 @@ function initMaps(){
     pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
   });
 
-  /* drop click */
   dropMap.on('click', async e=>{
     dropLat=e.latlng.lat;
     dropLng=e.latlng.lng;
@@ -172,21 +173,22 @@ onAuthStateChanged(auth, async user=>{
   currentUserData=snap.data();
 
   loadFriends(user.uid);
-
-  if(currentUserData.role==="passenger"){
-    sendType.value="friend";
-    sendType.disabled=true;
-    friendSelect.style.display="block";
-  }
+  loadPassengers(user.uid); // ✅ NEW
 
   initMaps();
 });
 
 /* ---------- UI ---------- */
 sendType.addEventListener("change", ()=>{
-  const isFriend = sendType.value==="friend";
-  friendSelect.style.display=isFriend?"block":"none";
-  longBtn.style.display=isFriend?"block":"none";
+
+  const val = sendType.value;
+
+  friendSelect.style.display = (val==="friend")?"block":"none";
+  longBtn.style.display = (val==="friend")?"block":"none";
+
+  if(passengerSelect){
+    passengerSelect.style.display = (val==="selfPassenger")?"block":"none";
+  }
 });
 
 /* ---------- FRIENDS ---------- */
@@ -205,6 +207,28 @@ function loadFriends(uid){
   });
 }
 
+/* ---------- PASSENGERS ---------- */
+function loadPassengers(uid){
+
+  if(!passengerSelect) return;
+
+  const q=query(collection(db,"passengers"),where("owner","==",uid));
+
+  onSnapshot(q,snap=>{
+    passengerSelect.innerHTML='<option value="">Select Passenger</option>';
+
+    snap.forEach(d=>{
+      const p=d.data();
+
+      const opt=document.createElement("option");
+      opt.value=p.passengerUID;
+      opt.textContent=p.nickName || p.email;
+
+      passengerSelect.appendChild(opt);
+    });
+  });
+}
+
 /* ---------- CREATE ---------- */
 btn.onclick=async()=>{
 
@@ -217,7 +241,7 @@ btn.onclick=async()=>{
     return alert("Fill all fields");
   }
 
-  const data={
+  const baseData={
     pickup, drop,
     pickupLat, pickupLng,
     dropLat, dropLng,
@@ -227,13 +251,55 @@ btn.onclick=async()=>{
     createdAt: serverTimestamp()
   };
 
+  /* =============================
+     ✅ NEW: SELF + PASSENGER
+  ============================== */
+  if(sendType.value==="selfPassenger"){
+
+    const passengerUID = passengerSelect.value;
+    if(!passengerUID) return alert("Select passenger");
+
+    const passengerSnap = await getDoc(doc(db,"users",passengerUID));
+    const passengerName = passengerSnap.data()?.nickName || "Passenger";
+
+    const myName = currentUserData.nickName || currentUser.email;
+
+    await addDoc(collection(db,"fares"),{
+
+      ...baseData,
+
+      status:"accepted",
+
+      passengerUID: passengerUID,
+      passengerName: passengerName,
+
+      currentDriverUID: currentUser.uid,
+      currentDriverName: myName,
+
+      originalDriverUID: currentUser.uid,
+      originalDriverName: myName
+
+    });
+
+    new Audio("assets/accept.mp3").play();
+
+    alert("Job created for you & passenger");
+    location.href="dashboardDriver.html";
+  }
+
+  /* =============================
+     EXISTING LOGIC (UNCHANGED)
+  ============================== */
+
   if(sendType.value==="friend"){
     const friendUID=friendSelect.value;
     if(!friendUID) return alert("Select driver");
 
-    data.status="assigned";
+    const ref=await addDoc(collection(db,"fares"),{
+      ...baseData,
+      status:"assigned"
+    });
 
-    const ref=await addDoc(collection(db,"fares"),data);
     await sendToFriend(ref.id,friendUID,currentUser.uid);
 
     alert("Sent to driver");
@@ -241,13 +307,21 @@ btn.onclick=async()=>{
   }
 
   if(sendType.value==="pool"){
-    await addDoc(collection(db,"fares"),{...data,status:"broadcast"});
+    await addDoc(collection(db,"fares"),{
+      ...baseData,
+      status:"broadcast"
+    });
+
     alert("Broadcast created");
     location.href="dashboardDriver.html";
   }
 
   if(sendType.value==="auto"){
-    await addDoc(collection(db,"fares"),{...data,status:"searching"});
+    await addDoc(collection(db,"fares"),{
+      ...baseData,
+      status:"searching"
+    });
+
     alert("Auto dispatch started");
     location.href="dashboardDriver.html";
   }
