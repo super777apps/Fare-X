@@ -21,13 +21,13 @@
 .result-item:hover {
   background:#111;
 }
-
 </style>
 </head>
 
 <body>
 
 <div class="lux-header">
+  <!-- ✅ BACK BUTTON (FIXED) -->
   <button onclick="goBack()" class="lux-btn">← Back</button>
   <div class="logo">Fare<span class="gold">-X</span></div>
 </div>
@@ -46,10 +46,21 @@
 
 </div>
 
-<script type="module" src="js/passenger.js"></script>
+<script type="module" src="js/passenger.js?v=BACKFIX"></script>
 
+<!-- ✅ STRONG BACK FIX -->
 <script>
 function goBack(){
+
+  // Always prefer explicit driver return
+  const lastPage = sessionStorage.getItem("fromPage");
+
+  if(lastPage === "driver"){
+    location.href = "dashboardDriver.html";
+    return;
+  }
+
+  // fallback (safety)
   location.href = "dashboardDriver.html";
 }
 </script>
