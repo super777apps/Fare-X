@@ -1,8 +1,14 @@
 import { db, auth } from "./firebase.js";
 
 import {
-  collection, query, where, onSnapshot,
-  doc, updateDoc, getDoc, serverTimestamp
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc,
+  getDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -11,42 +17,105 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
+let currentMode = "current";
 let isOnline = false;
+let watchId = null;
 
+// 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
-let soundTimer = null;
+const acceptSound = new Audio("assets/accept.mp3");
+const declineSound = new Audio("assets/decline.mp3");
 
-/* ---------- STOP SOUND ---------- */
-function stopSound(){
-  jobSound.pause();
-  jobSound.currentTime = 0;
-  if(soundTimer) clearTimeout(soundTimer);
+/* =========================================================
+   ETA CALCULATION
+========================================================= */
+function calculateETA(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI/180;
+  const dLng = (lng2 - lng1) * Math.PI/180;
+
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLng/2)**2;
+
+  const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const timeMinutes = Math.round((distance / 40) * 60);
+
+  return {
+    distance: distance.toFixed(2) + " km",
+    eta: timeMinutes + " min"
+  };
 }
 
-/* ---------- AUTH ---------- */
+/* =========================================================
+   GPS TRACKING
+========================================================= */
+function startLocationTracking() {
+  if (!navigator.geolocation) return;
+
+  watchId = navigator.geolocation.watchPosition(async (pos) => {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      location: {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      },
+      lastActive: serverTimestamp()
+    });
+  });
+}
+
+function stopLocationTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
+
+/* =========================================================
+   AUTH + ROLE PROTECTION (FIXED)
+========================================================= */
 onAuthStateChanged(auth, async (user) => {
 
-  if (!user) return location.href = "index.html";
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
 
   const snap = await getDoc(doc(db, "users", user.uid));
+
+  if (!snap.exists()) {
+    location.href = "index.html";
+    return;
+  }
+
   const u = snap.data();
 
+  // ✅ STRICT ROLE CHECK
   if (u.role !== "driver") {
     location.href = "dashboardPassenger.html";
     return;
   }
 
   currentUser = user;
+
+  const name = u.nickName || user.email;
   isOnline = u.online || false;
 
-  document.getElementById("userName").textContent = u.nickName || user.email;
-
   updateOnlineUI();
+
+  if (isOnline) startLocationTracking();
+
+  document.getElementById("userName").textContent = name;
+  document.getElementById("userRole").textContent = "Driver";
 
   listenJobs();
 });
 
-/* ---------- ONLINE TOGGLE ---------- */
+/* =========================================================
+   ONLINE TOGGLE
+========================================================= */
 const toggleBtn = document.getElementById("toggleOnlineBtn");
 
 toggleBtn.onclick = async () => {
@@ -58,79 +127,117 @@ toggleBtn.onclick = async () => {
     lastActive: serverTimestamp()
   });
 
+  if (isOnline) startLocationTracking();
+  else stopLocationTracking();
+
   updateOnlineUI();
 };
 
-function updateOnlineUI(){
+/* =========================================================
+   UI
+========================================================= */
+function updateOnlineUI() {
 
-  const status = document.getElementById("onlineStatus");
+  const statusText = document.getElementById("onlineStatus");
 
-  if(isOnline){
+  if (isOnline) {
     toggleBtn.textContent = "Go Offline";
-    status.textContent = "● Online";
-    status.style.color = "#00e676";
-  }else{
+    statusText.textContent = "● Online";
+    statusText.style.color = "#00e676";
+  } else {
     toggleBtn.textContent = "Go Online";
-    status.textContent = "● Offline";
-    status.style.color = "#ff5252";
+    statusText.textContent = "● Offline";
+    statusText.style.color = "#ff5252";
   }
 }
 
-/* ---------- LOGOUT ---------- */
+/* =========================================================
+   LOGOUT
+========================================================= */
 document.getElementById("logoutBtn").onclick = async () => {
 
   await updateDoc(doc(db, "users", currentUser.uid), {
     online: false
   });
 
+  stopLocationTracking();
+
   await signOut(auth);
   location.href = "index.html";
 };
 
-/* ---------- JOB LIST ---------- */
+/* =========================================================
+   BUTTONS
+========================================================= */
+document.getElementById("currentJobsBtn").onclick = () => {
+  currentMode = "current";
+  listenJobs();
+};
+
+document.getElementById("pastJobsBtn").onclick = () => {
+  currentMode = "past";
+  listenJobs();
+};
+
+/* =========================================================
+   JOB LISTENER
+========================================================= */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  const q = query(collection(db, "fares"));
+  let q;
+
+  if (currentMode === "current") {
+    q = query(collection(db, "fares"),
+      where("status", "in", ["assigned","waiting response","accepted"])
+    );
+  } else {
+    q = query(collection(db, "fares"),
+      where("status", "in", ["declined","completed","deleted"])
+    );
+  }
 
   onSnapshot(q, snap => {
 
     box.innerHTML = "";
 
+    if (snap.empty) {
+      box.innerHTML = `<div class="gold">No jobs found</div>`;
+      return;
+    }
+
     snap.forEach(async d => {
 
       const f = d.data();
+      const isMine = f.currentDriverUID === currentUser.uid;
 
-      const isAssigned = f.assignedTo === currentUser.uid;
-      const isCurrent = f.currentDriverUID === currentUser.uid;
+      let etaHTML = "";
 
-      /* 🔊 SOUND LOOP (12 sec) */
-      if (isAssigned && f.status==="waiting response" && !f.soundPlayed) {
+      if (isMine && f.pickupLat && f.pickupLng) {
+        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+        const loc = userSnap.data()?.location;
 
-        jobSound.loop = true;
-        jobSound.play();
+        if (loc) {
+          const calc = calculateETA(loc.lat, loc.lng, f.pickupLat, f.pickupLng);
 
-        soundTimer = setTimeout(()=>{
-          stopSound();
-        },12000);
-
-        await updateDoc(doc(db,"fares",d.id),{
-          soundPlayed:true
-        });
+          etaHTML = `
+            <div class="fare-row"><span>Distance:</span><b>${calc.distance}</b></div>
+            <div class="fare-row"><span>ETA:</span><b>${calc.eta}</b></div>
+          `;
+        }
       }
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
       div.innerHTML = `
-        <div><b>${f.pickupSuburb}</b> → <b>${f.dropSuburb}</b></div>
-        <div>Status: ${f.status}</div>
-        <div>Passenger: ${f.passengerName}</div>
-        <div>Original: ${f.originalDriverName}</div>
-        <div>Current: ${f.currentDriverName}</div>
-
-        ${renderButtons(d.id,f,isAssigned,isCurrent)}
+        <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
+        <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
+        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+        <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
+        ${etaHTML}
+        ${renderActions(d.id, f, isMine)}
       `;
 
       box.appendChild(div);
@@ -139,63 +246,32 @@ function listenJobs() {
   });
 }
 
-/* ---------- BUTTONS ---------- */
-function renderButtons(id,f,isAssigned,isCurrent){
+/* =========================================================
+   ACTIONS
+========================================================= */
+function renderActions(id, f, isMine) {
 
-  if(isAssigned && f.status==="waiting response"){
+  const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
+
+  if (isMine && f.status === "waiting response") {
     return `
+      ${viewBtn}
       <button onclick="acceptJob('${id}')">Accept</button>
       <button onclick="rejectJob('${id}')">Reject</button>
     `;
   }
 
-  if(isCurrent){
-    return `<button onclick="cancelJob('${id}')">Cancel</button>`;
-  }
-
-  return "";
+  return viewBtn;
 }
 
-/* ---------- ACTIONS ---------- */
+window.viewRoute = id => location.href = `mapView.html?id=${id}`;
+
 window.acceptJob = async id => {
-
-  const snap = await getDoc(doc(db,"fares",id));
-  const f = snap.data();
-
-  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
-  const myName = userSnap.data().nickName || currentUser.email;
-
-  await updateDoc(doc(db,"fares",id),{
-    status:"accepted",
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
-    assignedTo: null
-  });
-
-  stopSound();
+  await updateDoc(doc(db,"fares",id),{status:"accepted"});
+  acceptSound.play();
 };
 
 window.rejectJob = async id => {
-
-  const snap = await getDoc(doc(db,"fares",id));
-  const f = snap.data();
-
-  await updateDoc(doc(db,"fares",id),{
-    status:"returned",
-    currentDriverUID: f.originalDriverUID,
-    currentDriverName: f.originalDriverName,
-    assignedTo:null,
-    soundPlayed:false
-  });
-
-  stopSound();
-};
-
-window.cancelJob = async id => {
-
-  if(!confirm("Cancel job?")) return;
-
-  await updateDoc(doc(db,"fares",id),{
-    status:"deleted"
-  });
+  await updateDoc(doc(db,"fares",id),{status:"declined"});
+  declineSound.play();
 };
