@@ -3,77 +3,199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create Fare</title>
+<title>Fare-X | Create Fare</title>
 
 <link rel="stylesheet" href="css/style.css">
+
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-.map { height:250px; margin:10px 0; border-radius:10px; }
-.suggestions { background:#111; max-height:150px; overflow:auto; }
-.suggestions div { padding:8px; cursor:pointer; }
-.suggestions div:hover { background:#222; }
+
+/* ===== BACKGROUND ===== */
+body{
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial, sans-serif;
+}
+
+/* ===== FORM CARD ===== */
+.fare-form{
+  background:#111;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 20px rgba(255,215,0,0.1);
+}
+
+/* ===== INPUTS ===== */
+input, select, textarea{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:1px solid #333;
+  background:#0f0f0f;
+  color:#fff;
+  outline:none;
+}
+
+input:focus, select:focus, textarea:focus{
+  border-color:gold;
+  box-shadow:0 0 5px gold;
+}
+
+/* ===== GOLD BUTTON ===== */
+.lux-btn{
+  background:linear-gradient(135deg,#FFD700,#C9A000);
+  border:none;
+  color:#000;
+  font-weight:bold;
+  padding:12px;
+  border-radius:12px;
+  margin-top:10px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.lux-btn:hover{
+  transform:scale(1.03);
+  box-shadow:0 0 10px gold;
+}
+
+.lux-btn.full{
+  width:100%;
+}
+
+/* ===== MAP ===== */
+.map{
+  height:250px;
+  margin:10px 0;
+  border-radius:12px;
+  overflow:hidden;
+  border:1px solid #333;
+}
+
+/* ===== SUGGESTIONS ===== */
+.suggestions{
+  background:#111;
+  border-radius:10px;
+  max-height:150px;
+  overflow:auto;
+  margin-top:5px;
+  border:1px solid #222;
+}
+
+.suggestions div{
+  padding:10px;
+  cursor:pointer;
+  border-bottom:1px solid #222;
+}
+
+.suggestions div:hover{
+  background:#1c1c1c;
+}
+
+/* ===== LABEL ===== */
+.label{
+  margin-top:15px;
+  font-size:14px;
+  color:gold;
+  font-weight:bold;
+}
+
+/* ===== HEADER ===== */
+.lux-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 20px;
+}
+
+.logo{
+  color:white;
+}
+
+.gold{
+  color:gold;
+}
+
 </style>
 </head>
 
 <body>
 
 <header class="lux-header">
-<h1>Fare-X</h1>
-<button onclick="history.back()">← Back</button>
+<h1 class="logo">Fare<span class="gold">-X</span></h1>
+<button onclick="location.href='dashboardDriver.html'" class="lux-btn">← Back</button>
 </header>
 
 <main class="lux-main">
 
-<h2>Create Fare</h2>
+<div class="fare-form">
+
+<h2>Create New Fare</h2>
 
 <!-- PICKUP -->
-<label>Pickup Location</label>
-<input id="pickup">
+<div class="label">Pickup Location</div>
+<input id="pickup" placeholder="Enter pickup location">
 <div id="pickupSuggestions" class="suggestions"></div>
 <div id="pickupMap" class="map"></div>
-<button id="gpsBtn">Use My Current Location</button>
+<button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
 
 <!-- DROP -->
-<label>Drop Location</label>
-<input id="drop">
+<div class="label">Drop Location</div>
+<input id="drop" placeholder="Enter drop location">
 <div id="dropSuggestions" class="suggestions"></div>
 <div id="dropMap" class="map"></div>
 
-<!-- PASSENGER -->
-<label>Select Passenger</label>
-<select id="passengerSelect"></select>
-
 <!-- DATE -->
-<label>Trip Date & Time</label>
+<div class="label">Trip Date & Time</div>
 <input id="datetime" type="datetime-local">
 
+<!-- PRICE TYPE -->
+<div class="label">Fare Type</div>
 <select id="priceType">
-<option>Fixed</option>
-<option>Meter +</option>
+<option value="fixed">Fixed Price</option>
+<option value="meter">Meter + Extra</option>
 </select>
 
-<input id="price" placeholder="Price">
-<textarea id="note" placeholder="Notes"></textarea>
+<!-- PRICE -->
+<input id="price" placeholder="Enter price">
 
+<!-- NOTES -->
+<textarea id="note" placeholder="Notes (optional)"></textarea>
+
+<!-- SEND TYPE -->
+<div class="label">Send Job</div>
 <select id="sendType">
+<option value="pool">Broadcast Pool</option>
 <option value="friend">Send to Driver</option>
-<option value="pool">Broadcast</option>
-<option value="auto">Auto Dispatch</option>
-<option value="selfPassenger">Myself + Passenger</option>
+<option value="auto">Nearest Driver (Auto Dispatch)</option>
+<option value="selfPassenger">Send to Myself + Passenger</option>
 </select>
 
-<select id="friendSelect" style="display:none"></select>
+<!-- FRIEND -->
+<select id="friendSelect" style="display:none">
+<option value="">Select Driver</option>
+</select>
 
-<button id="createFareBtn">Send Fare</button>
+<!-- PASSENGER -->
+<select id="passengerSelect" style="display:none">
+<option value="">Select Passenger</option>
+</select>
 
-<button id="longSendBtn" style="display:none">
+<!-- BUTTONS -->
+<button id="createFareBtn" class="lux-btn full">Send Fare</button>
+
+<button id="longSendBtn" class="lux-btn full" style="display:none;">
 Send Until Accepted / Cancelled
 </button>
 
+</div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/create.js"></script>
 
 </body>
