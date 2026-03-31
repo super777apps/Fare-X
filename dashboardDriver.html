@@ -1,61 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fare-X | Passengers</title>
-
-<link rel="stylesheet" href="css/style.css">
-
-<style>
-.search-box {
-  margin-bottom: 10px;
-}
-
-.result-item {
-  padding:10px;
-  border-bottom:1px solid #222;
-  cursor:pointer;
-}
-
-.result-item:hover {
-  background:#111;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare-X | Driver Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
 <div class="lux-header">
-  <button onclick="goBack()" class="lux-btn">← Back</button>
   <div class="logo">Fare<span class="gold">-X</span></div>
+
+  <div>
+    <div id="userName"></div>
+    <div id="userRole" style="font-size:12px;color:#d4af37;"></div>
+    <div id="onlineStatus" style="font-size:12px;"></div>
+  </div>
+
+  <button id="logoutBtn" class="lux-btn">Logout</button>
 </div>
 
 <div class="lux-main">
 
-  <h2 class="section-title">Passengers</h2>
+  <button id="toggleOnlineBtn" class="lux-btn full"></button>
 
-  <!-- SEARCH -->
-  <input id="searchInput" class="search-box" placeholder="Search passenger by email">
+  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px; margin-top:10px;">
 
-  <div id="searchResults"></div>
+    <button onclick="location.href='create.html'" class="lux-btn full">Create Fare</button>
 
-  <h3 class="section-title">My Passengers</h3>
-  <div id="passengerList" class="fare-list"></div>
+    <button onclick="location.href='friends.html'" class="lux-btn full">
+      Friends / Drivers
+    </button>
+
+    <button onclick="location.href='profile.html'" class="lux-btn full">Profile</button>
+
+    <button onclick="location.href='help.html'" class="lux-btn full">Help</button>
+
+    <button id="poolJobsBtn" class="lux-btn full">Broadcast Pool Jobs</button>
+
+    <button id="currentJobsBtn" class="lux-btn full">Current Jobs</button>
+    <button id="pastJobsBtn" class="lux-btn full">Past Jobs</button>
+
+  </div>
+
+  <h2 class="section-title">Jobs</h2>
+
+  <div id="jobList" class="fare-list"></div>
 
 </div>
 
-<script type="module" src="js/passenger.js?v=driverFix"></script>
-
-<script>
-/* ✅ FORCE DRIVER CONTEXT */
-localStorage.setItem("role", "driver");
-
-/* ✅ ALWAYS GO BACK TO DRIVER DASHBOARD */
-function goBack(){
-  location.href = "dashboardDriver.html";
-}
-</script>
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/dashboardDriver.js?v=6"></script>
 
 </body>
 </html>
