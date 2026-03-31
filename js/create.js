@@ -8,6 +8,12 @@ import {
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+/* ---------- HELPERS ---------- */
+function getSuburb(fullAddress){
+  if(!fullAddress) return "";
+  return fullAddress.split(",")[0];
+}
+
 /* ---------- STATE ---------- */
 let currentUser, currentUserData;
 
@@ -30,7 +36,6 @@ const friendSelect = document.getElementById("friendSelect");
 const btn = document.getElementById("createFareBtn");
 const longBtn = document.getElementById("longSendBtn");
 
-/* ✅ NEW: passenger select */
 let passengerSelect = document.getElementById("passengerSelect");
 
 /* ---------- DEBOUNCE ---------- */
@@ -173,7 +178,7 @@ onAuthStateChanged(auth, async user=>{
   currentUserData=snap.data();
 
   loadFriends(user.uid);
-  loadPassengers(user.uid); // ✅ NEW
+  loadPassengers(user.uid);
 
   initMaps();
 });
@@ -242,18 +247,19 @@ btn.onclick=async()=>{
   }
 
   const baseData={
-    pickup, drop,
+    pickup,
+    drop,
+    pickupSuburb:getSuburb(pickup),
+    dropSuburb:getSuburb(drop),
     pickupLat, pickupLng,
     dropLat, dropLng,
-    time, price,
+    time,
+    price,
     createdUid: currentUser.uid,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
 
-  /* =============================
-     ✅ NEW: SELF + PASSENGER
-  ============================== */
   if(sendType.value==="selfPassenger"){
 
     const passengerUID = passengerSelect.value;
@@ -267,62 +273,23 @@ btn.onclick=async()=>{
     await addDoc(collection(db,"fares"),{
 
       ...baseData,
-
       status:"accepted",
 
-      passengerUID: passengerUID,
-      passengerName: passengerName,
+      passengerUID,
+      passengerName,
 
       currentDriverUID: currentUser.uid,
       currentDriverName: myName,
 
       originalDriverUID: currentUser.uid,
-      originalDriverName: myName
+      originalDriverName: myName,
 
+      soundPlayed:false
     });
 
-    new Audio("assets/accept.mp3").play();
+    new Audio("assets/job.mp3").play();
 
-    alert("Job created for you & passenger");
-    location.href="dashboardDriver.html";
-  }
-
-  /* =============================
-     EXISTING LOGIC (UNCHANGED)
-  ============================== */
-
-  if(sendType.value==="friend"){
-    const friendUID=friendSelect.value;
-    if(!friendUID) return alert("Select driver");
-
-    const ref=await addDoc(collection(db,"fares"),{
-      ...baseData,
-      status:"assigned"
-    });
-
-    await sendToFriend(ref.id,friendUID,currentUser.uid);
-
-    alert("Sent to driver");
-    location.href="dashboardDriver.html";
-  }
-
-  if(sendType.value==="pool"){
-    await addDoc(collection(db,"fares"),{
-      ...baseData,
-      status:"broadcast"
-    });
-
-    alert("Broadcast created");
-    location.href="dashboardDriver.html";
-  }
-
-  if(sendType.value==="auto"){
-    await addDoc(collection(db,"fares"),{
-      ...baseData,
-      status:"searching"
-    });
-
-    alert("Auto dispatch started");
+    alert("Job created");
     location.href="dashboardDriver.html";
   }
 };
