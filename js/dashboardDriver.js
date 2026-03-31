@@ -1,54 +1,24 @@
 import { db, auth } from "./firebase.js";
 
 import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  updateDoc,
-  getDoc,
-  serverTimestamp
+  collection, query, where, onSnapshot,
+  doc, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  onAuthStateChanged,
-  signOut
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
-let currentMode = "current";
-let isOnline = false;
-let watchId = null;
 
 const jobSound = new Audio("assets/job.mp3");
+let soundTimer = null;
 
-/* ---------- HELPER ---------- */
-function getSuburb(text){
-  if(!text) return "";
-  return text.split(",")[0];
-}
-
-/* ---------- ETA ---------- */
-function calculateETA(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-
-  const dLat = (lat2 - lat1) * Math.PI/180;
-  const dLng = (lng2 - lng1) * Math.PI/180;
-
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) *
-    Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLng/2)**2;
-
-  const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const timeMinutes = Math.round((distance / 40) * 60);
-
-  return {
-    distance: distance.toFixed(2) + " km",
-    eta: timeMinutes + " min"
-  };
+/* ---------- STOP SOUND ---------- */
+function stopSound(){
+  jobSound.pause();
+  jobSound.currentTime = 0;
+  if(soundTimer) clearTimeout(soundTimer);
 }
 
 /* ---------- AUTH ---------- */
@@ -66,12 +36,7 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  isOnline = u.online || false;
-  updateOnlineUI();
-
   document.getElementById("userName").textContent = u.nickName || user.email;
-  document.getElementById("userRole").textContent = "Driver";
-
   listenJobs();
 });
 
@@ -80,10 +45,7 @@ function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  const q = query(
-    collection(db, "fares"),
-    where("status", "in", ["accepted","assigned"])
-  );
+  const q = query(collection(db, "fares"));
 
   onSnapshot(q, snap => {
 
@@ -92,52 +54,36 @@ function listenJobs() {
     snap.forEach(async d => {
 
       const f = d.data();
-      const isMine = f.currentDriverUID === currentUser.uid;
 
-      /* 🔊 PLAY SOUND ONCE */
-      if (isMine && f.status === "accepted" && !f.soundPlayed) {
+      const isAssigned = f.assignedTo === currentUser.uid;
+      const isCurrent = f.currentDriverUID === currentUser.uid;
 
+      /* 🔊 SOUND LOOP (12 sec) */
+      if (isAssigned && f.status==="waiting response" && !f.soundPlayed) {
+
+        jobSound.loop = true;
         jobSound.play();
 
-        await updateDoc(doc(db,"fares", d.id),{
+        soundTimer = setTimeout(()=>{
+          stopSound();
+        },12000);
+
+        await updateDoc(doc(db,"fares",d.id),{
           soundPlayed:true
         });
-      }
-
-      let etaHTML = "";
-
-      if (f.pickupLat && f.dropLat) {
-
-        const calc = calculateETA(
-          f.pickupLat,
-          f.pickupLng,
-          f.dropLat,
-          f.dropLng
-        );
-
-        etaHTML = `
-          <div class="fare-row"><span>Trip:</span><b>${calc.distance}</b></div>
-          <div class="fare-row"><span>ETA:</span><b>${calc.eta}</b></div>
-        `;
       }
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
       div.innerHTML = `
-        <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || getSuburb(f.pickup)}</b></div>
-        <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || getSuburb(f.drop)}</b></div>
+        <div><b>${f.pickupSuburb}</b> → <b>${f.dropSuburb}</b></div>
+        <div>Status: ${f.status}</div>
+        <div>Passenger: ${f.passengerName}</div>
+        <div>Original: ${f.originalDriverName}</div>
+        <div>Current: ${f.currentDriverName}</div>
 
-        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
-
-        <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
-        <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
-        <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
-
-        <div class="fare-row"><span>Fare:</span><b>${f.price || "-"}</b></div>
-        <div class="fare-row"><span>Pickup Time:</span><b>${f.time || "-"}</b></div>
-
-        ${etaHTML}
+        ${renderButtons(d.id,f,isAssigned,isCurrent)}
       `;
 
       box.appendChild(div);
@@ -146,38 +92,63 @@ function listenJobs() {
   });
 }
 
-/* ---------- ONLINE UI ---------- */
-const toggleBtn = document.getElementById("toggleOnlineBtn");
+/* ---------- BUTTONS ---------- */
+function renderButtons(id,f,isAssigned,isCurrent){
 
-toggleBtn.onclick = async () => {
-
-  isOnline = !isOnline;
-
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    online: isOnline,
-    lastActive: serverTimestamp()
-  });
-
-  updateOnlineUI();
-};
-
-function updateOnlineUI() {
-
-  const statusText = document.getElementById("onlineStatus");
-
-  if (isOnline) {
-    toggleBtn.textContent = "Go Offline";
-    statusText.textContent = "● Online";
-    statusText.style.color = "#00e676";
-  } else {
-    toggleBtn.textContent = "Go Online";
-    statusText.textContent = "● Offline";
-    statusText.style.color = "#ff5252";
+  if(isAssigned && f.status==="waiting response"){
+    return `
+      <button onclick="acceptJob('${id}')">Accept</button>
+      <button onclick="rejectJob('${id}')">Reject</button>
+    `;
   }
+
+  if(isCurrent){
+    return `<button onclick="cancelJob('${id}')">Cancel</button>`;
+  }
+
+  return "";
 }
 
-/* ---------- LOGOUT ---------- */
-document.getElementById("logoutBtn").onclick = async () => {
-  await signOut(auth);
-  location.href = "index.html";
+/* ---------- ACTIONS ---------- */
+window.acceptJob = async id => {
+
+  const snap = await getDoc(doc(db,"fares",id));
+  const f = snap.data();
+
+  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
+  const myName = userSnap.data().nickName || currentUser.email;
+
+  await updateDoc(doc(db,"fares",id),{
+    status:"accepted",
+    currentDriverUID: currentUser.uid,
+    currentDriverName: myName,
+    assignedTo: null
+  });
+
+  stopSound();
+};
+
+window.rejectJob = async id => {
+
+  const snap = await getDoc(doc(db,"fares",id));
+  const f = snap.data();
+
+  await updateDoc(doc(db,"fares",id),{
+    status:"returned",
+    currentDriverUID: f.originalDriverUID,
+    currentDriverName: f.originalDriverName,
+    assignedTo:null,
+    soundPlayed:false
+  });
+
+  stopSound();
+};
+
+window.cancelJob = async id => {
+
+  if(!confirm("Cancel job?")) return;
+
+  await updateDoc(doc(db,"fares",id),{
+    status:"deleted"
+  });
 };
