@@ -2,14 +2,16 @@ import { db, auth } from "./firebase.js";
 
 import {
   collection, query, where, onSnapshot,
-  doc, updateDoc, getDoc
+  doc, updateDoc, getDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let currentUser = null;
+let isOnline = false;
 
 const jobSound = new Audio("assets/job.mp3");
 let soundTimer = null;
@@ -35,10 +37,55 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUser = user;
+  isOnline = u.online || false;
 
   document.getElementById("userName").textContent = u.nickName || user.email;
+
+  updateOnlineUI();
+
   listenJobs();
 });
+
+/* ---------- ONLINE TOGGLE ---------- */
+const toggleBtn = document.getElementById("toggleOnlineBtn");
+
+toggleBtn.onclick = async () => {
+
+  isOnline = !isOnline;
+
+  await updateDoc(doc(db, "users", currentUser.uid), {
+    online: isOnline,
+    lastActive: serverTimestamp()
+  });
+
+  updateOnlineUI();
+};
+
+function updateOnlineUI(){
+
+  const status = document.getElementById("onlineStatus");
+
+  if(isOnline){
+    toggleBtn.textContent = "Go Offline";
+    status.textContent = "● Online";
+    status.style.color = "#00e676";
+  }else{
+    toggleBtn.textContent = "Go Online";
+    status.textContent = "● Offline";
+    status.style.color = "#ff5252";
+  }
+}
+
+/* ---------- LOGOUT ---------- */
+document.getElementById("logoutBtn").onclick = async () => {
+
+  await updateDoc(doc(db, "users", currentUser.uid), {
+    online: false
+  });
+
+  await signOut(auth);
+  location.href = "index.html";
+};
 
 /* ---------- JOB LIST ---------- */
 function listenJobs() {
