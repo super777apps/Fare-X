@@ -3,104 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fare-X | Create Fare</title>
+<title>Create Fare</title>
 
 <link rel="stylesheet" href="css/style.css">
-
-<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-.map {
-  height: 250px;
-  margin: 10px 0;
-  border-radius: 10px;
-}
-
-/* suggestion box */
-.suggestions {
-  background:#111;
-  border-radius:8px;
-  max-height:150px;
-  overflow:auto;
-  margin-top:5px;
-}
-.suggestions div {
-  padding:8px;
-  cursor:pointer;
-}
-.suggestions div:hover {
-  background:#222;
-}
+.map { height:250px; margin:10px 0; border-radius:10px; }
+.suggestions { background:#111; max-height:150px; overflow:auto; }
+.suggestions div { padding:8px; cursor:pointer; }
+.suggestions div:hover { background:#222; }
 </style>
 </head>
 
 <body>
 
 <header class="lux-header">
-<h1 class="logo">Fare<span class="gold">-X</span></h1>
-<button onclick="location.href='dashboardDriver.html'" class="lux-btn">← Back</button>
+<h1>Fare-X</h1>
+<button onclick="history.back()">← Back</button>
 </header>
 
 <main class="lux-main">
 
-<div class="fare-form">
-
-<h2>Create New Fare</h2>
+<h2>Create Fare</h2>
 
 <!-- PICKUP -->
-<input id="pickup" placeholder="Pickup location">
+<label>Pickup Location</label>
+<input id="pickup">
 <div id="pickupSuggestions" class="suggestions"></div>
 <div id="pickupMap" class="map"></div>
-<button id="gpsBtn" class="lux-btn full">Use My Current Location</button>
+<button id="gpsBtn">Use My Current Location</button>
 
 <!-- DROP -->
-<input id="drop" placeholder="Drop location">
+<label>Drop Location</label>
+<input id="drop">
 <div id="dropSuggestions" class="suggestions"></div>
 <div id="dropMap" class="map"></div>
 
+<!-- PASSENGER -->
+<label>Select Passenger</label>
+<select id="passengerSelect"></select>
+
+<!-- DATE -->
+<label>Trip Date & Time</label>
 <input id="datetime" type="datetime-local">
 
 <select id="priceType">
-<option value="fixed">Fixed Price</option>
-<option value="meter">Meter + Extra</option>
+<option>Fixed</option>
+<option>Meter +</option>
 </select>
 
 <input id="price" placeholder="Price">
-<textarea id="note" placeholder="Notes (optional)"></textarea>
+<textarea id="note" placeholder="Notes"></textarea>
 
-<!-- ✅ SEND TYPE -->
 <select id="sendType">
-<option value="pool">Broadcast Pool</option>
 <option value="friend">Send to Driver</option>
-<option value="auto">Nearest Driver (Auto Dispatch)</option>
-
-<!-- ✅ NEW OPTION ADDED -->
-<option value="selfPassenger">Send to Myself + Passenger</option>
+<option value="pool">Broadcast</option>
+<option value="auto">Auto Dispatch</option>
+<option value="selfPassenger">Myself + Passenger</option>
 </select>
 
-<!-- EXISTING -->
-<select id="friendSelect" style="display:none">
-<option value="">Select Driver</option>
-</select>
+<select id="friendSelect" style="display:none"></select>
 
-<!-- ✅ NEW PASSENGER SELECT (ADDED ONLY) -->
-<select id="passengerSelect" style="display:none">
-<option value="">Select Passenger</option>
-</select>
+<button id="createFareBtn">Send Fare</button>
 
-<button id="createFareBtn" class="lux-btn full">Send Fare</button>
-
-<button id="longSendBtn" class="lux-btn full" style="display:none;">
-Send Fare Until Cancelled / Accepted
+<button id="longSendBtn" style="display:none">
+Send Until Accepted / Cancelled
 </button>
 
-</div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/create.js?v=SELF_PASSENGER"></script>
+<script type="module" src="js/create.js"></script>
 
 </body>
 </html>
