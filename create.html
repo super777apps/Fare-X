@@ -9,6 +9,18 @@
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+/* ✅ ONLY ADDITION (does NOT override your theme) */
+#pickupMap, #dropMap {
+  height: 300px;
+  width: 100%;
+  border-radius: 14px;
+  margin-bottom: 15px;
+  border: 1.5px solid rgba(212,175,55,.5);
+}
+</style>
+
 </head>
 
 <body>
@@ -54,10 +66,7 @@
   <option value="meter">Meter + Extra</option>
 </select>
 
-<!-- PRICE -->
 <input id="price" placeholder="Enter price">
-
-<!-- NOTES -->
 <textarea id="note" placeholder="Notes (optional)"></textarea>
 
 <!-- SEND TYPE -->
@@ -69,20 +78,15 @@
   <option value="selfPassenger">Send to Myself + Passenger</option>
 </select>
 
-<!-- DRIVER -->
 <select id="friendSelect" style="display:none">
   <option value="">Select Driver</option>
 </select>
 
-<!-- PASSENGER -->
 <select id="passengerSelect" style="display:none">
   <option value="">Select Passenger</option>
 </select>
 
-<!-- BUTTONS -->
-<button id="createFareBtn" class="lux-btn full">
-  Send Fare
-</button>
+<button id="createFareBtn" class="lux-btn full">Send Fare</button>
 
 <button id="longSendBtn" class="lux-btn full" style="display:none;">
   Send Until Accepted / Cancelled
