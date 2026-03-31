@@ -27,24 +27,8 @@
 <body>
 
 <div class="lux-header">
-
-  <!-- LEFT -->
   <button onclick="goBack()" class="lux-btn">← Back</button>
-
-  <!-- CENTER -->
   <div class="logo">Fare<span class="gold">-X</span></div>
-
-  <!-- RIGHT (NEW) -->
-  <div class="header-user">
-    <span id="userName">Driver</span>
-    <span id="onlineStatus">● Offline</span>
-  </div>
-
-  <div class="header-nav">
-    <button id="toggleOnlineBtn" class="lux-btn small">Go Online</button>
-    <button id="logoutBtn" class="lux-btn small">Logout</button>
-  </div>
-
 </div>
 
 <div class="lux-main">
@@ -59,15 +43,15 @@
   <h3 class="section-title">My Passengers</h3>
   <div id="passengerList" class="fare-list"></div>
 
-  <!-- ✅ ADD JOB LIST (needed for driver logic) -->
-  <h3 class="section-title">Jobs</h3>
-  <div id="jobList" class="fare-list"></div>
-
 </div>
 
-<script type="module" src="js/dashboardDriver.js?v=fixToggle1"></script>
+<script type="module" src="js/passenger.js?v=driverFix"></script>
 
 <script>
+/* ✅ FORCE DRIVER CONTEXT */
+localStorage.setItem("role", "driver");
+
+/* ✅ ALWAYS GO BACK TO DRIVER DASHBOARD */
 function goBack(){
   location.href = "dashboardDriver.html";
 }
