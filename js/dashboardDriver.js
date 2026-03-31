@@ -21,22 +21,13 @@ let currentMode = "current";
 let isOnline = false;
 let watchId = null;
 
-const isPassengerPage = document.referrer.includes("passenger");
-
-if (isPassengerPage) {
-  console.log("Blocked wrong redirect to driver dashboard");
-  // STOP accidental access from passenger flow
-  window.location.replace("dashboardPassenger.html");
-}
-
-
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
 const acceptSound = new Audio("assets/accept.mp3");
 const declineSound = new Audio("assets/decline.mp3");
 
 /* =========================================================
-   ✅ NEW: ETA CALCULATION (simple fallback)
+   ETA CALCULATION
 ========================================================= */
 function calculateETA(lat1, lng1, lat2, lng2) {
   const R = 6371;
@@ -50,8 +41,6 @@ function calculateETA(lat1, lng1, lat2, lng2) {
     Math.sin(dLng/2)**2;
 
   const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  // assume avg 40km/h
   const timeMinutes = Math.round((distance / 40) * 60);
 
   return {
@@ -61,29 +50,19 @@ function calculateETA(lat1, lng1, lat2, lng2) {
 }
 
 /* =========================================================
-   GPS TRACKING (UNCHANGED + ENHANCED)
+   GPS TRACKING
 ========================================================= */
 function startLocationTracking() {
-
-  if (!navigator.geolocation) {
-    alert("GPS not supported");
-    return;
-  }
+  if (!navigator.geolocation) return;
 
   watchId = navigator.geolocation.watchPosition(async (pos) => {
-
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
     await updateDoc(doc(db, "users", currentUser.uid), {
-      location: { lat, lng },
+      location: {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      },
       lastActive: serverTimestamp()
     });
-
-  }, (err) => {
-    console.error(err);
-  }, {
-    enableHighAccuracy: true
   });
 }
 
@@ -95,7 +74,7 @@ function stopLocationTracking() {
 }
 
 /* =========================================================
-   AUTH (UNCHANGED)
+   AUTH + ROLE PROTECTION (FIXED)
 ========================================================= */
 onAuthStateChanged(auth, async (user) => {
 
@@ -104,32 +83,38 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  currentUser = user;
-
   const snap = await getDoc(doc(db, "users", user.uid));
 
-  let name = user.email;
-  let role = "driver";
-
-  if (snap.exists()) {
-    const u = snap.data();
-    name = u.nickName || user.email;
-    role = u.role || "driver";
-
-    isOnline = u.online || false;
-    updateOnlineUI();
-
-    if (isOnline) startLocationTracking();
+  if (!snap.exists()) {
+    location.href = "index.html";
+    return;
   }
 
+  const u = snap.data();
+
+  // ✅ STRICT ROLE CHECK
+  if (u.role !== "driver") {
+    location.href = "dashboardPassenger.html";
+    return;
+  }
+
+  currentUser = user;
+
+  const name = u.nickName || user.email;
+  isOnline = u.online || false;
+
+  updateOnlineUI();
+
+  if (isOnline) startLocationTracking();
+
   document.getElementById("userName").textContent = name;
-  document.getElementById("userRole").textContent = role;
+  document.getElementById("userRole").textContent = "Driver";
 
   listenJobs();
 });
 
 /* =========================================================
-   ONLINE TOGGLE (UNCHANGED)
+   ONLINE TOGGLE
 ========================================================= */
 const toggleBtn = document.getElementById("toggleOnlineBtn");
 
@@ -149,7 +134,7 @@ toggleBtn.onclick = async () => {
 };
 
 /* =========================================================
-   UI (UNCHANGED)
+   UI
 ========================================================= */
 function updateOnlineUI() {
 
@@ -167,7 +152,7 @@ function updateOnlineUI() {
 }
 
 /* =========================================================
-   LOGOUT (UNCHANGED)
+   LOGOUT
 ========================================================= */
 document.getElementById("logoutBtn").onclick = async () => {
 
@@ -182,7 +167,7 @@ document.getElementById("logoutBtn").onclick = async () => {
 };
 
 /* =========================================================
-   BUTTONS (UNCHANGED)
+   BUTTONS
 ========================================================= */
 document.getElementById("currentJobsBtn").onclick = () => {
   currentMode = "current";
@@ -195,7 +180,7 @@ document.getElementById("pastJobsBtn").onclick = () => {
 };
 
 /* =========================================================
-   JOB LISTENER (ENHANCED)
+   JOB LISTENER
 ========================================================= */
 function listenJobs() {
 
@@ -204,22 +189,12 @@ function listenJobs() {
   let q;
 
   if (currentMode === "current") {
-    q = query(
-      collection(db, "fares"),
-      where("status", "in", [
-        "assigned",
-        "waiting response",
-        "accepted"
-      ])
+    q = query(collection(db, "fares"),
+      where("status", "in", ["assigned","waiting response","accepted"])
     );
   } else {
-    q = query(
-      collection(db, "fares"),
-      where("status", "in", [
-        "declined",
-        "completed",
-        "deleted"
-      ])
+    q = query(collection(db, "fares"),
+      where("status", "in", ["declined","completed","deleted"])
     );
   }
 
@@ -237,30 +212,14 @@ function listenJobs() {
       const f = d.data();
       const isMine = f.currentDriverUID === currentUser.uid;
 
-      const div = document.createElement("div");
-      div.className = "fare-card";
-
-      if (isMine && f.status === "waiting response") {
-        jobSound.currentTime = 0;
-        jobSound.play();
-      }
-
-      /* ===============================
-         ✅ NEW: ETA DISPLAY
-      =============================== */
       let etaHTML = "";
 
       if (isMine && f.pickupLat && f.pickupLng) {
         const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-        const driverLoc = userSnap.data()?.location;
+        const loc = userSnap.data()?.location;
 
-        if (driverLoc) {
-          const calc = calculateETA(
-            driverLoc.lat,
-            driverLoc.lng,
-            f.pickupLat,
-            f.pickupLng
-          );
+        if (loc) {
+          const calc = calculateETA(loc.lat, loc.lng, f.pickupLat, f.pickupLng);
 
           etaHTML = `
             <div class="fare-row"><span>Distance:</span><b>${calc.distance}</b></div>
@@ -269,15 +228,15 @@ function listenJobs() {
         }
       }
 
+      const div = document.createElement("div");
+      div.className = "fare-card";
+
       div.innerHTML = `
         <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
         <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
         <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
         <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
-        <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
-
         ${etaHTML}
-
         ${renderActions(d.id, f, isMine)}
       `;
 
@@ -288,85 +247,31 @@ function listenJobs() {
 }
 
 /* =========================================================
-   VIEW ROUTE (UNCHANGED)
-========================================================= */
-window.viewRoute = (id) => {
-  location.href = `mapView.html?id=${id}`;
-};
-
-/* =========================================================
-   ACTIONS (UNCHANGED)
+   ACTIONS
 ========================================================= */
 function renderActions(id, f, isMine) {
 
-  const viewBtn = `
-    <button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>
-  `;
-
-  if (["declined","completed","deleted"].includes(f.status)) {
-    return viewBtn + `<div class="gold">Past Job</div>`;
-  }
+  const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
   if (isMine && f.status === "waiting response") {
     return `
       ${viewBtn}
-      <div class="fare-actions">
-        <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
-        <button class="cancel-btn" onclick="rejectJob('${id}')">Reject</button>
-      </div>
-    `;
-  }
-
-  if (isMine && f.status === "accepted") {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
-        <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
-        <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
-      </div>
-    `;
-  }
-
-  if (f.createdUid === currentUser.uid && f.status === "waiting response") {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="editJob('${id}')">Edit</button>
-        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
-      </div>
+      <button onclick="acceptJob('${id}')">Accept</button>
+      <button onclick="rejectJob('${id}')">Reject</button>
     `;
   }
 
   return viewBtn;
 }
 
-/* =========================================================
-   HANDLERS (UNCHANGED)
-========================================================= */
-window.acceptJob = async (id) => {
-  await updateDoc(doc(db,"fares",id),{
-    status:"accepted",
-    currentDriverUID:currentUser.uid
-  });
+window.viewRoute = id => location.href = `mapView.html?id=${id}`;
+
+window.acceptJob = async id => {
+  await updateDoc(doc(db,"fares",id),{status:"accepted"});
   acceptSound.play();
 };
 
-window.rejectJob = async (id) => {
-  await updateDoc(doc(db,"fares",id),{
-    status:"declined"
-  });
+window.rejectJob = async id => {
+  await updateDoc(doc(db,"fares",id),{status:"declined"});
   declineSound.play();
-};
-
-window.markArrived = async id => updateDoc(doc(db,"fares",id),{status:"arrived"});
-window.markStarted = async id => updateDoc(doc(db,"fares",id),{status:"in progress"});
-window.markCompleted = async id => updateDoc(doc(db,"fares",id),{status:"completed"});
-
-window.editJob = id => location.href=`create.html?id=${id}`;
-
-window.deleteJob = async id => {
-  if(!confirm("Cancel this job?")) return;
-  await updateDoc(doc(db,"fares",id),{status:"deleted"});
-  alert("Job cancelled");
 };
