@@ -1,62 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fare-X | Driver Dashboard</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Passengers</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+.search-box {
+  margin-bottom: 10px;
+}
+
+.result-item {
+  padding:10px;
+  border-bottom:1px solid #222;
+  cursor:pointer;
+}
+
+.result-item:hover {
+  background:#111;
+}
+</style>
 </head>
+
 <body>
 
 <div class="lux-header">
+
+  <!-- LEFT -->
+  <button onclick="goBack()" class="lux-btn">← Back</button>
+
+  <!-- CENTER -->
   <div class="logo">Fare<span class="gold">-X</span></div>
 
-  <div>
-    <div id="userName"></div>
-    <div id="userRole" style="font-size:12px;color:#d4af37;"></div>
-    <div id="onlineStatus" style="font-size:12px;"></div>
+  <!-- RIGHT (NEW) -->
+  <div class="header-user">
+    <span id="userName">Driver</span>
+    <span id="onlineStatus">● Offline</span>
   </div>
 
-  <button id="logoutBtn" class="lux-btn">Logout</button>
+  <div class="header-nav">
+    <button id="toggleOnlineBtn" class="lux-btn small">Go Online</button>
+    <button id="logoutBtn" class="lux-btn small">Logout</button>
+  </div>
+
 </div>
 
 <div class="lux-main">
 
-  <button id="toggleOnlineBtn" class="lux-btn full"></button>
+  <h2 class="section-title">Passengers</h2>
 
-  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px; margin-top:10px;">
+  <!-- SEARCH -->
+  <input id="searchInput" class="search-box" placeholder="Search passenger by email">
 
-    <button onclick="location.href='create.html'" class="lux-btn full">Create Fare</button>
+  <div id="searchResults"></div>
 
-    <button onclick="location.href='friends.html'" class="lux-btn full">
-      Friends / Drivers
-    </button>
+  <h3 class="section-title">My Passengers</h3>
+  <div id="passengerList" class="fare-list"></div>
 
-    <button onclick="location.href='profile.html'" class="lux-btn full">Profile</button>
-    
-    <button onclick="location.href='passenger.html'" class="lux-btn full">
-  Passengers
-</button>
-    
-
-    <!-- ✅ FIXED HERE ONLY -->
-    <button onclick="location.href='helpDriver.html'" class="lux-btn full">Help</button>
-
-    <button id="poolJobsBtn" class="lux-btn full">Broadcast Pool Jobs</button>
-
-    <button id="currentJobsBtn" class="lux-btn full">Current Jobs</button>
-    <button id="pastJobsBtn" class="lux-btn full">Past Jobs</button>
-
-  </div>
-
-  <h2 class="section-title">Jobs</h2>
-
+  <!-- ✅ ADD JOB LIST (needed for driver logic) -->
+  <h3 class="section-title">Jobs</h3>
   <div id="jobList" class="fare-list"></div>
 
 </div>
 
-<script type="module" src="js/firebase.js"></script>
-<script type="module" src="js/dashboardDriver.js?v=6"></script>
+<script type="module" src="js/dashboardDriver.js?v=fixToggle1"></script>
+
+<script>
+function goBack(){
+  location.href = "dashboardDriver.html";
+}
+</script>
 
 </body>
 </html>
