@@ -167,35 +167,68 @@ onAuthStateChanged(auth, async user=>{
   loadPassengers(user.uid);
 });
 
-/* ---------- FIXED LOADERS ---------- */
+/* =========================================================
+   ✅ FIXED FRIENDS LOADER (SUPPORTS ALL DATA STRUCTURES)
+========================================================= */
 function loadFriends(uid){
-  const q=query(collection(db,"friends"),where("owner","==",uid));
+
+  const q=query(collection(db,"friends"));
 
   onSnapshot(q,snap=>{
+
     friendSelect.innerHTML='<option value="">Select Driver</option>';
 
     snap.forEach(d=>{
+
       const f=d.data();
+
+      // ✅ support multiple structures
+      const owner = f.owner || f.createdBy || f.userId;
+
+      if(owner !== uid) return;
+
+      const friendUID = f.friendUID || f.uid || f.driverUID;
+      const name = f.name || f.nickName || f.email || "Driver";
+
+      if(!friendUID) return;
+
       const opt=document.createElement("option");
-      opt.value=f.friendUID;
-      opt.textContent=f.name || f.email || "Driver";
+      opt.value=friendUID;
+      opt.textContent=name;
+
       friendSelect.appendChild(opt);
     });
   });
 }
 
+/* =========================================================
+   ✅ FIXED PASSENGERS LOADER (SUPPORTS ALL DATA STRUCTURES)
+========================================================= */
 function loadPassengers(uid){
-  const q=query(collection(db,"passengers"),where("owner","==",uid));
+
+  const q=query(collection(db,"passengers"));
 
   onSnapshot(q,snap=>{
+
     passengerSelect.innerHTML='<option value="">Select Passenger</option>';
 
     snap.forEach(d=>{
-      const p=d.data();
-      const opt=document.createElement("option");
 
-      opt.value=p.passengerUID;
-      opt.textContent=p.nickName || p.email || "Passenger";
+      const p=d.data();
+
+      // ✅ support multiple structures
+      const owner = p.owner || p.createdBy || p.userId;
+
+      if(owner !== uid) return;
+
+      const passengerUID = p.passengerUID || p.uid;
+      const name = p.nickName || p.name || p.email || "Passenger";
+
+      if(!passengerUID) return;
+
+      const opt=document.createElement("option");
+      opt.value=passengerUID;
+      opt.textContent=name;
 
       passengerSelect.appendChild(opt);
     });
@@ -208,7 +241,9 @@ sendType.addEventListener("change", ()=>{
   const val = sendType.value;
 
   friendSelect.style.display = (val==="friend")?"block":"none";
-  longBtn.style.display = (val==="friend")?"block":"block":"none";
+
+  // ✅ FIXED BUG HERE
+  longBtn.style.display = (val==="friend")?"block":"none";
 });
 
 /* ---------- CREATE ---------- */
