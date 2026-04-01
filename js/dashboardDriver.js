@@ -62,37 +62,81 @@ onAuthStateChanged(auth, async (user) => {
   const u = snap.data();
 
   isOnline = u?.online || false;
-  updateOnlineUI();
-
-  if (isOnline) startLocationTracking();
 
   document.getElementById("userName").textContent = u?.nickName || user.email;
   document.getElementById("userRole").textContent = u?.role || "driver";
 
+  updateOnlineUI();
+
+  if (isOnline) startLocationTracking();
+
   listenJobs();
 });
 
-/* ---------- ONLINE TOGGLE ---------- */
-const toggleBtn = document.getElementById("toggleOnlineBtn");
+/* =========================================================
+   ✅ SAFE BUTTON BINDING (FIX FOR OPPO)
+========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
 
-toggleBtn.onclick = async () => {
+  const toggleBtn = document.getElementById("toggleOnlineBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn = document.getElementById("pastJobsBtn");
 
-  isOnline = !isOnline;
+  if (toggleBtn) {
+    toggleBtn.onclick = async () => {
 
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    online: isOnline,
-    lastActive: serverTimestamp()
-  });
+      isOnline = !isOnline;
 
-  if (isOnline) startLocationTracking();
-  else stopLocationTracking();
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: isOnline,
+        lastActive: serverTimestamp()
+      });
 
-  updateOnlineUI();
-};
+      if (isOnline) startLocationTracking();
+      else stopLocationTracking();
 
+      updateOnlineUI();
+    };
+  }
+
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: false
+      });
+
+      stopLocationTracking();
+
+      await signOut(auth);
+      location.href = "index.html";
+    };
+  }
+
+  if (currentBtn) {
+    currentBtn.onclick = () => {
+      currentMode = "current";
+      listenJobs();
+    };
+  }
+
+  if (pastBtn) {
+    pastBtn.onclick = () => {
+      currentMode = "past";
+      listenJobs();
+    };
+  }
+
+});
+
+/* ---------- UPDATE UI (SAFE) ---------- */
 function updateOnlineUI() {
 
   const statusText = document.getElementById("onlineStatus");
+  const toggleBtn = document.getElementById("toggleOnlineBtn");
+
+  if (!toggleBtn || !statusText) return;
 
   if (isOnline) {
     toggleBtn.textContent = "Go Offline";
@@ -105,38 +149,14 @@ function updateOnlineUI() {
   }
 }
 
-/* ---------- LOGOUT ---------- */
-document.getElementById("logoutBtn").onclick = async () => {
-
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    online: false
-  });
-
-  stopLocationTracking();
-
-  await signOut(auth);
-  location.href = "index.html";
-};
-
-/* ---------- FILTER BUTTONS ---------- */
-document.getElementById("currentJobsBtn").onclick = () => {
-  currentMode = "current";
-  listenJobs();
-};
-
-document.getElementById("pastJobsBtn").onclick = () => {
-  currentMode = "past";
-  listenJobs();
-};
-
 /* =========================================================
-   🚀 MAIN JOB LISTENER (FULL DISPATCH LOGIC)
+   🚀 MAIN JOB LISTENER (UNCHANGED LOGIC)
 ========================================================= */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  const q = query(collection(db, "fares")); // NO FILTER
+  const q = query(collection(db, "fares"));
 
   onSnapshot(q, snap => {
 
@@ -155,7 +175,6 @@ function listenJobs() {
       const isMine = f.currentDriverUID === currentUser.uid;
       const isCreator = f.originalDriverUID === currentUser.uid;
 
-      // ✅ FILTER BASED ON MODE
       if (currentMode === "current") {
         if (!["waiting response","accepted","assigned"].includes(f.status)) return;
       } else {
@@ -165,7 +184,6 @@ function listenJobs() {
       const div = document.createElement("div");
       div.className = "fare-card";
 
-      /* 🔊 SOUND ONLY FOR ASSIGNED DRIVER */
       if (isAssigned && f.status === "waiting response" && !f.soundPlayed) {
 
         jobSound.loop = true;
@@ -203,7 +221,6 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
-  // ✅ DRIVER RECEIVING JOB
   if (isAssigned && f.status === "waiting response") {
     return `
       ${viewBtn}
@@ -214,7 +231,6 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
     `;
   }
 
-  // ✅ CURRENT DRIVER CONTROLS
   if (isMine && f.status === "accepted") {
     return `
       ${viewBtn}
@@ -226,7 +242,6 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
     `;
   }
 
-  // ✅ ORIGINAL DRIVER CAN EDIT / RESEND
   if (isCreator && f.status === "returned") {
     return `
       ${viewBtn}
