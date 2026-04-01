@@ -167,29 +167,20 @@ onAuthStateChanged(auth, async user=>{
   loadPassengers(user.uid);
 });
 
-/* =========================================================
-   ✅ FIXED FRIENDS LOADER (SUPPORTS ALL DATA STRUCTURES)
-========================================================= */
+/* ---------- LOADERS (UNCHANGED) ---------- */
 function loadFriends(uid){
-
   const q=query(collection(db,"friends"));
 
   onSnapshot(q,snap=>{
-
     friendSelect.innerHTML='<option value="">Select Driver</option>';
 
     snap.forEach(d=>{
-
       const f=d.data();
-
-      // ✅ support multiple structures
       const owner = f.owner || f.createdBy || f.userId;
-
       if(owner !== uid) return;
 
       const friendUID = f.friendUID || f.uid || f.driverUID;
       const name = f.name || f.nickName || f.email || "Driver";
-
       if(!friendUID) return;
 
       const opt=document.createElement("option");
@@ -201,29 +192,19 @@ function loadFriends(uid){
   });
 }
 
-/* =========================================================
-   ✅ FIXED PASSENGERS LOADER (SUPPORTS ALL DATA STRUCTURES)
-========================================================= */
 function loadPassengers(uid){
-
   const q=query(collection(db,"passengers"));
 
   onSnapshot(q,snap=>{
-
     passengerSelect.innerHTML='<option value="">Select Passenger</option>';
 
     snap.forEach(d=>{
-
       const p=d.data();
-
-      // ✅ support multiple structures
       const owner = p.owner || p.createdBy || p.userId;
-
       if(owner !== uid) return;
 
       const passengerUID = p.passengerUID || p.uid;
       const name = p.nickName || p.name || p.email || "Passenger";
-
       if(!passengerUID) return;
 
       const opt=document.createElement("option");
@@ -237,12 +218,8 @@ function loadPassengers(uid){
 
 /* ---------- UI FIX ---------- */
 sendType.addEventListener("change", ()=>{
-
   const val = sendType.value;
-
   friendSelect.style.display = (val==="friend")?"block":"none";
-
-  // ✅ FIXED BUG HERE
   longBtn.style.display = (val==="friend")?"block":"none";
 });
 
@@ -263,6 +240,14 @@ btn.onclick=async()=>{
   const passengerName = passengerSnap.data()?.nickName || "Passenger";
 
   const myName = currentUserData.nickName || currentUser.email;
+
+  /* ✅ NEW: FRIEND LOGIC */
+  let assignedTo = null;
+
+  if(sendType.value==="friend"){
+    assignedTo = friendSelect.value;
+    if(!assignedTo) return alert("Select friend driver");
+  }
 
   await addDoc(collection(db,"fares"),{
 
@@ -287,6 +272,8 @@ btn.onclick=async()=>{
     originalDriverName: myName,
 
     status:"waiting response",
+
+    assignedTo: assignedTo, // ✅ NEW
 
     createdAt: serverTimestamp(),
     soundPlayed:false

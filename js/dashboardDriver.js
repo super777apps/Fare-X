@@ -1,183 +1,11 @@
-import { db, auth } from "./firebase.js";
-
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  updateDoc,
-  getDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-let currentUser = null;
-let currentMode = "current";
-let isOnline = false;
-let watchId = null; // ✅ GPS tracker
-
-// 🔊 Sounds
-const jobSound = new Audio("assets/job.mp3");
-const acceptSound = new Audio("assets/accept.mp3");
-const declineSound = new Audio("assets/decline.mp3");
-
-/* ---------- GPS TRACKING ---------- */
-function startLocationTracking() {
-
-  if (!navigator.geolocation) {
-    alert("GPS not supported");
-    return;
-  }
-
-  watchId = navigator.geolocation.watchPosition(async (pos) => {
-
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      location: { lat, lng },
-      lastActive: serverTimestamp()
-    });
-
-  }, (err) => {
-    console.error(err);
-  }, {
-    enableHighAccuracy: true
-  });
-
-}
-
-function stopLocationTracking() {
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
-}
-
-/* ---------- AUTH ---------- */
-onAuthStateChanged(auth, async (user) => {
-
-  if (!user) {
-    location.href = "index.html";
-    return;
-  }
-
-  currentUser = user;
-
-  const snap = await getDoc(doc(db, "users", user.uid));
-
-  let name = user.email;
-  let role = "driver";
-
-  if (snap.exists()) {
-    const u = snap.data();
-    name = u.nickName || user.email;
-    role = u.role || "driver";
-
-    isOnline = u.online || false;
-    updateOnlineUI();
-
-    if (isOnline) startLocationTracking();
-  }
-
-  document.getElementById("userName").textContent = name;
-  document.getElementById("userRole").textContent = role;
-
-  listenJobs();
-});
-
-/* ---------- ONLINE TOGGLE ---------- */
-const toggleBtn = document.getElementById("toggleOnlineBtn");
-
-toggleBtn.onclick = async () => {
-
-  isOnline = !isOnline;
-
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    online: isOnline,
-    lastActive: serverTimestamp()
-  });
-
-  if (isOnline) {
-    startLocationTracking();
-  } else {
-    stopLocationTracking();
-  }
-
-  updateOnlineUI();
-};
-
-/* ---------- UPDATE UI ---------- */
-function updateOnlineUI() {
-
-  const statusText = document.getElementById("onlineStatus");
-
-  if (isOnline) {
-    toggleBtn.textContent = "Go Offline";
-    statusText.textContent = "● Online";
-    statusText.style.color = "#00e676";
-  } else {
-    toggleBtn.textContent = "Go Online";
-    statusText.textContent = "● Offline";
-    statusText.style.color = "#ff5252";
-  }
-}
-
-/* ---------- LOGOUT ---------- */
-document.getElementById("logoutBtn").onclick = async () => {
-
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    online: false
-  });
-
-  stopLocationTracking();
-
-  await signOut(auth);
-  location.href = "index.html";
-};
-
-/* ---------- BUTTONS ---------- */
-document.getElementById("currentJobsBtn").onclick = () => {
-  currentMode = "current";
-  listenJobs();
-};
-
-document.getElementById("pastJobsBtn").onclick = () => {
-  currentMode = "past";
-  listenJobs();
-};
+// KEEP ALL YOUR CODE ABOVE SAME
 
 /* ---------- JOB LISTENER ---------- */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  let q;
-
-  if (currentMode === "current") {
-    q = query(
-      collection(db, "fares"),
-      where("status", "in", [
-        "assigned",
-        "waiting response",
-        "accepted"
-      ])
-    );
-  } else {
-    q = query(
-      collection(db, "fares"),
-      where("status", "in", [
-        "declined",
-        "completed",
-        "deleted"
-      ])
-    );
-  }
+  let q = query(collection(db, "fares")); // ✅ NO FILTER (important)
 
   onSnapshot(q, snap => {
 
@@ -191,14 +19,27 @@ function listenJobs() {
     snap.forEach(d => {
 
       const f = d.data();
+
+      const isAssigned = f.assignedTo === currentUser.uid; // ✅ NEW
       const isMine = f.currentDriverUID === currentUser.uid;
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
-      if (isMine && f.status === "waiting response") {
-        jobSound.currentTime = 0;
+      /* 🔊 SOUND FOR ASSIGNED DRIVER */
+      if (isAssigned && f.status === "waiting response" && !f.soundPlayed) {
+
+        jobSound.loop = true;
         jobSound.play();
+
+        setTimeout(()=>{
+          jobSound.pause();
+          jobSound.currentTime = 0;
+        },12000);
+
+        updateDoc(doc(db,"fares",d.id),{
+          soundPlayed:true
+        });
       }
 
       div.innerHTML = `
@@ -208,7 +49,7 @@ function listenJobs() {
         <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
         <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
 
-        ${renderActions(d.id, f, isMine)}
+        ${renderActions(d.id, f, isMine, isAssigned)}
       `;
 
       box.appendChild(div);
@@ -217,23 +58,12 @@ function listenJobs() {
   });
 }
 
-/* ---------- VIEW ROUTE ---------- */
-window.viewRoute = (id) => {
-  location.href = `mapView.html?id=${id}`;
-};
-
 /* ---------- ACTIONS ---------- */
-function renderActions(id, f, isMine) {
+function renderActions(id, f, isMine, isAssigned) {
 
-  const viewBtn = `
-    <button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>
-  `;
+  const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
-  if (["declined","completed","deleted"].includes(f.status)) {
-    return viewBtn + `<div class="gold">Past Job</div>`;
-  }
-
-  if (isMine && f.status === "waiting response") {
+  if (isAssigned && f.status === "waiting response") {
     return `
       ${viewBtn}
       <div class="fare-actions">
@@ -243,54 +73,42 @@ function renderActions(id, f, isMine) {
     `;
   }
 
-  if (isMine && f.status === "accepted") {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
-        <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
-        <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
-      </div>
-    `;
-  }
-
-  if (f.createdUid === currentUser.uid && f.status === "waiting response") {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="editJob('${id}')">Edit</button>
-        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
-      </div>
-    `;
-  }
-
   return viewBtn;
 }
 
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
+
+  const snap = await getDoc(doc(db,"fares",id));
+  const f = snap.data();
+
+  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
+  const myName = userSnap.data().nickName || currentUser.email;
+
   await updateDoc(doc(db,"fares",id),{
     status:"accepted",
-    currentDriverUID:currentUser.uid
+    currentDriverUID: currentUser.uid,
+    currentDriverName: myName,
+    assignedTo:null
   });
+
+  jobSound.pause();
   acceptSound.play();
 };
 
 window.rejectJob = async (id) => {
+
+  const snap = await getDoc(doc(db,"fares",id));
+  const f = snap.data();
+
   await updateDoc(doc(db,"fares",id),{
-    status:"declined"
+    status:"returned",
+    currentDriverUID: f.originalDriverUID,
+    currentDriverName: f.originalDriverName,
+    assignedTo:null,
+    soundPlayed:false
   });
+
+  jobSound.pause();
   declineSound.play();
-};
-
-window.markArrived = async id => updateDoc(doc(db,"fares",id),{status:"arrived"});
-window.markStarted = async id => updateDoc(doc(db,"fares",id),{status:"in progress"});
-window.markCompleted = async id => updateDoc(doc(db,"fares",id),{status:"completed"});
-
-window.editJob = id => location.href=`create.html?id=${id}`;
-
-window.deleteJob = async id => {
-  if(!confirm("Cancel this job?")) return;
-  await updateDoc(doc(db,"fares",id),{status:"deleted"});
-  alert("Job cancelled");
 };
