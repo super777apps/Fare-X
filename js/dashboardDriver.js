@@ -200,15 +200,19 @@ function listenJobs() {
       }
 
       div.innerHTML = `
-        <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
-        <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || f.drop}</b></div>
-        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
-        <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
-        <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
-        <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
+  <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
+  <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || f.drop}</b></div>
+  <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+  <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
+  <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
+  <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
 
-        ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
-      `;
+  <div class="fare-row"><span>Price:</span><b>${f.price || "-"}</b></div>
+  <div class="fare-row"><span>Notes:</span><b>${f.notes || "-"}</b></div>
+
+  ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
+`;
+
 
       box.appendChild(div);
     });

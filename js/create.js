@@ -2,7 +2,7 @@ import { db, auth } from "./firebase.js";
 
 import {
   collection, addDoc, query, where, onSnapshot,
-  serverTimestamp, doc, getDoc
+  serverTimestamp, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -230,6 +230,7 @@ btn.onclick=async()=>{
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
+  const notes=document.getElementById("notes")?.value || "";
   const passengerUID = passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
@@ -241,7 +242,6 @@ btn.onclick=async()=>{
 
   const myName = currentUserData.nickName || currentUser.email;
 
-  /* ✅ NEW: FRIEND LOGIC */
   let assignedTo = null;
 
   if(sendType.value==="friend"){
@@ -249,7 +249,7 @@ btn.onclick=async()=>{
     if(!assignedTo) return alert("Select friend driver");
   }
 
-  await addDoc(collection(db,"fares"),{
+  const docRef = await addDoc(collection(db,"fares"),{
 
     pickup,
     drop,
@@ -261,6 +261,7 @@ btn.onclick=async()=>{
 
     time,
     price,
+    notes, // ✅ NEW
 
     passengerUID,
     passengerName,
@@ -273,11 +274,27 @@ btn.onclick=async()=>{
 
     status:"waiting response",
 
-    assignedTo: assignedTo, // ✅ NEW
+    assignedTo: assignedTo,
 
     createdAt: serverTimestamp(),
     soundPlayed:false
   });
+
+  /* ✅ AUTO RETURN AFTER 12 SEC IF NOT ACCEPTED */
+  if(assignedTo){
+    setTimeout(async ()=>{
+      const snap = await getDoc(docRef);
+      const f = snap.data();
+
+      if(f.status==="waiting response"){
+        await updateDoc(docRef,{
+          status:"returned",
+          assignedTo:null,
+          soundPlayed:false
+        });
+      }
+    },12000);
+  }
 
   alert("Job sent");
   location.href="dashboardDriver.html";
