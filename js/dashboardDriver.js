@@ -8,7 +8,8 @@ import {
   doc,
   updateDoc,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  orderBy // ✅ NEW
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -73,9 +74,7 @@ onAuthStateChanged(auth, async (user) => {
   listenJobs();
 });
 
-/* =========================================================
-   ✅ SAFE BUTTON BINDING (FIX FOR OPPO)
-========================================================= */
+/* ---------- SAFE BUTTON BINDING ---------- */
 document.addEventListener("DOMContentLoaded", () => {
 
   const toggleBtn = document.getElementById("toggleOnlineBtn");
@@ -130,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-/* ---------- UPDATE UI (SAFE) ---------- */
+/* ---------- UPDATE UI ---------- */
 function updateOnlineUI() {
 
   const statusText = document.getElementById("onlineStatus");
@@ -150,13 +149,17 @@ function updateOnlineUI() {
 }
 
 /* =========================================================
-   🚀 MAIN JOB LISTENER (UNCHANGED LOGIC)
+   🚀 MAIN JOB LISTENER (FIXED)
 ========================================================= */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  const q = query(collection(db, "fares"));
+  // ✅ NEW: SORT BY LATEST FIRST
+  const q = query(
+    collection(db, "fares"),
+    orderBy("createdAt", "desc")
+  );
 
   onSnapshot(q, snap => {
 
@@ -175,15 +178,30 @@ function listenJobs() {
       const isMine = f.currentDriverUID === currentUser.uid;
       const isCreator = f.originalDriverUID === currentUser.uid;
 
+      /* =====================================================
+         ✅ CRITICAL FILTER FIX
+         REMOVE JOB FROM B SCREEN AFTER REJECT
+      ===================================================== */
+      if (!isAssigned && !isMine && !isCreator) return;
+
+      /* =====================================================
+         ✅ MODE FILTER FIX
+      ===================================================== */
       if (currentMode === "current") {
-        if (!["waiting response","accepted","assigned"].includes(f.status)) return;
+
+        // ✅ returned MUST be in current
+        if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
+
       } else {
-        if (!["declined","completed","deleted","returned"].includes(f.status)) return;
+
+        // ✅ past ONLY completed / deleted
+        if (!["completed","deleted"].includes(f.status)) return;
       }
 
       const div = document.createElement("div");
       div.className = "fare-card";
 
+      /* 🔊 SOUND */
       if (isAssigned && f.status === "waiting response" && !f.soundPlayed) {
 
         jobSound.loop = true;
@@ -212,7 +230,6 @@ function listenJobs() {
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
 `;
-
 
       box.appendChild(div);
     });
