@@ -35,8 +35,7 @@ const friendSelect = document.getElementById("friendSelect");
 const passengerSelect = document.getElementById("passengerSelect");
 
 const btn = document.getElementById("createFareBtn");
-const longBtn = document.getElementById("longSendBtn");
-
+const longBtn = null;
 /* ---------- MAP INIT ---------- */
 function initMaps(){
 
@@ -220,7 +219,6 @@ function loadPassengers(uid){
 sendType.addEventListener("change", ()=>{
   const val = sendType.value;
   friendSelect.style.display = (val==="friend")?"block":"none";
-  longBtn.style.display = (val==="friend")?"block":"none";
 });
 
 /* ---------- CREATE ---------- */
