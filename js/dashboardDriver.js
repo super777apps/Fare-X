@@ -9,7 +9,7 @@ import {
   updateDoc,
   getDoc,
   serverTimestamp,
-  orderBy // ✅ NEW
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -84,7 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (toggleBtn) {
     toggleBtn.onclick = async () => {
-
       isOnline = !isOnline;
 
       await updateDoc(doc(db, "users", currentUser.uid), {
@@ -101,7 +100,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
-
       await updateDoc(doc(db, "users", currentUser.uid), {
         online: false
       });
@@ -149,13 +147,12 @@ function updateOnlineUI() {
 }
 
 /* =========================================================
-   🚀 MAIN JOB LISTENER (FIXED)
+   🚀 MAIN JOB LISTENER (UPDATED)
 ========================================================= */
 function listenJobs() {
 
   const box = document.getElementById("jobList");
 
-  // ✅ NEW: SORT BY LATEST FIRST
   const q = query(
     collection(db, "fares"),
     orderBy("createdAt", "desc")
@@ -177,25 +174,19 @@ function listenJobs() {
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = f.currentDriverUID === currentUser.uid;
       const isCreator = f.originalDriverUID === currentUser.uid;
+      const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-      /* =====================================================
-         ✅ CRITICAL FILTER FIX
-         REMOVE JOB FROM B SCREEN AFTER REJECT
-      ===================================================== */
-      if (!isAssigned && !isMine && !isCreator) return;
+      // ❗ SHOW ONLY RELATED JOBS
+      if (!isAssigned && !isMine && !isCreator && !isDeclinedByMe) return;
 
-      /* =====================================================
-         ✅ MODE FILTER FIX
-      ===================================================== */
+      // ✅ CURRENT MODE
       if (currentMode === "current") {
-
-        // ✅ returned MUST be in current
         if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
+      }
 
-      } else {
-
-        // ✅ past ONLY completed / deleted
-        if (!["completed","deleted"].includes(f.status)) return;
+      // ✅ PAST MODE
+      if (currentMode === "past") {
+        if (!["completed","deleted"].includes(f.status) && !isDeclinedByMe) return;
       }
 
       const div = document.createElement("div");
@@ -217,14 +208,15 @@ function listenJobs() {
         });
       }
 
+      const displayStatus = isDeclinedByMe ? "declined" : f.status;
+
       div.innerHTML = `
   <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
   <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || f.drop}</b></div>
-  <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+  <div class="fare-row"><span>Status:</span><b>${displayStatus}</b></div>
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
   <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
-
   <div class="fare-row"><span>Price:</span><b>${f.price || "-"}</b></div>
   <div class="fare-row"><span>Notes:</span><b>${f.notes || "-"}</b></div>
 
@@ -242,6 +234,7 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
+  // DRIVER RECEIVING
   if (isAssigned && f.status === "waiting response") {
     return `
       ${viewBtn}
@@ -252,6 +245,7 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
     `;
   }
 
+  // CURRENT DRIVER
   if (isMine && f.status === "accepted") {
     return `
       ${viewBtn}
@@ -263,12 +257,22 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
     `;
   }
 
+  // ✅ ORIGINAL DRIVER CAN CANCEL ALWAYS (EXCEPT IN PROGRESS/COMPLETED)
+  if (isCreator && ["waiting response","accepted","returned"].includes(f.status)) {
+    return `
+      ${viewBtn}
+      <div class="fare-actions">
+        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
+      </div>
+    `;
+  }
+
+  // RETURNED JOB (RESEND)
   if (isCreator && f.status === "returned") {
     return `
       ${viewBtn}
       <div class="fare-actions">
         <button class="lux-btn" onclick="editJob('${id}')">Resend</button>
-        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
       </div>
     `;
   }
@@ -298,12 +302,15 @@ window.rejectJob = async (id) => {
   const snap = await getDoc(doc(db,"fares",id));
   const f = snap.data();
 
+  const declinedList = f.declinedBy || [];
+
   await updateDoc(doc(db,"fares",id),{
     status:"returned",
     currentDriverUID: f.originalDriverUID,
     currentDriverName: f.originalDriverName,
     assignedTo:null,
-    soundPlayed:false
+    soundPlayed:false,
+    declinedBy: [...declinedList, currentUser.uid] // ✅ KEY FIX
   });
 
   jobSound.pause();
