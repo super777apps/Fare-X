@@ -190,15 +190,22 @@ function listenJobs() {
 }
 
       // ✅ PAST MODE
-      if (currentMode === "past") {
+  if (currentMode === "past") {
 
-  // ✅ Show if declined by this driver
-  if ((f.declinedBy || []).includes(currentUser.uid)) return;
+  const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-  // Otherwise only completed/deleted
-  if (!["completed","deleted"].includes(f.status)) return;
+  // ✅ Show declined jobs (for B)
+  if (declinedByMe) {
+    // allow showing
+  }
+  // ✅ Show completed/deleted
+  else if (["completed","deleted"].includes(f.status)) {
+    // allow showing
+  }
+  else {
+    return;
+  }
 }
-
       const div = document.createElement("div");
       div.className = "fare-card";
 
