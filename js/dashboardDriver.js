@@ -180,18 +180,24 @@ function listenJobs() {
       if (!isAssigned && !isMine && !isCreator && !isDeclinedByMe) return;
 
       // ✅ CURRENT MODE
-      if (currentMode === "current") {
+     if (currentMode === "current") {
 
-  // ❌ HIDE jobs declined by this driver
+  // ❌ Hide jobs declined by THIS driver (B)
   if ((f.declinedBy || []).includes(currentUser.uid)) return;
 
+  // Normal current jobs
   if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
 }
 
       // ✅ PAST MODE
       if (currentMode === "past") {
-        if (!["completed","deleted"].includes(f.status) && !isDeclinedByMe) return;
-      }
+
+  // ✅ Show if declined by this driver
+  if ((f.declinedBy || []).includes(currentUser.uid)) return;
+
+  // Otherwise only completed/deleted
+  if (!["completed","deleted"].includes(f.status)) return;
+}
 
       const div = document.createElement("div");
       div.className = "fare-card";
