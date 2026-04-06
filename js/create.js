@@ -22,6 +22,9 @@ let dropLat=null, dropLng=null;
 let pickupMap, dropMap;
 let pickupMarker, dropMarker;
 
+// ✅ NEW (EDIT MODE)
+let editId = null;
+
 /* ---------- ELEMENTS ---------- */
 const pickupInput = document.getElementById("pickup");
 const dropInput = document.getElementById("drop");
@@ -36,6 +39,7 @@ const passengerSelect = document.getElementById("passengerSelect");
 
 const btn = document.getElementById("createFareBtn");
 const longBtn = null;
+
 /* ---------- MAP INIT ---------- */
 function initMaps(){
 
@@ -66,6 +70,49 @@ function initMaps(){
 
     dropInput.value = await reverseGeocode(dropLat,dropLng);
   });
+}
+
+/* ---------- LOAD EXISTING JOB (NEW) ---------- */
+async function loadExistingJob(id){
+
+  const snap = await getDoc(doc(db,"fares",id));
+  if(!snap.exists()) return;
+
+  const f = snap.data();
+
+  pickupInput.value = f.pickup || "";
+  dropInput.value = f.drop || "";
+
+  document.getElementById("datetime").value = f.time || "";
+  document.getElementById("price").value = f.price || "";
+  document.getElementById("notes").value = f.notes || "";
+
+  pickupLat = f.pickupLat;
+  pickupLng = f.pickupLng;
+  dropLat = f.dropLat;
+  dropLng = f.dropLng;
+
+  if(pickupLat && pickupLng){
+    pickupMap.setView([pickupLat,pickupLng],15);
+    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+  }
+
+  if(dropLat && dropLng){
+    dropMap.setView([dropLat,dropLng],15);
+    dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
+  }
+
+  if(f.passengerUID){
+    passengerSelect.value = f.passengerUID;
+  }
+
+  if(f.assignedTo){
+    sendType.value="friend";
+    friendSelect.style.display="block";
+    friendSelect.value = f.assignedTo;
+  }
+
+  btn.textContent = "Update & Resend";
 }
 
 /* ---------- SEARCH ---------- */
@@ -164,9 +211,17 @@ onAuthStateChanged(auth, async user=>{
 
   loadFriends(user.uid);
   loadPassengers(user.uid);
+
+  // ✅ CHECK EDIT MODE
+  const params = new URLSearchParams(window.location.search);
+  editId = params.get("id");
+
+  if(editId){
+    setTimeout(()=>loadExistingJob(editId),500);
+  }
 });
 
-/* ---------- LOADERS (UNCHANGED) ---------- */
+/* ---------- LOADERS ---------- */
 function loadFriends(uid){
   const q=query(collection(db,"friends"));
 
@@ -221,14 +276,14 @@ sendType.addEventListener("change", ()=>{
   friendSelect.style.display = (val==="friend")?"block":"none";
 });
 
-/* ---------- CREATE ---------- */
+/* ---------- CREATE / RESEND ---------- */
 btn.onclick=async()=>{
 
   const pickup=pickupInput.value.trim();
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
-  const notes=document.getElementById("notes")?.value || "";
+  const notes=document.getElementById("notes")?.value.trim() || "";
   const passengerUID = passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
@@ -247,6 +302,40 @@ btn.onclick=async()=>{
     if(!assignedTo) return alert("Select friend driver");
   }
 
+  // ✅ EDIT MODE (RESEND)
+  if(editId){
+
+    await updateDoc(doc(db,"fares",editId),{
+
+      pickup,
+      drop,
+      pickupSuburb:getSuburb(pickup),
+      dropSuburb:getSuburb(drop),
+
+      pickupLat, pickupLng,
+      dropLat, dropLng,
+
+      time,
+      price,
+      notes,
+
+      passengerUID,
+      passengerName,
+
+      currentDriverUID: currentUser.uid,
+      currentDriverName: myName,
+
+      status:"waiting response",
+      assignedTo: assignedTo,
+      soundPlayed:false,
+      declinedBy:[]
+    });
+
+    alert("Job resent");
+    return location.href="dashboardDriver.html";
+  }
+
+  // ✅ NORMAL CREATE
   const docRef = await addDoc(collection(db,"fares"),{
 
     pickup,
@@ -259,7 +348,7 @@ btn.onclick=async()=>{
 
     time,
     price,
-    notes, // ✅ NEW
+    notes,
 
     passengerUID,
     passengerName,
@@ -278,7 +367,6 @@ btn.onclick=async()=>{
     soundPlayed:false
   });
 
-  /* ✅ AUTO RETURN AFTER 12 SEC IF NOT ACCEPTED */
   if(assignedTo){
     setTimeout(async ()=>{
       const snap = await getDoc(docRef);

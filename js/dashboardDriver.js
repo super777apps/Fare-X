@@ -257,29 +257,26 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
     `;
   }
 
-  // ✅ ORIGINAL DRIVER CAN CANCEL ALWAYS (EXCEPT IN PROGRESS/COMPLETED)
+  // ✅ ORIGINAL DRIVER (FIXED: RETURNED NOW HAS RESEND + CANCEL TOGETHER)
   if (isCreator && ["waiting response","accepted","returned"].includes(f.status)) {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
-      </div>
-    `;
-  }
 
-  // RETURNED JOB (RESEND)
-  if (isCreator && f.status === "returned") {
+    let extraBtn = "";
+
+    if (f.status === "returned") {
+      extraBtn = `<button class="lux-btn" onclick="editJob('${id}')">Resend</button>`;
+    }
+
     return `
       ${viewBtn}
       <div class="fare-actions">
-        <button class="lux-btn" onclick="editJob('${id}')">Resend</button>
+        ${extraBtn}
+        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
       </div>
     `;
   }
 
   return viewBtn;
 }
-
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
 
