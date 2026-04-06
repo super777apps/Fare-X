@@ -181,8 +181,12 @@ function listenJobs() {
 
       // ✅ CURRENT MODE
       if (currentMode === "current") {
-        if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
-      }
+
+  // ❌ HIDE jobs declined by this driver
+  if ((f.declinedBy || []).includes(currentUser.uid)) return;
+
+  if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
+}
 
       // ✅ PAST MODE
       if (currentMode === "past") {
