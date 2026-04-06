@@ -225,7 +225,17 @@ function listenJobs() {
         });
       }
 
-      const displayStatus = isDeclinedByMe ? "declined" : f.status;
+     let displayStatus = f.status;
+
+// ✅ If declined by me
+if ((f.declinedBy || []).includes(currentUser.uid)) {
+  displayStatus = "declined";
+}
+
+// ✅ If accepted and I am ORIGINAL driver (A)
+else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
+  displayStatus = `accepted by ${f.currentDriverName || "driver"}`;
+}
 
       div.innerHTML = `
   <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
