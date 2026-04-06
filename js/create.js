@@ -283,7 +283,8 @@ btn.onclick=async()=>{
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
-  const notes=document.getElementById("notes")?.value.trim() || "";
+  const notesEl = document.getElementById("notes");
+const notes = notesEl ? (notesEl.value || "").trim() : "";
   const passengerUID = passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
