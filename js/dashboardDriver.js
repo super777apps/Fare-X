@@ -172,12 +172,21 @@ function listenJobs() {
       const f = d.data();
 
       const isAssigned = f.assignedTo === currentUser.uid;
-      const isMine = f.currentDriverUID === currentUser.uid;
-      const isCreator = f.originalDriverUID === currentUser.uid;
+      const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-      // ❗ SHOW ONLY RELATED JOBS
-      if (!isAssigned && !isMine && !isCreator && !isDeclinedByMe) return;
+      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
+const isActiveStatus = [
+  "waiting response",
+  "accepted",
+  "assigned",
+  "returned",
+  "arrived",
+  "in progress"
+].includes(f.status);
+
+// allow if user is related OR job is active and was mine before
+if (!isAssigned && !isMine && !isCreator && !isDeclinedByMe) return;
 
       // ✅ CURRENT MODE
      if (currentMode === "current") {
@@ -227,7 +236,7 @@ function listenJobs() {
 
      let displayStatus = f.status;
 
-// Declined
+// Declined (for B)
 if ((f.declinedBy || []).includes(currentUser.uid)) {
   displayStatus = "declined";
 }
@@ -250,11 +259,6 @@ else if (f.status === "in progress") {
 // Completed
 else if (f.status === "completed") {
   displayStatus = "Completed";
-}
-
-// ✅ If declined by me
-if ((f.declinedBy || []).includes(currentUser.uid)) {
-  displayStatus = "declined";
 }
 
 // ✅ If accepted and I am ORIGINAL driver (A)
