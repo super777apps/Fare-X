@@ -302,17 +302,16 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
   }
 
   // CURRENT DRIVER
-  if (isMine && f.status === "accepted") {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
-        <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
-        <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
-      </div>
-    `;
-  }
-
+  if (isMine && ["accepted","arrived","in progress"].includes(f.status)) {
+  return `
+    ${viewBtn}
+    <div class="fare-actions">
+      <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
+      <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
+      <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
+    </div>
+  `;
+}
   // ✅ ORIGINAL DRIVER (FIXED: RETURNED NOW HAS RESEND + CANCEL TOGETHER)
   if (isCreator && ["waiting response","accepted","returned"].includes(f.status)) {
 
