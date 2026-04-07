@@ -186,7 +186,7 @@ function listenJobs() {
   if ((f.declinedBy || []).includes(currentUser.uid)) return;
 
   // Normal current jobs
-  if (!["waiting response","accepted","assigned","returned"].includes(f.status)) return;
+  if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
 }
 
       // ✅ PAST MODE
@@ -226,6 +226,31 @@ function listenJobs() {
       }
 
      let displayStatus = f.status;
+
+// Declined
+if ((f.declinedBy || []).includes(currentUser.uid)) {
+  displayStatus = "declined";
+}
+
+// Accepted by (for A)
+else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
+  displayStatus = `accepted by ${f.currentDriverName || "driver"}`;
+}
+
+// Arrived
+else if (f.status === "arrived") {
+  displayStatus = "Driver arrived";
+}
+
+// Started
+else if (f.status === "in progress") {
+  displayStatus = "Trip Started";
+}
+
+// Completed
+else if (f.status === "completed") {
+  displayStatus = "Completed";
+}
 
 // ✅ If declined by me
 if ((f.declinedBy || []).includes(currentUser.uid)) {
@@ -341,9 +366,26 @@ window.rejectJob = async (id) => {
   declineSound.play();
 };
 
-window.markArrived = id => updateDoc(doc(db,"fares",id),{status:"arrived"});
-window.markStarted = id => updateDoc(doc(db,"fares",id),{status:"in progress"});
-window.markCompleted = id => updateDoc(doc(db,"fares",id),{status:"completed"});
+window.markArrived = async (id) => {
+  await updateDoc(doc(db,"fares",id),{
+    status:"arrived"
+  });
+  acceptSound.play();
+};
+
+window.markStarted = async (id) => {
+  await updateDoc(doc(db,"fares",id),{
+    status:"in progress"
+  });
+  acceptSound.play();
+};
+
+window.markCompleted = async (id) => {
+  await updateDoc(doc(db,"fares",id),{
+    status:"completed"
+  });
+  acceptSound.play();
+};
 
 window.viewRoute = id => location.href = `mapView.html?id=${id}`;
 window.editJob = id => location.href = `create.html?id=${id}`;
