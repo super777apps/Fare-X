@@ -287,6 +287,17 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
 `;
 
       box.appendChild(div);
+      
+      const statusEl = div.querySelector(".status-text");
+
+if (statusEl) {
+  statusEl.classList.add("blink");
+
+  setTimeout(() => {
+    statusEl.classList.remove("blink");
+  }, 4000);
+}
+      
     });
 
   });
