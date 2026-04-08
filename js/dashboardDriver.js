@@ -176,17 +176,15 @@ function listenJobs() {
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
       // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
-const isActiveStatus = [
-  "waiting response",
-  "accepted",
-  "assigned",
-  "returned",
-  "arrived",
-  "in progress"
-].includes(f.status);
-
-// allow if user is related OR job is active and was mine before
-if (!isAssigned && !isMine && !isCreator && !isDeclinedByMe) return;
+// ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
+if (
+  f.assignedTo !== currentUser.uid &&
+  f.currentDriverUID !== currentUser.uid &&
+  f.originalDriverUID !== currentUser.uid &&
+  !(f.declinedBy || []).includes(currentUser.uid)
+) {
+  return;
+}
 
       // ✅ CURRENT MODE
      if (currentMode === "current") {
@@ -302,7 +300,8 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
   }
 
   // CURRENT DRIVER
-  if (isMine && ["accepted","arrived","in progress"].includes(f.status)) {
+  if (f.currentDriverUID === currentUser.uid && 
+    ["accepted","arrived","in progress"].includes(f.status)) {
   return `
     ${viewBtn}
     <div class="fare-actions">
