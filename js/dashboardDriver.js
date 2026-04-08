@@ -256,7 +256,16 @@ else if (f.status === "in progress") {
 
 // Completed
 else if (f.status === "completed") {
-  displayStatus = "Completed";
+
+  // If I am ORIGINAL driver (A)
+  if (f.originalDriverUID === currentUser.uid) {
+    displayStatus = `Completed by ${f.currentDriverName || "driver"}`;
+  }
+
+  // If I am CURRENT driver (B)
+  else {
+    displayStatus = "Completed";
+  }
 }
 
 // ✅ If accepted and I am ORIGINAL driver (A)
