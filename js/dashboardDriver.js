@@ -291,6 +291,10 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
       const statusEl = div.querySelector(".status-text");
 
 if (statusEl) {
+  // 🔥 FORCE GOLD COLOR
+  statusEl.style.color = "#FFD700";
+
+  // 🔥 ADD BLINK
   statusEl.classList.add("blink");
 
   setTimeout(() => {
