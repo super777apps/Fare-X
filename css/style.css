@@ -386,3 +386,35 @@ html, body {
 .lux-main .lux-btn {
   margin-bottom: 15px; /* space between buttons */
 }
+#pickupMap {
+  height: 300px;
+  width: 100%;
+  border-radius: 10px;
+}
+.status-text {
+  color: #FFD700;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.6);
+}
+.status-text {
+  color: #FFD700;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.6);
+}
+
+/* 🔥 Blink animation */
+.status-text {
+  color: #FFD700 !important;
+  font-weight: bold;
+}
+
+/* 🔥 STRONG BLINK */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.blink {
+  animation: blink 0.5s linear infinite;
+}
