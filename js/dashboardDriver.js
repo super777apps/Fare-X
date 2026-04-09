@@ -183,12 +183,19 @@ const isBroadcast = f.broadcast === true;
 // - I am original driver
 // - I declined it
 // - OR it is broadcast + still waiting
+// ✅ BROADCAST + NORMAL VISIBILITY FIXED
+
+const isBroadcast = f.broadcast === true;
+const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+
+// ❌ skip only if:
+// not my job AND not broadcast AND I didn't decline
 if (
+  !declinedByMe &&
+  !isBroadcast &&
   f.assignedTo !== currentUser.uid &&
   f.currentDriverUID !== currentUser.uid &&
-  f.originalDriverUID !== currentUser.uid &&
-  !(f.declinedBy || []).includes(currentUser.uid) &&
-  !(isBroadcast && f.status === "waiting response")
+  f.originalDriverUID !== currentUser.uid
 ) {
   return;
 }
@@ -208,9 +215,22 @@ if (
   const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
   // ✅ Show declined jobs (for B)
-  if (declinedByMe) {
-    // allow showing
+if (currentMode === "past") {
+
+  const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+
+  const isCompleted = f.status === "completed";
+  const isDeleted = f.status === "deleted";
+
+  // ✅ Show if:
+  // 1. I declined it
+  // 2. OR it's completed/deleted
+  if (declinedByMe || isCompleted || isDeleted) {
+    // show job
+  } else {
+    return;
   }
+}
   // ✅ Show completed/deleted
   else if (["completed","deleted"].includes(f.status)) {
     // allow showing
