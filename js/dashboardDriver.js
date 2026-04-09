@@ -218,38 +218,7 @@ else if (currentMode === "past") {
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
   
-// ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
 
-
-
-
-      // ✅ CURRENT MODE
-     if (currentMode === "current") {
-
-  // ❌ Hide jobs declined by THIS driver (B)
-  if ((f.declinedBy || []).includes(currentUser.uid)) return;
-
-  // Normal current jobs
-  if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
-}
-
-      // ✅ PAST MODE
-  if (currentMode === "past") {
-
-  const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
-
-  // ✅ Show declined jobs (for B)
-  if (declinedByMe) {
-    // allow showing
-  }
-  // ✅ Show completed/deleted
-  else if (["completed","deleted"].includes(f.status)) {
-    // allow showing
-  }
-  else {
-    return;
-  }
-}
       const div = document.createElement("div");
       div.className = "fare-card";
 
