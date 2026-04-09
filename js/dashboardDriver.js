@@ -111,6 +111,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+const poolBtn = document.getElementById("poolJobsBtn");
+
+if (poolBtn) {
+  poolBtn.onclick = () => {
+    currentMode = "broadcast";
+    listenJobs();
+  };
+}
+
+
   if (currentBtn) {
     currentBtn.onclick = () => {
       currentMode = "current";
@@ -169,8 +179,18 @@ function listenJobs() {
 
     snap.forEach(d => {
 
-      const f = d.data();
+     const f = d.data();
 
+// 👇 ADD THIS RIGHT AFTER f is defined
+if (currentMode === "broadcast") {
+
+  const isBroadcast = f.broadcast === true;
+  const isWaiting = f.status === "waiting response";
+
+  if (!(isBroadcast && isWaiting)) {
+    return;
+  }
+}
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
