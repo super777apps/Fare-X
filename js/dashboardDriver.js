@@ -174,18 +174,24 @@ function listenJobs() {
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+// ✅ SHOW JOBS (INCLUDING BROADCAST)
+const isBroadcast = f.broadcast === true;
 
-      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
-// ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
+// allow if:
+// - assigned to me
+// - I am current driver
+// - I am original driver
+// - I declined it
+// - OR it is broadcast + still waiting
 if (
   f.assignedTo !== currentUser.uid &&
   f.currentDriverUID !== currentUser.uid &&
   f.originalDriverUID !== currentUser.uid &&
-  !(f.declinedBy || []).includes(currentUser.uid)
+  !(f.declinedBy || []).includes(currentUser.uid) &&
+  !(isBroadcast && f.status === "waiting response")
 ) {
   return;
 }
-
       // ✅ CURRENT MODE
      if (currentMode === "current") {
 
@@ -362,11 +368,16 @@ window.acceptJob = async (id) => {
   const myName = userSnap.data().nickName || currentUser.email;
 
   await updateDoc(doc(db,"fares",id),{
-    status:"accepted",
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
-    assignedTo:null
-  });
+
+  status: "accepted",
+
+  currentDriverUID: currentUser.uid,
+  currentDriverName: myName,
+
+  assignedTo: null,
+
+  broadcast: false // ✅ IMPORTANT
+});
 
   jobSound.pause();
   acceptSound.play();
