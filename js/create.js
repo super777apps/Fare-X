@@ -304,11 +304,40 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
   }
 
   // ✅ EDIT MODE (RESEND)
-if(editId){
+  if(editId){
 
-  const isBroadcast = (sendType.value === "broadcast"); // ✅ ADD
+    await updateDoc(doc(db,"fares",editId),{
 
-  await updateDoc(doc(db,"fares",editId),{
+      pickup,
+      drop,
+      pickupSuburb:getSuburb(pickup),
+      dropSuburb:getSuburb(drop),
+
+      pickupLat, pickupLng,
+      dropLat, dropLng,
+
+      time,
+      price,
+      notes,
+
+      passengerUID,
+      passengerName,
+
+      currentDriverUID: currentUser.uid,
+      currentDriverName: myName,
+
+      status:"waiting response",
+      assignedTo: assignedTo,
+      soundPlayed:false,
+      declinedBy:[]
+    });
+
+    alert("Job resent");
+    return location.href="dashboardDriver.html";
+  }
+
+  // ✅ NORMAL CREATE
+  const docRef = await addDoc(collection(db,"fares"),{
 
     pickup,
     drop,
@@ -328,57 +357,17 @@ if(editId){
     currentDriverUID: currentUser.uid,
     currentDriverName: myName,
 
+    originalDriverUID: currentUser.uid,
+    originalDriverName: myName,
+
     status:"waiting response",
 
-    // ✅ SAFE LOGIC (will NOT break friend sending)
-    assignedTo: sendType.value === "friend" ? assignedTo : null,
-    broadcast: isBroadcast,
+    assignedTo: assignedTo,
 
-    soundPlayed:false,
-    declinedBy:[]
+    createdAt: serverTimestamp(),
+    soundPlayed:false
   });
 
-  alert("Job resent");
-  return location.href="dashboardDriver.html";
-}
-  // ✅ NORMAL CREATE
-  // ✅ NORMAL CREATE
-
-const isBroadcast = (sendType.value === "broadcast"); // ✅ ADD THIS
-
-const docRef = await addDoc(collection(db,"fares"),{
-
-  pickup,
-  drop,
-  pickupSuburb:getSuburb(pickup),
-  dropSuburb:getSuburb(drop),
-
-  pickupLat, pickupLng,
-  dropLat, dropLng,
-
-  time,
-  price,
-  notes,
-
-  passengerUID,
-  passengerName,
-
-  currentDriverUID: currentUser.uid,
-  currentDriverName: myName,
-
-  originalDriverUID: currentUser.uid,
-  originalDriverName: myName,
-
-  status:"waiting response",
-
-  // 🔥 MODIFY THIS LINE
-  assignedTo: isBroadcast ? null : assignedTo,
-
-  broadcast: isBroadcast, // ✅ ADD THIS
-
-  createdAt: serverTimestamp(),
-  soundPlayed:false
-});
   if(assignedTo){
     setTimeout(async ()=>{
       const snap = await getDoc(docRef);

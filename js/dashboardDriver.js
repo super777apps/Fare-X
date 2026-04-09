@@ -174,31 +174,18 @@ function listenJobs() {
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
-// ✅ SHOW JOBS (INCLUDING BROADCAST)
-const isBroadcast = f.broadcast === true;
 
-// allow if:
-// - assigned to me
-// - I am current driver
-// - I am original driver
-// - I declined it
-// - OR it is broadcast + still waiting
-// ✅ BROADCAST + NORMAL VISIBILITY FIXED
-
-const isBroadcast = f.broadcast === true;
-const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
-
-// ❌ skip only if:
-// not my job AND not broadcast AND I didn't decline
+      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
+// ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
 if (
-  !declinedByMe &&
-  !isBroadcast &&
   f.assignedTo !== currentUser.uid &&
   f.currentDriverUID !== currentUser.uid &&
-  f.originalDriverUID !== currentUser.uid
+  f.originalDriverUID !== currentUser.uid &&
+  !(f.declinedBy || []).includes(currentUser.uid)
 ) {
   return;
 }
+
       // ✅ CURRENT MODE
      if (currentMode === "current") {
 
@@ -215,22 +202,9 @@ if (
   const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
   // ✅ Show declined jobs (for B)
-if (currentMode === "past") {
-
-  const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
-
-  const isCompleted = f.status === "completed";
-  const isDeleted = f.status === "deleted";
-
-  // ✅ Show if:
-  // 1. I declined it
-  // 2. OR it's completed/deleted
-  if (declinedByMe || isCompleted || isDeleted) {
-    // show job
-  } else {
-    return;
+  if (declinedByMe) {
+    // allow showing
   }
-}
   // ✅ Show completed/deleted
   else if (["completed","deleted"].includes(f.status)) {
     // allow showing
@@ -388,16 +362,11 @@ window.acceptJob = async (id) => {
   const myName = userSnap.data().nickName || currentUser.email;
 
   await updateDoc(doc(db,"fares",id),{
-
-  status: "accepted",
-
-  currentDriverUID: currentUser.uid,
-  currentDriverName: myName,
-
-  assignedTo: null,
-
-  broadcast: false // ✅ IMPORTANT
-});
+    status:"accepted",
+    currentDriverUID: currentUser.uid,
+    currentDriverName: myName,
+    assignedTo:null
+  });
 
   jobSound.pause();
   acceptSound.play();
