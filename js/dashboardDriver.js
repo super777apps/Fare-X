@@ -178,14 +178,29 @@ function listenJobs() {
 
       const f = d.data();
       // ✅ BROADCAST MODE FILTER
+const isBroadcast = f.broadcast === true;
+const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+
+// ✅ BROADCAST MODE (STRICT)
 if (currentMode === "broadcast") {
 
-  const isBroadcast = f.broadcast === true;
-  const isWaiting = f.status === "waiting response";
-
-  if (!(isBroadcast && isWaiting)) {
+  if (!(isBroadcast && f.status === "waiting response")) {
     return;
   }
+
+} else {
+
+  // ✅ NORMAL MODE (current + past)
+  if (
+    !isBroadcast &&
+    f.assignedTo !== currentUser.uid &&
+    f.currentDriverUID !== currentUser.uid &&
+    f.originalDriverUID !== currentUser.uid &&
+    !declinedByMe
+  ) {
+    return;
+  }
+
 }
 
       const isAssigned = f.assignedTo === currentUser.uid;
