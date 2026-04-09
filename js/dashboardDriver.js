@@ -183,9 +183,11 @@ unsubscribe = onSnapshot(q, snap => {
 const isBroadcast = f.broadcast === true;
 const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-// 🔥 BROADCAST MODE
+// 🔥 BROADCAST MODE (STRICT — ONLY POOL JOBS)
 if (currentMode === "broadcast") {
-  if (!(isBroadcast && f.status === "waiting response")) return;
+  if (!(isBroadcast && f.status === "waiting response")) {
+    return;
+  }
 }
 
 // 🔥 CURRENT MODE
@@ -195,8 +197,8 @@ else if (currentMode === "current") {
 
   if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
 
+  // Only my jobs (NOT broadcast ones)
   if (
-    !isBroadcast &&
     f.assignedTo !== currentUser.uid &&
     f.currentDriverUID !== currentUser.uid &&
     f.originalDriverUID !== currentUser.uid
@@ -211,7 +213,6 @@ else if (currentMode === "past") {
     !["completed","deleted"].includes(f.status)
   ) return;
 }
-
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
