@@ -76,7 +76,14 @@ onAuthStateChanged(auth, async (user) => {
 
 /* ---------- SAFE BUTTON BINDING ---------- */
 document.addEventListener("DOMContentLoaded", () => {
+const poolBtn = document.getElementById("poolJobsBtn");
 
+if (poolBtn) {
+  poolBtn.onclick = () => {
+    currentMode = "broadcast";
+    listenJobs();
+  };
+}
   const toggleBtn = document.getElementById("toggleOnlineBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const currentBtn = document.getElementById("currentJobsBtn");
