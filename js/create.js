@@ -303,6 +303,8 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
     if(!assignedTo) return alert("Select friend driver");
   }
 
+const isBroadcast = sendType.value === "pool";
+
   // ✅ EDIT MODE (RESEND)
   if(editId){
 
@@ -362,7 +364,8 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
 
     status:"waiting response",
 
-    assignedTo: assignedTo,
+    assignedTo: isBroadcast ? null : assignedTo,
+broadcast: isBroadcast,
 
     createdAt: serverTimestamp(),
     soundPlayed:false
