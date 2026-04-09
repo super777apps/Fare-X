@@ -177,14 +177,28 @@ function listenJobs() {
     snap.forEach(d => {
 
       const f = d.data();
+      // ✅ BROADCAST MODE FILTER
+if (currentMode === "broadcast") {
+
+  const isBroadcast = f.broadcast === true;
+  const isWaiting = f.status === "waiting response";
+
+  if (!(isBroadcast && isWaiting)) {
+    return;
+  }
+}
 
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
+
 // ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
+// ✅ ALLOW BROADCAST JOBS FOR ALL DRIVERS
+const isBroadcast = f.broadcast === true;
+
 if (
+  !isBroadcast && // ⬅️ IMPORTANT
   f.assignedTo !== currentUser.uid &&
   f.currentDriverUID !== currentUser.uid &&
   f.originalDriverUID !== currentUser.uid &&
