@@ -302,7 +302,7 @@ btn.onclick=async()=>{
     if(!assignedTo) return alert("Select friend driver");
   }
 
-const isBroadcast = sendType.value === "pool";
+const isBroadcast = sendType.value === "broadcast";
 
   // ✅ EDIT MODE (RESEND)
   if(editId){
