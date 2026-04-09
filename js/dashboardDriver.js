@@ -21,6 +21,7 @@ let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
 let watchId = null;
+let unsubscribe = null;
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
@@ -165,8 +166,9 @@ function listenJobs() {
     orderBy("createdAt", "desc")
   );
 
-  onSnapshot(q, snap => {
+  if (unsubscribe) unsubscribe();
 
+unsubscribe = onSnapshot(q, snap => {
     box.innerHTML = "";
 
     if (snap.empty) {
@@ -178,20 +180,47 @@ function listenJobs() {
 
       const f = d.data();
 
+const isBroadcast = f.broadcast === true;
+const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+
+// 🔥 BROADCAST MODE
+if (currentMode === "broadcast") {
+  if (!(isBroadcast && f.status === "waiting response")) return;
+}
+
+// 🔥 CURRENT MODE
+else if (currentMode === "current") {
+
+  if (declinedByMe) return;
+
+  if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
+
+  if (
+    !isBroadcast &&
+    f.assignedTo !== currentUser.uid &&
+    f.currentDriverUID !== currentUser.uid &&
+    f.originalDriverUID !== currentUser.uid
+  ) return;
+}
+
+// 🔥 PAST MODE
+else if (currentMode === "past") {
+
+  if (
+    !declinedByMe &&
+    !["completed","deleted"].includes(f.status)
+  ) return;
+}
+
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
+  
 // ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
-if (
-  f.assignedTo !== currentUser.uid &&
-  f.currentDriverUID !== currentUser.uid &&
-  f.originalDriverUID !== currentUser.uid &&
-  !(f.declinedBy || []).includes(currentUser.uid)
-) {
-  return;
-}
+
+
+
 
       // ✅ CURRENT MODE
      if (currentMode === "current") {
