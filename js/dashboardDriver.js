@@ -318,6 +318,31 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
+
+// ✅ POOL JOB LOGIC (ADD THIS BLOCK HERE)
+if (f.broadcast === true && f.status === "waiting response") {
+
+  // 🔹 CREATOR (A)
+  if (f.originalDriverUID === currentUser.uid) {
+    return `
+      ${viewBtn}
+      <div class="fare-actions">
+        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
+      </div>
+    `;
+  }
+
+  // 🔹 OTHER DRIVERS (B, C...)
+  else {
+    return `
+      ${viewBtn}
+      <div class="fare-actions">
+        <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
+      </div>
+    `;
+  }
+}
+
   // DRIVER RECEIVING
   if (isAssigned && f.status === "waiting response") {
     return `
