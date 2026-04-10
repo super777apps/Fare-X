@@ -1,5 +1,4 @@
 import { db, auth } from "./firebase.js";
-import { autoDispatch } from "./dispatch.js";
 
 import {
   collection,
@@ -78,73 +77,61 @@ onAuthStateChanged(auth, async (user) => {
 
 /* ---------- SAFE BUTTON BINDING ---------- */
 document.addEventListener("DOMContentLoaded", () => {
+const poolBtn = document.getElementById("poolJobsBtn");
 
-  // 🔁 Delay binding slightly (fix race condition)
-  setTimeout(() => {
+if (poolBtn) {
+  poolBtn.onclick = () => {
+    currentMode = "broadcast";
+    listenJobs();
+  };
+}
+  const toggleBtn = document.getElementById("toggleOnlineBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn = document.getElementById("pastJobsBtn");
 
-    const poolBtn = document.getElementById("poolJobsBtn");
-    const toggleBtn = document.getElementById("toggleOnlineBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const currentBtn = document.getElementById("currentJobsBtn");
-    const pastBtn = document.getElementById("pastJobsBtn");
+  if (toggleBtn) {
+    toggleBtn.onclick = async () => {
+      isOnline = !isOnline;
 
-    if (poolBtn) {
-      poolBtn.onclick = () => {
-        currentMode = "broadcast";
-        listenJobs();
-      };
-    }
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: isOnline,
+        lastActive: serverTimestamp()
+      });
 
-    if (toggleBtn) {
-      toggleBtn.onclick = async () => {
+      if (isOnline) startLocationTracking();
+      else stopLocationTracking();
 
-        if (!currentUser) return alert("User not ready");
+      updateOnlineUI();
+    };
+  }
 
-        isOnline = !isOnline;
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: false
+      });
 
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          online: isOnline,
-          lastActive: serverTimestamp()
-        });
+      stopLocationTracking();
 
-        if (isOnline) startLocationTracking();
-        else stopLocationTracking();
+      await signOut(auth);
+      location.href = "index.html";
+    };
+  }
 
-        updateOnlineUI();
-      };
-    }
+  if (currentBtn) {
+    currentBtn.onclick = () => {
+      currentMode = "current";
+      listenJobs();
+    };
+  }
 
-    if (logoutBtn) {
-      logoutBtn.onclick = async () => {
-
-        if (!currentUser) return;
-
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          online: false
-        });
-
-        stopLocationTracking();
-
-        await signOut(auth);
-        location.href = "index.html";
-      };
-    }
-
-    if (currentBtn) {
-      currentBtn.onclick = () => {
-        currentMode = "current";
-        listenJobs();
-      };
-    }
-
-    if (pastBtn) {
-      pastBtn.onclick = () => {
-        currentMode = "past";
-        listenJobs();
-      };
-    }
-
-  }, 300); // 🔥 small delay fixes binding issue
+  if (pastBtn) {
+    pastBtn.onclick = () => {
+      currentMode = "past";
+      listenJobs();
+    };
+  }
 
 });
 
@@ -432,52 +419,19 @@ window.acceptJob = async (id) => {
 
 window.rejectJob = async (id) => {
 
-  const jobRef = doc(db,"fares",id);
-
-  const snap = await getDoc(jobRef);
-  if (!snap.exists()) return;
-
+  const snap = await getDoc(doc(db,"fares",id));
   const f = snap.data();
 
   const declinedList = f.declinedBy || [];
 
-  // 🔊 sounds
-  jobSound.pause();
-  declineSound.play();
-
-  // =========================
-  // 🚀 AUTO DISPATCH JOB
-  // =========================
-  if (f.autoDispatch === true) {
-
-    await updateDoc(jobRef,{
-      status:"waiting response",
-      assignedTo:null,
-      currentDriverUID:null,
-      currentDriverName:null,
-      soundPlayed:false,
-      declinedBy:[...declinedList, currentUser.uid],
-      updatedAt: serverTimestamp()
-    });
-
-    // 🔥 CONTINUE DISPATCH TO NEXT DRIVER
-    autoDispatch(id, f.pickupLat, f.pickupLng);
-
-    return;
-  }
-
-  // =========================
-  // 🟡 NORMAL / FRIEND JOB
-  // =========================
-  await updateDoc(jobRef,{
+  await updateDoc(doc(db,"fares",id),{
     status:"returned",
     currentDriverUID: f.originalDriverUID,
     currentDriverName: f.originalDriverName,
     assignedTo:null,
     soundPlayed:false,
-    declinedBy:[...declinedList, currentUser.uid]
+    declinedBy: [...declinedList, currentUser.uid] // ✅ KEY FIX
   });
-};
 
   jobSound.pause();
   declineSound.play();

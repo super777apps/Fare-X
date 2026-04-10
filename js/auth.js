@@ -38,31 +38,36 @@ loginBtn.onclick = async () => {
 
     const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-    const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+    const userRef = doc(db, "users", userCred.user.uid);
+    const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
-      throw "User data missing";
+      alert("User profile missing");
+      return;
     }
 
     const userData = userDoc.data();
-    const role = userData.role;
 
-    /* ✅ ROUTING BASED ON ROLE */
-    if (role === "driver") {
+    if (!userData.role) {
+      alert("Account misconfigured");
+      return;
+    }
+
+    if (userData.role === "driver") {
       location.href = "dashboardDriver.html";
     }
-    else if (role === "passenger") {
+    else if (userData.role === "passenger") {
       location.href = "dashboardPassenger.html";
     }
-    else if (role === "admin") {
+    else if (userData.role === "admin") {
       location.href = "admin.html";
     }
     else {
-      alert("Invalid user role");
+      alert("Invalid role");
     }
 
   } catch (e) {
-    alert("Login failed: " + e);
+    alert("Login failed: " + e.message);
   }
 };
 
@@ -83,18 +88,16 @@ registerDriverBtn.onclick = async () => {
     const userCred = await createUserWithEmailAndPassword(auth, email, password);
 
     await setDoc(doc(db, "users", userCred.user.uid), {
-      email,
-      role: "driver",
+  email,
+  role: "driver",
+  nickName: "",
 
-      /* ✅ CONSISTENT FIELD */
-      nickName: "",
+  online: false,
+  location: { lat: null, lng: null },
 
-      /* ✅ DRIVER SYSTEM FIELDS */
-      online: false,
-      location: null,
-
-      createdAt: new Date()
-    });
+  lastActive: null,
+  createdAt: new Date()
+});
 
     alert("Driver account created. You can login now.");
 
@@ -120,14 +123,11 @@ registerPassengerBtn.onclick = async () => {
     const userCred = await createUserWithEmailAndPassword(auth, email, password);
 
     await setDoc(doc(db, "users", userCred.user.uid), {
-      email,
-      role: "passenger",
-
-      /* ✅ CONSISTENT FIELD */
-      nickName: "",
-
-      createdAt: new Date()
-    });
+  email,
+  role: "passenger",
+  nickName: "",
+  createdAt: new Date()
+});
 
     alert("Passenger account created. You can login now.");
 
