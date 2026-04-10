@@ -1,4 +1,5 @@
 import { db, auth } from "./firebase.js";
+import { autoDispatch } from "./dispatch.js";
 
 import {
   collection, addDoc, query, where, onSnapshot,
@@ -43,33 +44,45 @@ const longBtn = null;
 /* ---------- MAP INIT ---------- */
 function initMaps(){
 
-  pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
-  dropMap = L.map('dropMap').setView([31.52,74.35],13);
+  setTimeout(() => {
 
-  const tile='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    if (!document.getElementById('pickupMap')) return;
 
-  L.tileLayer(tile).addTo(pickupMap);
-  L.tileLayer(tile).addTo(dropMap);
+    pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
+    dropMap = L.map('dropMap').setView([31.52,74.35],13);
 
-  pickupMap.on('click', async e=>{
-    pickupLat=e.latlng.lat;
-    pickupLng=e.latlng.lng;
+    const tile='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+    L.tileLayer(tile).addTo(pickupMap);
+    L.tileLayer(tile).addTo(dropMap);
 
-    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
-  });
+    // 🔥 IMPORTANT: force resize fix
+    setTimeout(() => {
+      pickupMap.invalidateSize();
+      dropMap.invalidateSize();
+    }, 500);
 
-  dropMap.on('click', async e=>{
-    dropLat=e.latlng.lat;
-    dropLng=e.latlng.lng;
+    pickupMap.on('click', async e=>{
+      pickupLat=e.latlng.lat;
+      pickupLng=e.latlng.lng;
 
-    if(dropMarker) dropMap.removeLayer(dropMarker);
-    dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
+      if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+      pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
 
-    dropInput.value = await reverseGeocode(dropLat,dropLng);
-  });
+      pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+    });
+
+    dropMap.on('click', async e=>{
+      dropLat=e.latlng.lat;
+      dropLng=e.latlng.lng;
+
+      if(dropMarker) dropMap.removeLayer(dropMarker);
+      dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
+
+      dropInput.value = await reverseGeocode(dropLat,dropLng);
+    });
+
+  }, 400); // 🔥 critical delay
 }
 
 /* ---------- LOAD EXISTING JOB (NEW) ---------- */
@@ -207,7 +220,9 @@ onAuthStateChanged(auth, async user=>{
   const snap=await getDoc(doc(db,"users",user.uid));
   currentUserData=snap.data();
 
+  setTimeout(() => {
   initMaps();
+}, 300);
 
   loadFriends(user.uid);
   loadPassengers(user.uid);
@@ -283,8 +298,7 @@ btn.onclick=async()=>{
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
-  const notesEl = document.getElementById("notes");
-const notes = notesEl ? (notesEl.value || "").trim() : "";
+  const notes = document.getElementById("notes").value.trim();
   const passengerUID = passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
@@ -302,6 +316,8 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
     assignedTo = friendSelect.value;
     if(!assignedTo) return alert("Select friend driver");
   }
+
+const isBroadcast = sendType.value === "broadcast";
 
   // ✅ EDIT MODE (RESEND)
   if(editId){
@@ -336,38 +352,74 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
     return location.href="dashboardDriver.html";
   }
 
-  // ✅ NORMAL CREATE
-  const docRef = await addDoc(collection(db,"fares"),{
 
-    pickup,
-    drop,
-    pickupSuburb:getSuburb(pickup),
-    dropSuburb:getSuburb(drop),
+const jobType = sendType.value;
 
-    pickupLat, pickupLng,
-    dropLat, dropLng,
+const isBroadcast = jobType === "broadcast";
+const isAuto = jobType === "auto";
+const isFriend = jobType === "friend";
 
-    time,
-    price,
-    notes,
+const docRef = await addDoc(collection(db,"fares"),{
 
-    passengerUID,
-    passengerName,
+  pickup,
+  drop,
+  pickupSuburb:getSuburb(pickup),
+  dropSuburb:getSuburb(drop),
 
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
+  pickupLat,
+  pickupLng,
+  dropLat,
+  dropLng,
 
-    originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
+  time,
+  price,
+  notes,
 
-    status:"waiting response",
+  passengerUID,
+  passengerName,
 
-    assignedTo: assignedTo,
+  // 🔵 CREATOR (A)
+  originalDriverUID: currentUser.uid,
+  originalDriverName: myName,
 
-    createdAt: serverTimestamp(),
-    soundPlayed:false
-  });
+  // 🔵 INITIALLY NO DRIVER
+  currentDriverUID: null,
+  currentDriverName: null,
 
+  // 🔵 DISPATCH CONTROL
+  assignedTo: isFriend ? assignedTo : null,
+  broadcast: isBroadcast,
+  autoDispatch: isAuto,
+
+  // 🔵 STATUS
+  status: "waiting response",
+
+  createdAt: serverTimestamp(),
+  soundPlayed: false
+});
+
+
+// 🟡 FRIEND TIMEOUT ONLY
+if(isFriend && assignedTo){
+  setTimeout(async ()=>{
+    const snap = await getDoc(docRef);
+    const f = snap.data();
+
+    if(f.status==="waiting response"){
+      await updateDoc(docRef,{
+        status:"returned",
+        assignedTo:null,
+        soundPlayed:false
+      });
+    }
+  },12000);
+}
+
+
+// 🔥 AUTO DISPATCH START
+if(isAuto){
+  autoDispatch(docRef.id, pickupLat, pickupLng);
+}
   if(assignedTo){
     setTimeout(async ()=>{
       const snap = await getDoc(docRef);
