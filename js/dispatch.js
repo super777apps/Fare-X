@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* ================================
-   DISTANCE CALC (simple)
+   DISTANCE CALC (simple version)
 ================================ */
 function getDistance(lat1, lon1, lat2, lon2) {
   return Math.sqrt(
@@ -62,62 +62,31 @@ async function getSortedDrivers(pickupLat, pickupLng) {
 }
 
 /* ================================
-   AUTO DISPATCH ENGINE (SAFE PRO)
+   MAIN AUTO DISPATCH ENGINE
 ================================ */
 export async function autoDispatch(jobId, pickupLat, pickupLng) {
 
   const jobRef = doc(db, "fares", jobId);
 
-  // 🔁 ALWAYS GET LATEST JOB STATE
-  let snap = await getDoc(jobRef);
-  if (!snap.exists()) return;
-
-  let job = snap.data();
-
-  // 🚫 NOT AUTO JOB → STOP
-  if (!job.autoDispatch) return;
-
-  // 🚫 ALREADY TAKEN → STOP
-  if (job.status === "accepted") return;
-
   const drivers = await getSortedDrivers(pickupLat, pickupLng);
 
-  // ❌ NO DRIVERS → SEND TO POOL
+  // ❌ NO DRIVERS → GO TO POOL
   if (drivers.length === 0) {
     await updateDoc(jobRef, {
       broadcast: true,
-      autoDispatch: false,
       assignedTo: null,
-      currentDriverUID: null,
-      currentDriverName: null,
       status: "waiting response",
       updatedAt: serverTimestamp()
     });
     return;
   }
 
-  // 🔁 TRY DRIVERS ONE BY ONE
+  // 🔁 TRY EACH DRIVER ONE BY ONE
   for (let i = 0; i < drivers.length; i++) {
 
-  const driver = drivers[i];
+    const driver = drivers[i];
 
-  // 🔥 GET LATEST JOB DATA
-  const snap = await getDoc(jobRef);
-  const job = snap.data();
-
-  // 🚫 SKIP DRIVERS WHO ALREADY REJECTED
-  if (job.declinedBy?.includes(driver.uid)) {
-    continue;
-  }
-    // 🔁 CHECK LATEST JOB STATE BEFORE ASSIGN
-    snap = await getDoc(jobRef);
-    job = snap.data();
-
-    // 🚫 STOP if job changed externally
-    if (!job.autoDispatch) return;
-    if (job.status !== "waiting response") return;
-
-    // 🎯 ASSIGN TO DRIVER
+    // assign job
     await updateDoc(jobRef, {
       broadcast: false,
       assignedTo: driver.uid,
@@ -129,35 +98,27 @@ export async function autoDispatch(jobId, pickupLat, pickupLng) {
 
     console.log("Sent to:", driver.name);
 
-    // ⏱ WAIT FOR RESPONSE
-    await new Promise(r => setTimeout(r, 15000));
+    // ⏱ WAIT 20 SECONDS
+    await new Promise(r => setTimeout(r, 20000));
 
-    // 🔁 CHECK RESULT
-    snap = await getDoc(jobRef);
-    job = snap.data();
+    const snap = await getDoc(jobRef);
+    const job = snap.data();
 
-    // ✅ ACCEPTED → STOP ENGINE
+    // ✅ ACCEPTED → STOP
     if (job.status === "accepted") {
       console.log("Accepted by:", job.currentDriverName);
       return;
     }
 
-    // 🔁 IF DRIVER REJECTED → CONTINUE LOOP
-    if (job.status === "waiting response") {
-      console.log("No response, trying next driver...");
-      continue;
-    }
-
-    // 🛑 IF MANUAL CHANGE (cancel/return) → STOP
-    if (!job.autoDispatch) {
+    // ❌ if job was manually changed (cancel/return) stop dispatch
+    if (job.status !== "waiting response") {
       return;
     }
   }
 
-  // 🔵 NONE ACCEPTED → FALLBACK TO POOL
+  // 🔵 NO ONE ACCEPTED → SEND TO POOL
   await updateDoc(jobRef, {
     broadcast: true,
-    autoDispatch: false,
     assignedTo: null,
     currentDriverUID: null,
     currentDriverName: null,
@@ -165,5 +126,4 @@ export async function autoDispatch(jobId, pickupLat, pickupLng) {
     updatedAt: serverTimestamp()
   });
 
-  console.log("Moved to pool (no driver accepted)");
 }
