@@ -471,14 +471,32 @@ window.deleteJob = async id => {
 window.cancelAfterAccept = async (id) => {
 
   const jobRef = doc(db, "fares", id);
+  const snap = await getDoc(jobRef);
+  const f = snap.data();
 
-  await updateDoc(jobRef, {
-    status: "waiting response",
-    currentDriverUID: null,
-    currentDriverName: null,
-    assignedTo: null
-  });
+  // 🔵 POOL JOB → back to pool
+  if (f.broadcast === true) {
 
-  // 🔊 play sound
+    await updateDoc(jobRef, {
+      status: "waiting response",
+      currentDriverUID: null,
+      currentDriverName: null,
+      assignedTo: null
+    });
+
+  }
+
+  // 🟡 FRIEND JOB → back to A only
+  else {
+
+    await updateDoc(jobRef, {
+      status: "returned",
+      currentDriverUID: f.originalDriverUID,
+      currentDriverName: f.originalDriverName,
+      assignedTo: f.originalDriverUID
+    });
+
+  }
+
   acceptSound.play();
 };
