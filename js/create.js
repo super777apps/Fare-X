@@ -2,11 +2,23 @@ import { db, auth } from "./firebase.js";
 import { autoDispatch } from "./dispatch.js";
 
 import {
-  collection, addDoc, query, where, onSnapshot,
+  collection, addDoc, query,
   serverTimestamp, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+/* =========================
+   INIT WRAPPER (IMPORTANT)
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  initCreatePage();
+});
+
+/* =========================
+   MAIN APP
+========================= */
+function initCreatePage() {
 
 /* ---------- HELPERS ---------- */
 function getSuburb(fullAddress){
@@ -23,10 +35,9 @@ let dropLat=null, dropLng=null;
 let pickupMap, dropMap;
 let pickupMarker, dropMarker;
 
-// ✅ NEW (EDIT MODE)
 let editId = null;
 
-/* ---------- ELEMENTS ---------- */
+/* ---------- ELEMENTS (SAFE NOW) ---------- */
 const pickupInput = document.getElementById("pickup");
 const dropInput = document.getElementById("drop");
 
@@ -39,10 +50,18 @@ const friendSelect = document.getElementById("friendSelect");
 const passengerSelect = document.getElementById("passengerSelect");
 
 const btn = document.getElementById("createFareBtn");
-const longBtn = null;
 
-/* ---------- MAP INIT ---------- */
+/* =========================
+   MAP INIT (SAFE)
+========================= */
 function initMaps(){
+
+  if (!document.getElementById("pickupMap") ||
+      !document.getElementById("dropMap") ||
+      typeof L === "undefined") {
+    console.log("Map not ready");
+    return;
+  }
 
   pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
   dropMap = L.map('dropMap').setView([31.52,74.35],13);
@@ -73,7 +92,32 @@ function initMaps(){
   });
 }
 
-/* ---------- LOAD EXISTING JOB (NEW) ---------- */
+/* =========================
+   AUTH
+========================= */
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="index.html";
+
+  currentUser = user;
+
+  const snap = await getDoc(doc(db,"users",user.uid));
+  currentUserData = snap.data();
+
+  initMaps();
+  loadFriends(user.uid);
+  loadPassengers(user.uid);
+
+  const params = new URLSearchParams(window.location.search);
+  editId = params.get("id");
+
+  if(editId){
+    setTimeout(()=>loadExistingJob(editId),500);
+  }
+});
+
+/* =========================
+   EXISTING JOB LOAD
+========================= */
 async function loadExistingJob(id){
 
   const snap = await getDoc(doc(db,"fares",id));
@@ -116,113 +160,9 @@ async function loadExistingJob(id){
   btn.textContent = "Update & Resend";
 }
 
-/* ---------- SEARCH ---------- */
-async function searchAddress(q){
-  if(q.length < 3) return [];
-
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
-  );
-
-  return await res.json();
-}
-
-/* ---------- REVERSE ---------- */
-async function reverseGeocode(lat,lng){
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-  );
-  const data = await res.json();
-  return data.display_name || "Selected location";
-}
-
-/* ---------- SUGGESTIONS ---------- */
-function showSuggestions(list, box, input, type){
-
-  box.innerHTML="";
-  box.style.display="block";
-
-  list.forEach(item=>{
-    const div=document.createElement("div");
-    div.textContent=item.display_name;
-
-    div.onclick=()=>{
-      input.value=item.display_name;
-
-      const lat=parseFloat(item.lat);
-      const lng=parseFloat(item.lon);
-
-      if(type==="pickup"){
-        pickupLat=lat; pickupLng=lng;
-        pickupMap.setView([lat,lng],15);
-        if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-        pickupMarker=L.marker([lat,lng]).addTo(pickupMap);
-      }
-
-      if(type==="drop"){
-        dropLat=lat; dropLng=lng;
-        dropMap.setView([lat,lng],15);
-        if(dropMarker) dropMap.removeLayer(dropMarker);
-        dropMarker=L.marker([lat,lng]).addTo(dropMap);
-      }
-
-      box.innerHTML="";
-    };
-
-    box.appendChild(div);
-  });
-}
-
-/* ---------- INPUT EVENTS ---------- */
-pickupInput.addEventListener("input", async ()=>{
-  const list = await searchAddress(pickupInput.value);
-  showSuggestions(list,pickupBox,pickupInput,"pickup");
-});
-
-dropInput.addEventListener("input", async ()=>{
-  const list = await searchAddress(dropInput.value);
-  showSuggestions(list,dropBox,dropInput,"drop");
-});
-
-/* ---------- GPS ---------- */
-gpsBtn.onclick=()=>{
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    pickupLat=pos.coords.latitude;
-    pickupLng=pos.coords.longitude;
-
-    pickupMap.setView([pickupLat,pickupLng],15);
-
-    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
-
-    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
-  });
-};
-
-/* ---------- AUTH ---------- */
-onAuthStateChanged(auth, async user=>{
-  if(!user) return location.href="index.html";
-
-  currentUser=user;
-
-  const snap=await getDoc(doc(db,"users",user.uid));
-  currentUserData=snap.data();
-
-  initMaps();
-
-  loadFriends(user.uid);
-  loadPassengers(user.uid);
-
-  // ✅ CHECK EDIT MODE
-  const params = new URLSearchParams(window.location.search);
-  editId = params.get("id");
-
-  if(editId){
-    setTimeout(()=>loadExistingJob(editId),500);
-  }
-});
-
-/* ---------- LOADERS ---------- */
+/* =========================
+   LOAD FRIENDS
+========================= */
 function loadFriends(uid){
   const q=query(collection(db,"friends"));
 
@@ -247,6 +187,9 @@ function loadFriends(uid){
   });
 }
 
+/* =========================
+   LOAD PASSENGERS
+========================= */
 function loadPassengers(uid){
   const q=query(collection(db,"passengers"));
 
@@ -271,21 +214,45 @@ function loadPassengers(uid){
   });
 }
 
-/* ---------- UI FIX ---------- */
-sendType.addEventListener("change", ()=>{
-  const val = sendType.value;
-  friendSelect.style.display = (val==="friend")?"block":"none";
-});
+/* =========================
+   GPS BUTTON
+========================= */
+gpsBtn.onclick=()=>{
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    pickupLat=pos.coords.latitude;
+    pickupLng=pos.coords.longitude;
 
-/* ---------- CREATE / RESEND ---------- */
+    pickupMap.setView([pickupLat,pickupLng],15);
+
+    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+
+    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+  });
+};
+
+/* =========================
+   ADDRESS HELPERS
+========================= */
+async function reverseGeocode(lat,lng){
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+  );
+  const data = await res.json();
+  return data.display_name || "Selected location";
+}
+
+/* =========================
+   CREATE / EDIT JOB
+========================= */
 btn.onclick=async()=>{
 
   const pickup=pickupInput.value.trim();
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
-  const notes = document.getElementById("notes").value.trim();
-  const passengerUID = passengerSelect.value;
+  const notes=document.getElementById("notes").value.trim();
+  const passengerUID=passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
     return alert("Fill all fields");
@@ -296,31 +263,29 @@ btn.onclick=async()=>{
 
   const myName = currentUserData.nickName || currentUser.email;
 
-  let assignedTo = null;
-
+  let assignedTo=null;
   if(sendType.value==="friend"){
     assignedTo = friendSelect.value;
     if(!assignedTo) return alert("Select friend driver");
   }
 
-const isBroadcast = sendType.value === "broadcast";
+  const isBroadcast = sendType.value === "broadcast";
+  const isAuto = sendType.value === "auto";
 
-  // ✅ EDIT MODE (RESEND)
+  /* =========================
+     EDIT MODE
+  ========================= */
   if(editId){
 
     await updateDoc(doc(db,"fares",editId),{
-
-      pickup,
-      drop,
+      pickup, drop,
       pickupSuburb:getSuburb(pickup),
       dropSuburb:getSuburb(drop),
 
       pickupLat, pickupLng,
       dropLat, dropLng,
 
-      time,
-      price,
-      notes,
+      time, price, notes,
 
       passengerUID,
       passengerName,
@@ -329,75 +294,49 @@ const isBroadcast = sendType.value === "broadcast";
       currentDriverName: myName,
 
       status:"waiting response",
-      assignedTo: assignedTo,
+      assignedTo,
       soundPlayed:false,
       declinedBy:[]
     });
 
-    alert("Job resent");
     return location.href="dashboardDriver.html";
   }
 
+  /* =========================
+     NEW JOB
+  ========================= */
+  await addDoc(collection(db,"fares"),{
 
-const jobType = document.getElementById("sendType").value;
+    pickup, drop,
+    pickupSuburb:getSuburb(pickup),
+    dropSuburb:getSuburb(drop),
 
-const isBroadcast = jobType === "broadcast";
-const isAuto = jobType === "auto"; // 🔥 ADD THIS
+    pickupLat, pickupLng,
+    dropLat, dropLng,
 
-const docRef = await addDoc(collection(db,"fares"),{
+    time, price, notes,
 
-  pickup,
-  drop,
-  pickupSuburb:getSuburb(pickup),
-  dropSuburb:getSuburb(drop),
+    passengerUID,
+    passengerName,
 
-  pickupLat,
-  pickupLng,
-  dropLat,
-  dropLng,
+    originalDriverUID: currentUser.uid,
+    originalDriverName: myName,
 
-  time,
-  price,
-  notes,
+    currentDriverUID: null,
+    currentDriverName: null,
 
-  passengerUID,
-  passengerName,
+    assignedTo,
+    broadcast: isBroadcast,
+    autoDispatch: isAuto,
 
-  // 🔵 CREATOR (A)
-  originalDriverUID: currentUser.uid,
-  originalDriverName: myName,
+    status:"waiting response",
 
-  // 🔵 INITIALLY NO DRIVER (IMPORTANT)
-  currentDriverUID: null,
-  currentDriverName: null,
-
-
-  // 🔵 DISPATCH CONTROL
-assignedTo: null,
-broadcast: isBroadcast,
-autoDispatch: isAuto,   // 🔥 ADD THIS LINE
-
-// 🔵 STATUS
-status: "waiting response",
-
-  createdAt: serverTimestamp(),
-  soundPlayed: false
-});
-  if(assignedTo){
-    setTimeout(async ()=>{
-      const snap = await getDoc(docRef);
-      const f = snap.data();
-
-      if(f.status==="waiting response"){
-        await updateDoc(docRef,{
-          status:"returned",
-          assignedTo:null,
-          soundPlayed:false
-        });
-      }
-    },12000);
-  }
+    createdAt: serverTimestamp(),
+    soundPlayed:false
+  });
 
   alert("Job sent");
   location.href="dashboardDriver.html";
 };
+
+} // END initCreatePage
