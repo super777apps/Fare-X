@@ -1,4 +1,5 @@
 import { db, auth } from "./firebase.js";
+import { autoDispatch } from "./dispatch.js";
 
 import {
   collection,
@@ -419,19 +420,52 @@ window.acceptJob = async (id) => {
 
 window.rejectJob = async (id) => {
 
-  const snap = await getDoc(doc(db,"fares",id));
+  const jobRef = doc(db,"fares",id);
+
+  const snap = await getDoc(jobRef);
+  if (!snap.exists()) return;
+
   const f = snap.data();
 
   const declinedList = f.declinedBy || [];
 
-  await updateDoc(doc(db,"fares",id),{
+  // 🔊 sounds
+  jobSound.pause();
+  declineSound.play();
+
+  // =========================
+  // 🚀 AUTO DISPATCH JOB
+  // =========================
+  if (f.autoDispatch === true) {
+
+    await updateDoc(jobRef,{
+      status:"waiting response",
+      assignedTo:null,
+      currentDriverUID:null,
+      currentDriverName:null,
+      soundPlayed:false,
+      declinedBy:[...declinedList, currentUser.uid],
+      updatedAt: serverTimestamp()
+    });
+
+    // 🔥 CONTINUE DISPATCH TO NEXT DRIVER
+    autoDispatch(id, f.pickupLat, f.pickupLng);
+
+    return;
+  }
+
+  // =========================
+  // 🟡 NORMAL / FRIEND JOB
+  // =========================
+  await updateDoc(jobRef,{
     status:"returned",
     currentDriverUID: f.originalDriverUID,
     currentDriverName: f.originalDriverName,
     assignedTo:null,
     soundPlayed:false,
-    declinedBy: [...declinedList, currentUser.uid] // ✅ KEY FIX
+    declinedBy:[...declinedList, currentUser.uid]
   });
+};
 
   jobSound.pause();
   declineSound.play();
@@ -472,31 +506,76 @@ window.cancelAfterAccept = async (id) => {
 
   const jobRef = doc(db, "fares", id);
   const snap = await getDoc(jobRef);
+
+  if (!snap.exists()) return;
+
   const f = snap.data();
 
-  // 🔵 POOL JOB → back to pool
+  acceptSound.play();
+
+  // =========================
+  // 🔵 POOL JOB
+  // =========================
   if (f.broadcast === true) {
 
     await updateDoc(jobRef, {
       status: "waiting response",
       currentDriverUID: null,
       currentDriverName: null,
-      assignedTo: null
+      assignedTo: null,
+      updatedAt: serverTimestamp()
     });
 
+    return;
   }
 
-  // 🟡 FRIEND JOB → back to A only
-  else {
+  // =========================
+  // 🟡 FRIEND JOB (RETURN TO A)
+  // =========================
+  if (!f.broadcast && !f.autoDispatch) {
 
     await updateDoc(jobRef, {
       status: "returned",
-      currentDriverUID: f.originalDriverUID,
-      currentDriverName: f.originalDriverName,
-      assignedTo: f.originalDriverUID
+
+      currentDriverUID: null,
+      currentDriverName: null,
+      assignedTo: null,
+
+      // 👇 IMPORTANT: mark it back for creator view
+      returnedToUID: f.originalDriverUID,
+
+      updatedAt: serverTimestamp()
     });
 
+    return;
   }
 
-  acceptSound.play();
+  // =========================
+  // 🚀 AUTO DISPATCH JOB
+  // =========================
+  if (f.autoDispatch === true) {
+
+    await updateDoc(jobRef, {
+      status: "waiting response",
+
+      currentDriverUID: null,
+      currentDriverName: null,
+      assignedTo: null,
+
+      // 🔥 re-trigger dispatch flag
+      dispatchReset: true,
+
+      updatedAt: serverTimestamp()
+    });
+
+    // 🔥 RESTART DISPATCH ENGINE
+    // (important)
+    autoDispatch(
+      id,
+      f.pickupLat,
+      f.pickupLng
+    );
+
+    return;
+  }
 };

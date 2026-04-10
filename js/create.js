@@ -1,4 +1,5 @@
 import { db, auth } from "./firebase.js";
+import { autoDispatch } from "./dispatch.js";
 
 import {
   collection, addDoc, query, where, onSnapshot,
@@ -337,39 +338,74 @@ const isBroadcast = sendType.value === "broadcast";
     return location.href="dashboardDriver.html";
   }
 
-  // ✅ NORMAL CREATE
-  const docRef = await addDoc(collection(db,"fares"),{
 
-    pickup,
-    drop,
-    pickupSuburb:getSuburb(pickup),
-    dropSuburb:getSuburb(drop),
+const jobType = sendType.value;
 
-    pickupLat, pickupLng,
-    dropLat, dropLng,
+const isBroadcast = jobType === "broadcast";
+const isAuto = jobType === "auto";
+const isFriend = jobType === "friend";
 
-    time,
-    price,
-    notes,
+const docRef = await addDoc(collection(db,"fares"),{
 
-    passengerUID,
-    passengerName,
+  pickup,
+  drop,
+  pickupSuburb:getSuburb(pickup),
+  dropSuburb:getSuburb(drop),
 
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
+  pickupLat,
+  pickupLng,
+  dropLat,
+  dropLng,
 
-    originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
+  time,
+  price,
+  notes,
 
-    status:"waiting response",
+  passengerUID,
+  passengerName,
 
-    assignedTo: isBroadcast ? null : assignedTo,
-broadcast: isBroadcast,
+  // 🔵 CREATOR (A)
+  originalDriverUID: currentUser.uid,
+  originalDriverName: myName,
 
-    createdAt: serverTimestamp(),
-    soundPlayed:false
-  });
+  // 🔵 INITIALLY NO DRIVER
+  currentDriverUID: null,
+  currentDriverName: null,
 
+  // 🔵 DISPATCH CONTROL
+  assignedTo: isFriend ? assignedTo : null,
+  broadcast: isBroadcast,
+  autoDispatch: isAuto,
+
+  // 🔵 STATUS
+  status: "waiting response",
+
+  createdAt: serverTimestamp(),
+  soundPlayed: false
+});
+
+
+// 🟡 FRIEND TIMEOUT ONLY
+if(isFriend && assignedTo){
+  setTimeout(async ()=>{
+    const snap = await getDoc(docRef);
+    const f = snap.data();
+
+    if(f.status==="waiting response"){
+      await updateDoc(docRef,{
+        status:"returned",
+        assignedTo:null,
+        soundPlayed:false
+      });
+    }
+  },12000);
+}
+
+
+// 🔥 AUTO DISPATCH START
+if(isAuto){
+  autoDispatch(docRef.id, pickupLat, pickupLng);
+}
   if(assignedTo){
     setTimeout(async ()=>{
       const snap = await getDoc(docRef);
