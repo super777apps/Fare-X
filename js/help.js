@@ -1,24 +1,33 @@
-import { auth, db } from "./firebase.js";
+import { db, auth } from "./firebase.js";
+
+import {
+  doc,
+  getDoc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+/* ---------- ELEMENTS ---------- */
+const firstName = document.getElementById("firstName");
+const middleName = document.getElementById("middleName");
+const dob = document.getElementById("dob");
 
-/* ---------- BACK BUTTON ---------- */
-const backBtn = document.getElementById("backBtn");
+const resAddress = document.getElementById("resAddress");
+const postalAddress = document.getElementById("postalAddress");
 
-/* ---------- WHATSAPP ---------- */
-const whatsappBtn = document.getElementById("whatsappBtn");
+const licenceNo = document.getElementById("licenceNo");
+const taxiLicence = document.getElementById("taxiLicence");
 
-whatsappBtn.onclick = () => {
-  // ✅ opens WhatsApp chat
-  window.open("https://wa.me/61431859673", "_blank");
-};
+const carReg = document.getElementById("carReg");
+const carMake = document.getElementById("carMake");
+const carYear = document.getElementById("carYear");
+
+const saveBtn = document.getElementById("saveBtn");
+
+let currentUser = null;
 
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
@@ -28,21 +37,64 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const snap = await getDoc(doc(db, "users", user.uid));
+  currentUser = user;
 
-  let role = "driver";
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
 
   if (snap.exists()) {
-    role = snap.data().role || "driver";
+    const d = snap.data();
+
+    // save role locally (for back button)
+    localStorage.setItem("role", d.role || "driver");
+
+    firstName.value = d.firstName || "";
+    middleName.value = d.middleName || "";
+    dob.value = d.dob || "";
+
+    resAddress.value = d.resAddress || "";
+    postalAddress.value = d.postalAddress || "";
+
+    licenceNo.value = d.licenceNo || "";
+    taxiLicence.value = d.taxiLicence || "";
+
+    carReg.value = d.carReg || "";
+    carMake.value = d.carMake || "";
+    carYear.value = d.carYear || "";
   }
 
-  /* ✅ SMART BACK NAVIGATION */
-  backBtn.onclick = () => {
-    if (role === "passenger") {
-      location.href = "dashboardPassenger.html";
-    } else {
-      location.href = "dashboardDriver.html";
-    }
-  };
-
 });
+
+/* ---------- SAVE ---------- */
+saveBtn.onclick = async () => {
+
+  if (!currentUser) return;
+
+  try {
+
+    await updateDoc(doc(db, "users", currentUser.uid), {
+
+      firstName: firstName.value.trim(),
+      middleName: middleName.value.trim(),
+      dob: dob.value,
+
+      resAddress: resAddress.value.trim(),
+      postalAddress: postalAddress.value.trim(),
+
+      licenceNo: licenceNo.value.trim(),
+      taxiLicence: taxiLicence.value.trim(),
+
+      carReg: carReg.value.trim(),
+      carMake: carMake.value.trim(),
+      carYear: carYear.value.trim()
+
+    });
+
+    alert("Profile updated successfully");
+
+  } catch (err) {
+    console.error(err);
+    alert("Error saving profile");
+  }
+
+};

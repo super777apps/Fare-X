@@ -1,5 +1,4 @@
 import { db, auth } from "./firebase.js";
-import { autoDispatch } from "./dispatch.js";
 
 import {
   collection,
@@ -22,7 +21,6 @@ let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
 let watchId = null;
-let unsubscribe = null;
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
@@ -78,73 +76,61 @@ onAuthStateChanged(auth, async (user) => {
 
 /* ---------- SAFE BUTTON BINDING ---------- */
 document.addEventListener("DOMContentLoaded", () => {
+const poolBtn = document.getElementById("poolJobsBtn");
 
-  // 🔁 Delay binding slightly (fix race condition)
-  setTimeout(() => {
+if (poolBtn) {
+  poolBtn.onclick = () => {
+    currentMode = "broadcast";
+    listenJobs();
+  };
+}
+  const toggleBtn = document.getElementById("toggleOnlineBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn = document.getElementById("pastJobsBtn");
 
-    const poolBtn = document.getElementById("poolJobsBtn");
-    const toggleBtn = document.getElementById("toggleOnlineBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const currentBtn = document.getElementById("currentJobsBtn");
-    const pastBtn = document.getElementById("pastJobsBtn");
+  if (toggleBtn) {
+    toggleBtn.onclick = async () => {
+      isOnline = !isOnline;
 
-    if (poolBtn) {
-      poolBtn.onclick = () => {
-        currentMode = "broadcast";
-        listenJobs();
-      };
-    }
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: isOnline,
+        lastActive: serverTimestamp()
+      });
 
-    if (toggleBtn) {
-      toggleBtn.onclick = async () => {
+      if (isOnline) startLocationTracking();
+      else stopLocationTracking();
 
-        if (!currentUser) return alert("User not ready");
+      updateOnlineUI();
+    };
+  }
 
-        isOnline = !isOnline;
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        online: false
+      });
 
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          online: isOnline,
-          lastActive: serverTimestamp()
-        });
+      stopLocationTracking();
 
-        if (isOnline) startLocationTracking();
-        else stopLocationTracking();
+      await signOut(auth);
+      location.href = "index.html";
+    };
+  }
 
-        updateOnlineUI();
-      };
-    }
+  if (currentBtn) {
+    currentBtn.onclick = () => {
+      currentMode = "current";
+      listenJobs();
+    };
+  }
 
-    if (logoutBtn) {
-      logoutBtn.onclick = async () => {
-
-        if (!currentUser) return;
-
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          online: false
-        });
-
-        stopLocationTracking();
-
-        await signOut(auth);
-        location.href = "index.html";
-      };
-    }
-
-    if (currentBtn) {
-      currentBtn.onclick = () => {
-        currentMode = "current";
-        listenJobs();
-      };
-    }
-
-    if (pastBtn) {
-      pastBtn.onclick = () => {
-        currentMode = "past";
-        listenJobs();
-      };
-    }
-
-  }, 300); // 🔥 small delay fixes binding issue
+  if (pastBtn) {
+    pastBtn.onclick = () => {
+      currentMode = "past";
+      listenJobs();
+    };
+  }
 
 });
 
@@ -179,9 +165,8 @@ function listenJobs() {
     orderBy("createdAt", "desc")
   );
 
-  if (unsubscribe) unsubscribe();
+  onSnapshot(q, snap => {
 
-unsubscribe = onSnapshot(q, snap => {
     box.innerHTML = "";
 
     if (snap.empty) {
@@ -193,45 +178,48 @@ unsubscribe = onSnapshot(q, snap => {
 
       const f = d.data();
 
-const isBroadcast = f.broadcast === true;
-const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
-
-// 🔥 BROADCAST MODE (STRICT — ONLY POOL JOBS)
-if (currentMode === "broadcast") {
-  if (!(isBroadcast && f.status === "waiting response")) {
-    return;
-  }
-}
-
-// 🔥 CURRENT MODE
-else if (currentMode === "current") {
-
-  if (declinedByMe) return;
-
-  if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
-
-  // Only my jobs (NOT broadcast ones)
-  if (
-    f.assignedTo !== currentUser.uid &&
-    f.currentDriverUID !== currentUser.uid &&
-    f.originalDriverUID !== currentUser.uid
-  ) return;
-}
-
-// 🔥 PAST MODE
-else if (currentMode === "past") {
-
-  if (
-    !declinedByMe &&
-    !["completed","deleted"].includes(f.status)
-  ) return;
-}
       const isAssigned = f.assignedTo === currentUser.uid;
       const isMine = (f.currentDriverUID || "") === currentUser.uid;      const isCreator = f.originalDriverUID === currentUser.uid;
       const isDeclinedByMe = (f.declinedBy || []).includes(currentUser.uid);
 
-  
+      // ❗ // ❗ SHOW ONLY RELATED JOBS (FIXED - KEEP ACTIVE JOBS SAFE)
+// ❗ SHOW ONLY RELATED JOBS (FIXED PROPERLY)
+if (
+  f.assignedTo !== currentUser.uid &&
+  f.currentDriverUID !== currentUser.uid &&
+  f.originalDriverUID !== currentUser.uid &&
+  !(f.declinedBy || []).includes(currentUser.uid)
+) {
+  return;
+}
 
+      // ✅ CURRENT MODE
+     if (currentMode === "current") {
+
+  // ❌ Hide jobs declined by THIS driver (B)
+  if ((f.declinedBy || []).includes(currentUser.uid)) return;
+
+  // Normal current jobs
+  if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
+}
+
+      // ✅ PAST MODE
+  if (currentMode === "past") {
+
+  const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
+
+  // ✅ Show declined jobs (for B)
+  if (declinedByMe) {
+    // allow showing
+  }
+  // ✅ Show completed/deleted
+  else if (["completed","deleted"].includes(f.status)) {
+    // allow showing
+  }
+  else {
+    return;
+  }
+}
       const div = document.createElement("div");
       div.className = "fare-card";
 
@@ -331,31 +319,6 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
-
-// ✅ POOL JOB LOGIC (ADD THIS BLOCK HERE)
-if (f.broadcast === true && f.status === "waiting response") {
-
-  // 🔹 CREATOR (A)
-  if (f.originalDriverUID === currentUser.uid) {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
-      </div>
-    `;
-  }
-
-  // 🔹 OTHER DRIVERS (B, C...)
-  else {
-    return `
-      ${viewBtn}
-      <div class="fare-actions">
-        <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
-      </div>
-    `;
-  }
-}
-
   // DRIVER RECEIVING
   if (isAssigned && f.status === "waiting response") {
     return `
@@ -370,14 +333,12 @@ if (f.broadcast === true && f.status === "waiting response") {
   // CURRENT DRIVER
   if (f.currentDriverUID === currentUser.uid && 
     ["accepted","arrived","in progress"].includes(f.status)) {
-
   return `
     ${viewBtn}
     <div class="fare-actions">
       <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
       <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
       <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
-      <button class="lux-btn danger" onclick="cancelAfterAccept('${id}')">Cancel</button>
     </div>
   `;
 }
@@ -404,80 +365,35 @@ if (f.broadcast === true && f.status === "waiting response") {
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
 
-  const jobRef = doc(db, "fares", id);
-
-  const snap = await getDoc(jobRef);
-  if (!snap.exists()) return;
-
-  const f = snap.data();
-
-  // ❌ STOP if already taken
-  if (f.currentDriverUID && f.currentDriverUID !== currentUser.uid) {
-    alert("Job already taken");
-    return;
-  }
-
   const userSnap = await getDoc(doc(db,"users",currentUser.uid));
   const myName = userSnap.data().nickName || currentUser.email;
 
-  await updateDoc(jobRef,{
-    status: "accepted",
+  await updateDoc(doc(db,"fares",id),{
+    status:"accepted",
     currentDriverUID: currentUser.uid,
     currentDriverName: myName,
-    assignedTo: null
+    assignedTo:null
   });
 
+  jobSound.pause();
   acceptSound.play();
 };
 
 window.rejectJob = async (id) => {
 
-  const jobRef = doc(db,"fares",id);
-
-  const snap = await getDoc(jobRef);
-  if (!snap.exists()) return;
-
+  const snap = await getDoc(doc(db,"fares",id));
   const f = snap.data();
 
   const declinedList = f.declinedBy || [];
 
-  // 🔊 sounds
-  jobSound.pause();
-  declineSound.play();
-
-  // =========================
-  // 🚀 AUTO DISPATCH JOB
-  // =========================
-  if (f.autoDispatch === true) {
-
-    await updateDoc(jobRef,{
-      status:"waiting response",
-      assignedTo:null,
-      currentDriverUID:null,
-      currentDriverName:null,
-      soundPlayed:false,
-      declinedBy:[...declinedList, currentUser.uid],
-      updatedAt: serverTimestamp()
-    });
-
-    // 🔥 CONTINUE DISPATCH TO NEXT DRIVER
-    autoDispatch(id, f.pickupLat, f.pickupLng);
-
-    return;
-  }
-
-  // =========================
-  // 🟡 NORMAL / FRIEND JOB
-  // =========================
-  await updateDoc(jobRef,{
+  await updateDoc(doc(db,"fares",id),{
     status:"returned",
     currentDriverUID: f.originalDriverUID,
     currentDriverName: f.originalDriverName,
     assignedTo:null,
     soundPlayed:false,
-    declinedBy:[...declinedList, currentUser.uid]
+    declinedBy: [...declinedList, currentUser.uid] // ✅ KEY FIX
   });
-};
 
   jobSound.pause();
   declineSound.play();
@@ -510,84 +426,4 @@ window.editJob = id => location.href = `create.html?id=${id}`;
 window.deleteJob = async id => {
   if(!confirm("Cancel this job?")) return;
   await updateDoc(doc(db,"fares",id),{status:"deleted"});
-};
-
-
-
-window.cancelAfterAccept = async (id) => {
-
-  const jobRef = doc(db, "fares", id);
-  const snap = await getDoc(jobRef);
-
-  if (!snap.exists()) return;
-
-  const f = snap.data();
-
-  acceptSound.play();
-
-  // =========================
-  // 🔵 POOL JOB
-  // =========================
-  if (f.broadcast === true) {
-
-    await updateDoc(jobRef, {
-      status: "waiting response",
-      currentDriverUID: null,
-      currentDriverName: null,
-      assignedTo: null,
-      updatedAt: serverTimestamp()
-    });
-
-    return;
-  }
-
-  // =========================
-  // 🟡 FRIEND JOB (RETURN TO A)
-  // =========================
-  if (!f.broadcast && !f.autoDispatch) {
-
-    await updateDoc(jobRef, {
-      status: "returned",
-
-      currentDriverUID: null,
-      currentDriverName: null,
-      assignedTo: null,
-
-      // 👇 IMPORTANT: mark it back for creator view
-      returnedToUID: f.originalDriverUID,
-
-      updatedAt: serverTimestamp()
-    });
-
-    return;
-  }
-
-  // =========================
-  // 🚀 AUTO DISPATCH JOB
-  // =========================
-  if (f.autoDispatch === true) {
-
-    await updateDoc(jobRef, {
-      status: "waiting response",
-
-      currentDriverUID: null,
-      currentDriverName: null,
-      assignedTo: null,
-
-      // 🔥 re-trigger dispatch flag
-      dispatchReset: true,
-
-      updatedAt: serverTimestamp()
-    });
-
-    // 🔥 RESTART DISPATCH ENGINE
-    // (important)
-    autoDispatch(
-      id,
-      f.pickupLat,
-      f.pickupLng
-    );
-
-    return;
-  }
 };
