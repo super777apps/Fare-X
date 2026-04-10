@@ -78,61 +78,73 @@ onAuthStateChanged(auth, async (user) => {
 
 /* ---------- SAFE BUTTON BINDING ---------- */
 document.addEventListener("DOMContentLoaded", () => {
-const poolBtn = document.getElementById("poolJobsBtn");
 
-if (poolBtn) {
-  poolBtn.onclick = () => {
-    currentMode = "broadcast";
-    listenJobs();
-  };
-}
-  const toggleBtn = document.getElementById("toggleOnlineBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const currentBtn = document.getElementById("currentJobsBtn");
-  const pastBtn = document.getElementById("pastJobsBtn");
+  // 🔁 Delay binding slightly (fix race condition)
+  setTimeout(() => {
 
-  if (toggleBtn) {
-    toggleBtn.onclick = async () => {
-      isOnline = !isOnline;
+    const poolBtn = document.getElementById("poolJobsBtn");
+    const toggleBtn = document.getElementById("toggleOnlineBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const currentBtn = document.getElementById("currentJobsBtn");
+    const pastBtn = document.getElementById("pastJobsBtn");
 
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        online: isOnline,
-        lastActive: serverTimestamp()
-      });
+    if (poolBtn) {
+      poolBtn.onclick = () => {
+        currentMode = "broadcast";
+        listenJobs();
+      };
+    }
 
-      if (isOnline) startLocationTracking();
-      else stopLocationTracking();
+    if (toggleBtn) {
+      toggleBtn.onclick = async () => {
 
-      updateOnlineUI();
-    };
-  }
+        if (!currentUser) return alert("User not ready");
 
-  if (logoutBtn) {
-    logoutBtn.onclick = async () => {
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        online: false
-      });
+        isOnline = !isOnline;
 
-      stopLocationTracking();
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          online: isOnline,
+          lastActive: serverTimestamp()
+        });
 
-      await signOut(auth);
-      location.href = "index.html";
-    };
-  }
+        if (isOnline) startLocationTracking();
+        else stopLocationTracking();
 
-  if (currentBtn) {
-    currentBtn.onclick = () => {
-      currentMode = "current";
-      listenJobs();
-    };
-  }
+        updateOnlineUI();
+      };
+    }
 
-  if (pastBtn) {
-    pastBtn.onclick = () => {
-      currentMode = "past";
-      listenJobs();
-    };
-  }
+    if (logoutBtn) {
+      logoutBtn.onclick = async () => {
+
+        if (!currentUser) return;
+
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          online: false
+        });
+
+        stopLocationTracking();
+
+        await signOut(auth);
+        location.href = "index.html";
+      };
+    }
+
+    if (currentBtn) {
+      currentBtn.onclick = () => {
+        currentMode = "current";
+        listenJobs();
+      };
+    }
+
+    if (pastBtn) {
+      pastBtn.onclick = () => {
+        currentMode = "past";
+        listenJobs();
+      };
+    }
+
+  }, 300); // 🔥 small delay fixes binding issue
 
 });
 

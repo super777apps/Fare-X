@@ -44,33 +44,45 @@ const longBtn = null;
 /* ---------- MAP INIT ---------- */
 function initMaps(){
 
-  pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
-  dropMap = L.map('dropMap').setView([31.52,74.35],13);
+  setTimeout(() => {
 
-  const tile='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    if (!document.getElementById('pickupMap')) return;
 
-  L.tileLayer(tile).addTo(pickupMap);
-  L.tileLayer(tile).addTo(dropMap);
+    pickupMap = L.map('pickupMap').setView([31.52,74.35],13);
+    dropMap = L.map('dropMap').setView([31.52,74.35],13);
 
-  pickupMap.on('click', async e=>{
-    pickupLat=e.latlng.lat;
-    pickupLng=e.latlng.lng;
+    const tile='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-    pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+    L.tileLayer(tile).addTo(pickupMap);
+    L.tileLayer(tile).addTo(dropMap);
 
-    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
-  });
+    // 🔥 IMPORTANT: force resize fix
+    setTimeout(() => {
+      pickupMap.invalidateSize();
+      dropMap.invalidateSize();
+    }, 500);
 
-  dropMap.on('click', async e=>{
-    dropLat=e.latlng.lat;
-    dropLng=e.latlng.lng;
+    pickupMap.on('click', async e=>{
+      pickupLat=e.latlng.lat;
+      pickupLng=e.latlng.lng;
 
-    if(dropMarker) dropMap.removeLayer(dropMarker);
-    dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
+      if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+      pickupMarker=L.marker([pickupLat,pickupLng]).addTo(pickupMap);
 
-    dropInput.value = await reverseGeocode(dropLat,dropLng);
-  });
+      pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+    });
+
+    dropMap.on('click', async e=>{
+      dropLat=e.latlng.lat;
+      dropLng=e.latlng.lng;
+
+      if(dropMarker) dropMap.removeLayer(dropMarker);
+      dropMarker=L.marker([dropLat,dropLng]).addTo(dropMap);
+
+      dropInput.value = await reverseGeocode(dropLat,dropLng);
+    });
+
+  }, 400); // 🔥 critical delay
 }
 
 /* ---------- LOAD EXISTING JOB (NEW) ---------- */
@@ -208,7 +220,9 @@ onAuthStateChanged(auth, async user=>{
   const snap=await getDoc(doc(db,"users",user.uid));
   currentUserData=snap.data();
 
+  setTimeout(() => {
   initMaps();
+}, 300);
 
   loadFriends(user.uid);
   loadPassengers(user.uid);
