@@ -1,4 +1,5 @@
 import { db, auth } from "./firebase.js";
+import { autoDispatch } from "./dispatch.js";
 
 import {
   collection, addDoc, query, where, onSnapshot,
@@ -283,8 +284,7 @@ btn.onclick=async()=>{
   const drop=dropInput.value.trim();
   const time=document.getElementById("datetime").value;
   const price=document.getElementById("price").value.trim();
-  const notesEl = document.getElementById("notes");
-const notes = notesEl ? (notesEl.value || "").trim() : "";
+  const notes = document.getElementById("notes").value.trim();
   const passengerUID = passengerSelect.value;
 
   if(!pickup||!drop||!time||!price||!passengerUID){
@@ -302,6 +302,8 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
     assignedTo = friendSelect.value;
     if(!assignedTo) return alert("Select friend driver");
   }
+
+const isBroadcast = sendType.value === "broadcast";
 
   // ✅ EDIT MODE (RESEND)
   if(editId){
@@ -336,38 +338,51 @@ const notes = notesEl ? (notesEl.value || "").trim() : "";
     return location.href="dashboardDriver.html";
   }
 
-  // ✅ NORMAL CREATE
-  const docRef = await addDoc(collection(db,"fares"),{
 
-    pickup,
-    drop,
-    pickupSuburb:getSuburb(pickup),
-    dropSuburb:getSuburb(drop),
+const jobType = document.getElementById("sendType").value;
 
-    pickupLat, pickupLng,
-    dropLat, dropLng,
+const isBroadcast = jobType === "broadcast";
+const isAuto = jobType === "auto"; // 🔥 ADD THIS
 
-    time,
-    price,
-    notes,
+const docRef = await addDoc(collection(db,"fares"),{
 
-    passengerUID,
-    passengerName,
+  pickup,
+  drop,
+  pickupSuburb:getSuburb(pickup),
+  dropSuburb:getSuburb(drop),
 
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
+  pickupLat,
+  pickupLng,
+  dropLat,
+  dropLng,
 
-    originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
+  time,
+  price,
+  notes,
 
-    status:"waiting response",
+  passengerUID,
+  passengerName,
 
-    assignedTo: assignedTo,
+  // 🔵 CREATOR (A)
+  originalDriverUID: currentUser.uid,
+  originalDriverName: myName,
 
-    createdAt: serverTimestamp(),
-    soundPlayed:false
-  });
+  // 🔵 INITIALLY NO DRIVER (IMPORTANT)
+  currentDriverUID: null,
+  currentDriverName: null,
 
+
+  // 🔵 DISPATCH CONTROL
+assignedTo: null,
+broadcast: isBroadcast,
+autoDispatch: isAuto,   // 🔥 ADD THIS LINE
+
+// 🔵 STATUS
+status: "waiting response",
+
+  createdAt: serverTimestamp(),
+  soundPlayed: false
+});
   if(assignedTo){
     setTimeout(async ()=>{
       const snap = await getDoc(docRef);
