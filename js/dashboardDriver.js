@@ -357,12 +357,14 @@ if (f.broadcast === true && f.status === "waiting response") {
   // CURRENT DRIVER
   if (f.currentDriverUID === currentUser.uid && 
     ["accepted","arrived","in progress"].includes(f.status)) {
+
   return `
     ${viewBtn}
     <div class="fare-actions">
       <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
       <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
       <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
+      <button class="lux-btn danger" onclick="cancelAfterAccept('${id}')">Cancel</button>
     </div>
   `;
 }
@@ -389,17 +391,29 @@ if (f.broadcast === true && f.status === "waiting response") {
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
 
+  const jobRef = doc(db, "fares", id);
+
+  const snap = await getDoc(jobRef);
+  if (!snap.exists()) return;
+
+  const f = snap.data();
+
+  // ❌ STOP if already taken
+  if (f.currentDriverUID && f.currentDriverUID !== currentUser.uid) {
+    alert("Job already taken");
+    return;
+  }
+
   const userSnap = await getDoc(doc(db,"users",currentUser.uid));
   const myName = userSnap.data().nickName || currentUser.email;
 
-  await updateDoc(doc(db,"fares",id),{
-    status:"accepted",
+  await updateDoc(jobRef,{
+    status: "accepted",
     currentDriverUID: currentUser.uid,
     currentDriverName: myName,
-    assignedTo:null
+    assignedTo: null
   });
 
-  jobSound.pause();
   acceptSound.play();
 };
 
@@ -450,4 +464,21 @@ window.editJob = id => location.href = `create.html?id=${id}`;
 window.deleteJob = async id => {
   if(!confirm("Cancel this job?")) return;
   await updateDoc(doc(db,"fares",id),{status:"deleted"});
+};
+
+
+
+window.cancelAfterAccept = async (id) => {
+
+  const jobRef = doc(db, "fares", id);
+
+  await updateDoc(jobRef, {
+    status: "waiting response",
+    currentDriverUID: null,
+    currentDriverName: null,
+    assignedTo: null
+  });
+
+  // 🔊 play sound
+  acceptSound.play();
 };
