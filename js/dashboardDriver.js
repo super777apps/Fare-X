@@ -143,19 +143,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (currentBtn) {
-    currentBtn.onclick = () => {
-      currentMode = "current";
-      listenJobs();
-    };
-  }
+  currentBtn.onclick = () => {
+    currentMode = "current";
+    updateHeading();
+    listenJobs();
+  };
+}
 
-  if (pastBtn) {
-    pastBtn.onclick = () => {
-      currentMode = "past";
-      listenJobs();
-    };
-  }
+if (pastBtn) {
+  pastBtn.onclick = () => {
+    currentMode = "past";
+    updateHeading();
+    listenJobs();
+  };
+}
 
+if (poolBtn) {
+  poolBtn.onclick = () => {
+    currentMode = "broadcast";
+    updateHeading();
+    listenJobs();
+  };
+}
 });
 
 /* ---------- UPDATE UI ---------- */
@@ -633,4 +642,18 @@ function loadPassengers(uid){
 
   });
 
+}
+function updateHeading() {
+  const h = document.getElementById("jobHeading");
+  if (!h) return;
+
+  if (currentMode === "current") {
+    h.textContent = "Current Jobs";
+  } 
+  else if (currentMode === "past") {
+    h.textContent = "Past Jobs";
+  } 
+  else if (currentMode === "broadcast") {
+    h.textContent = "Pool Broadcast Jobs";
+  }
 }
