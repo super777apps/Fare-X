@@ -99,6 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const toggleBtn = document.getElementById("toggleOnlineBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const currentBtn = document.getElementById("currentJobsBtn");
+  
+  const poolBtn = document.getElementById("poolJobsBtn");
+  
   const pastBtn = document.getElementById("pastJobsBtn");
 
   if (toggleBtn) {
