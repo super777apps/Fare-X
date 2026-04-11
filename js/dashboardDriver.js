@@ -27,7 +27,15 @@ let unsubscribe = null;
 const jobSound = new Audio("assets/job.mp3");
 const acceptSound = new Audio("assets/accept.mp3");
 const declineSound = new Audio("assets/decline.mp3");
+let uiReady = false;
 
+function setInstantUI(){
+  const statusText = document.getElementById("onlineStatus");
+  const toggleBtn = document.getElementById("toggleOnlineBtn");
+
+  if(statusText) statusText.textContent = "● Loading...";
+  if(toggleBtn) toggleBtn.textContent = "Loading...";
+}
 /* ---------- GPS TRACKING ---------- */
 function startLocationTracking() {
   if (!navigator.geolocation) return;
@@ -51,7 +59,7 @@ function stopLocationTracking() {
 }
 
 /* ---------- AUTH ---------- */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
 
   if (!user) {
     location.href = "index.html";
@@ -60,31 +68,33 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  const snap = await getDoc(doc(db, "users", user.uid));
-  const u = snap.data();
+  setInstantUI(); // 🔥 UI instantly shows loading state
 
-  isOnline = u?.online || false;
+  getDoc(doc(db, "users", user.uid)).then((snap) => {
 
-  document.getElementById("userName").textContent = u?.nickName || user.email;
-  document.getElementById("userRole").textContent = u?.role || "driver";
+    const u = snap.data();
+    isOnline = u?.online || false;
 
-  updateOnlineUI();
+    document.getElementById("userName").textContent = u?.nickName || user.email;
+    document.getElementById("userRole").textContent = u?.role || "driver";
 
-  if (isOnline) startLocationTracking();
+    updateOnlineUI();
 
-  listenJobs();
+    if (isOnline) startLocationTracking();
+
+    listenJobs(); // async but does NOT block UI
+
+    loadFriends(user.uid);
+    loadPassengers(user.uid);
+
+    uiReady = true;
+  });
 });
 
-/* ---------- SAFE BUTTON BINDING ---------- */
+/* ---------- /* ---------- SAFE BUTTON BINDING ---------- */
+// ⚡ INSTANT UI LOAD (no waiting for Firebase)
 document.addEventListener("DOMContentLoaded", () => {
-const poolBtn = document.getElementById("poolJobsBtn");
 
-if (poolBtn) {
-  poolBtn.onclick = () => {
-    currentMode = "broadcast";
-    listenJobs();
-  };
-}
   const toggleBtn = document.getElementById("toggleOnlineBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const currentBtn = document.getElementById("currentJobsBtn");
@@ -92,7 +102,11 @@ if (poolBtn) {
 
   if (toggleBtn) {
     toggleBtn.onclick = async () => {
+      if (!currentUser) return;
+
       isOnline = !isOnline;
+
+      updateOnlineUI(); // ⚡ instant UI
 
       await updateDoc(doc(db, "users", currentUser.uid), {
         online: isOnline,
@@ -101,20 +115,29 @@ if (poolBtn) {
 
       if (isOnline) startLocationTracking();
       else stopLocationTracking();
-
-      updateOnlineUI();
     };
   }
 
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        online: false
-      });
+      if (!currentUser) return;
 
       stopLocationTracking();
 
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      try {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          online: false,
+          lastActive: serverTimestamp()
+        });
+      } catch (e) {}
+
       await signOut(auth);
+
       location.href = "index.html";
     };
   }
@@ -545,3 +568,69 @@ window.cancelAfterAccept = async (id) => {
     return;
   }
 };
+
+function loadFriends(uid){
+
+  const q = query(
+    collection(db,"friends"),
+    where("owner","==",uid)
+  );
+
+  onSnapshot(q, snap => {
+
+    const select = document.getElementById("friendSelect");
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Select Driver</option>';
+
+    snap.forEach(d => {
+      const f = d.data();
+
+      const friendUID = f.friendUID || f.uid || f.driverUID;
+      const name = f.name || f.nickName || f.email || "Driver";
+
+      if (!friendUID) return;
+
+      const opt = document.createElement("option");
+      opt.value = friendUID;
+      opt.textContent = name;
+
+      select.appendChild(opt);
+    });
+
+  });
+
+}
+
+function loadPassengers(uid){
+
+  const q = query(
+    collection(db,"passengers"),
+    where("owner","==",uid)
+  );
+
+  onSnapshot(q, snap => {
+
+    const select = document.getElementById("passengerSelect");
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Select Passenger</option>';
+
+    snap.forEach(d => {
+      const p = d.data();
+
+      const passengerUID = p.passengerUID || p.uid;
+      const name = p.nickName || p.name || p.email || "Passenger";
+
+      if (!passengerUID) return;
+
+      const opt = document.createElement("option");
+      opt.value = passengerUID;
+      opt.textContent = name;
+
+      select.appendChild(opt);
+    });
+
+  });
+
+}
