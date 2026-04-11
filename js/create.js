@@ -234,6 +234,7 @@ if(sendType && friendSelect){
   if(editId){
     setTimeout(()=>loadExistingJob(editId),800);
   }
+  bindCreateButton();
 });
 
 /* ---------- FRIENDS ---------- */
@@ -294,10 +295,9 @@ function loadPassengers(uid){
 /* ---------- CREATE / RESEND ---------- */
 
 
-setTimeout(() => {
+function bindCreateButton() {
 
   const btn = document.getElementById("createFareBtn");
-
   if (!btn) {
     console.error("Create button not found");
     return;
@@ -306,18 +306,107 @@ setTimeout(() => {
   btn.onclick = async () => {
 
     try {
-      console.log("CLICK WORKING");
 
-      // 🔥 PASTE YOUR EXISTING CLICK LOGIC HERE (UNCHANGED)
+      const pickup = pickupInput?.value?.trim();
+      const drop = dropInput?.value?.trim();
+      const time = document.getElementById("datetime")?.value;
+      const price = document.getElementById("price")?.value?.trim();
+      const notes = document.getElementById("notes")?.value?.trim();
+      const passengerUID = passengerSelect?.value;
+
+      if (!pickup || !drop || !time || !price || !passengerUID) {
+        alert("Fill all fields");
+        return;
+      }
+
+      const sendMode = sendType?.value || "friend";
+
+      let assignedTo = null;
+
+      if (sendMode === "friend") {
+        assignedTo = friendSelect?.value;
+        if (!assignedTo) {
+          alert("Select friend driver");
+          return;
+        }
+      }
+
+      const passengerSnap = await getDoc(doc(db, "users", passengerUID));
+
+      const passengerName =
+        passengerSnap.exists()
+          ? passengerSnap.data()?.nickName
+          : "Passenger";
+
+      const myName = currentUserData?.nickName || currentUser?.email;
+
+      const isBroadcast = sendMode === "broadcast";
+      const isAuto = sendMode === "auto";
+
+      if (editId) {
+
+        await updateDoc(doc(db, "fares", editId), {
+          pickup, drop,
+          pickupSuburb: getSuburb(pickup),
+          dropSuburb: getSuburb(drop),
+
+          pickupLat, pickupLng,
+          dropLat, dropLng,
+
+          time, price, notes,
+          passengerUID,
+          passengerName,
+
+          currentDriverUID: currentUser.uid,
+          currentDriverName: myName,
+
+          status: "waiting response",
+          assignedTo,
+          soundPlayed: false,
+          declinedBy: []
+        });
+
+        alert("Job resent");
+        location.href = "dashboardDriver.html";
+        return;
+      }
+
+      await addDoc(collection(db, "fares"), {
+        pickup, drop,
+        pickupSuburb: getSuburb(pickup),
+        dropSuburb: getSuburb(drop),
+
+        pickupLat, pickupLng,
+        dropLat, dropLng,
+
+        time, price, notes,
+        passengerUID,
+        passengerName,
+
+        originalDriverUID: currentUser.uid,
+        originalDriverName: myName,
+
+        currentDriverUID: null,
+        currentDriverName: null,
+
+        assignedTo: isBroadcast ? null : assignedTo,
+        broadcast: isBroadcast,
+        autoDispatch: isAuto,
+
+        status: "waiting response",
+        createdAt: serverTimestamp(),
+        soundPlayed: false
+      });
+
+      alert("Job sent");
+      location.href = "dashboardDriver.html";
 
     } catch (err) {
-      console.error("SEND ERROR:", err);
-      alert("Something went wrong");
+      console.error("CREATE ERROR:", err);
+      alert("Error sending job. Check console");
     }
-
   };
-
-}, 500);
+}
   try {
 
     const pickup = pickupInput?.value?.trim();
