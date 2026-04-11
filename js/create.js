@@ -248,7 +248,7 @@ function loadFriends(uid){
     snap.forEach(d=>{
       const f=d.data();
       const owner = f.owner || f.createdBy || f.userId;
-      if(owner !== uid) return;
+      if(owner && owner !== uid) return;
 
       const friendUID = f.friendUID || f.uid || f.driverUID;
       const name = f.name || f.nickName || f.email || "Driver";
