@@ -86,6 +86,7 @@ onAuthStateChanged(auth, (user) => {
 
     loadFriends(user.uid);
     loadPassengers(user.uid);
+    updateHeading()
 
     uiReady = true;
   });
@@ -643,8 +644,13 @@ function loadPassengers(uid){
   });
 
 }
+
 function updateHeading() {
   const h = document.getElementById("jobHeading");
+
+  console.log("Heading function called. Mode:", currentMode);
+  console.log("Heading element:", h);
+
   if (!h) return;
 
   if (currentMode === "current") {
