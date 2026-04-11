@@ -290,88 +290,108 @@ function loadPassengers(uid){
   });
 }
 
-/* ---------- SEND TYPE UI ---------- */
 
 /* ---------- CREATE / RESEND ---------- */
-btn?.addEventListener("click", async()=>{
+btn?.addEventListener("click", async () => {
+  try {
 
-  const pickup=pickupInput.value.trim();
-  const drop=dropInput.value.trim();
-  const time=document.getElementById("datetime").value;
-  const price=document.getElementById("price").value.trim();
-  const notes=document.getElementById("notes").value.trim();
-  const passengerUID=passengerSelect.value;
+    const pickup = pickupInput?.value?.trim();
+    const drop = dropInput?.value?.trim();
+    const time = document.getElementById("datetime")?.value;
+    const price = document.getElementById("price")?.value?.trim();
+    const notes = document.getElementById("notes")?.value?.trim();
+    const passengerUID = passengerSelect?.value;
 
-  if(!pickup||!drop||!time||!price||!passengerUID){
-    return alert("Fill all fields");
-  }
+    if (!pickup || !drop || !time || !price || !passengerUID) {
+      alert("Fill all fields");
+      return;
+    }
 
-  const passengerSnap = await getDoc(doc(db,"users",passengerUID));
-  const passengerName = passengerSnap.data()?.nickName || "Passenger";
+    const sendMode = sendType?.value || "friend";
 
-  const myName = currentUserData.nickName || currentUser.email;
+    let assignedTo = null;
 
-  let assignedTo=null;
-  if(sendType.value==="friend"){
-    assignedTo=friendSelect.value;
-    if(!assignedTo) return alert("Select friend driver");
-  }
+    if (sendMode === "friend") {
+      assignedTo = friendSelect?.value;
 
-  const isBroadcast = sendType.value === "broadcast";
-  const isAuto = sendType.value === "auto";
+      if (!assignedTo) {
+        alert("Select friend driver");
+        return;
+      }
+    }
 
-  if(editId){
+    const passengerSnap = await getDoc(doc(db, "users", passengerUID));
 
-    await updateDoc(doc(db,"fares",editId),{
-      pickup,drop,
-      pickupSuburb:getSuburb(pickup),
-      dropSuburb:getSuburb(drop),
+    const passengerName =
+      passengerSnap.exists()
+        ? passengerSnap.data()?.nickName
+        : "Passenger";
 
-      pickupLat,pickupLng,
-      dropLat,dropLng,
+    const myName = currentUserData?.nickName || currentUser?.email;
 
-      time,price,notes,
-      passengerUID,passengerName,
+    const isBroadcast = sendMode === "broadcast";
+    const isAuto = sendMode === "auto";
 
-      currentDriverUID: currentUser.uid,
-      currentDriverName: myName,
+    if (editId) {
 
-      status:"waiting response",
-      assignedTo,
-      soundPlayed:false,
-      declinedBy:[]
+      await updateDoc(doc(db, "fares", editId), {
+        pickup, drop,
+        pickupSuburb: getSuburb(pickup),
+        dropSuburb: getSuburb(drop),
+
+        pickupLat, pickupLng,
+        dropLat, dropLng,
+
+        time, price, notes,
+        passengerUID,
+        passengerName,
+
+        currentDriverUID: currentUser.uid,
+        currentDriverName: myName,
+
+        status: "waiting response",
+        assignedTo,
+        soundPlayed: false,
+        declinedBy: []
+      });
+
+      alert("Job resent");
+      location.href = "dashboardDriver.html";
+      return;
+    }
+
+    await addDoc(collection(db, "fares"), {
+      pickup, drop,
+      pickupSuburb: getSuburb(pickup),
+      dropSuburb: getSuburb(drop),
+
+      pickupLat, pickupLng,
+      dropLat, dropLng,
+
+      time, price, notes,
+      passengerUID,
+      passengerName,
+
+      originalDriverUID: currentUser.uid,
+      originalDriverName: myName,
+
+      currentDriverUID: null,
+      currentDriverName: null,
+
+      assignedTo: isBroadcast ? null : assignedTo,
+      broadcast: isBroadcast,
+      autoDispatch: isAuto,
+
+      status: "waiting response",
+      createdAt: serverTimestamp(),
+      soundPlayed: false
     });
 
-    alert("Job resent");
-    return location.href="dashboardDriver.html";
+    alert("Job sent");
+    location.href = "dashboardDriver.html";
+
+  } catch (err) {
+    console.error("CREATE ERROR:", err);
+    alert("Error sending job. Check console.");
   }
-
-  await addDoc(collection(db,"fares"),{
-    pickup,drop,
-    pickupSuburb:getSuburb(pickup),
-    dropSuburb:getSuburb(drop),
-
-    pickupLat,pickupLng,
-    dropLat,dropLng,
-
-    time,price,notes,
-    passengerUID,passengerName,
-
-    originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
-
-    currentDriverUID:null,
-    currentDriverName:null,
-
-    assignedTo:null,
-    broadcast:isBroadcast,
-    autoDispatch:isAuto,
-
-    status:"waiting response",
-    createdAt:serverTimestamp(),
-    soundPlayed:false
-  });
-
-  alert("Job sent");
-  location.href="dashboardDriver.html";
 });
