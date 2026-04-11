@@ -212,6 +212,12 @@ onAuthStateChanged(auth, async user=>{
   gpsBtn = document.getElementById("gpsBtn");
   sendType = document.getElementById("sendType");
   friendSelect = document.getElementById("friendSelect");
+  // ✅ FIXED: sendType binding AFTER DOM is ready
+if(sendType && friendSelect){
+  sendType.addEventListener("change", ()=>{
+    friendSelect.style.display = (sendType.value === "friend") ? "block" : "none";
+  });
+}
   passengerSelect = document.getElementById("passengerSelect");
   btn = document.getElementById("createFareBtn");
 
@@ -285,9 +291,6 @@ function loadPassengers(uid){
 }
 
 /* ---------- SEND TYPE UI ---------- */
-sendType?.addEventListener("change", ()=>{
-  friendSelect.style.display = (sendType.value==="friend")?"block":"none";
-});
 
 /* ---------- CREATE / RESEND ---------- */
 btn?.addEventListener("click", async()=>{
