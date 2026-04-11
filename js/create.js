@@ -292,7 +292,32 @@ function loadPassengers(uid){
 
 
 /* ---------- CREATE / RESEND ---------- */
-btn?.addEventListener("click", async () => {
+
+
+setTimeout(() => {
+
+  const btn = document.getElementById("createFareBtn");
+
+  if (!btn) {
+    console.error("Create button not found");
+    return;
+  }
+
+  btn.onclick = async () => {
+
+    try {
+      console.log("CLICK WORKING");
+
+      // 🔥 PASTE YOUR EXISTING CLICK LOGIC HERE (UNCHANGED)
+
+    } catch (err) {
+      console.error("SEND ERROR:", err);
+      alert("Something went wrong");
+    }
+
+  };
+
+}, 500);
   try {
 
     const pickup = pickupInput?.value?.trim();
@@ -394,4 +419,3 @@ btn?.addEventListener("click", async () => {
     console.error("CREATE ERROR:", err);
     alert("Error sending job. Check console.");
   }
-});
