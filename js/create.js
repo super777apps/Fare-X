@@ -219,7 +219,7 @@ if(sendType && friendSelect){
   });
 }
   passengerSelect = document.getElementById("passengerSelect");
-  btn = document.getElementById("createFareBtn");
+  
 
   initMaps();
   bindInputs();
@@ -290,9 +290,10 @@ function loadPassengers(uid){
   });
 }
 
-/* ---------- SEND TYPE UI ---------- */
 
 /* ---------- CREATE / RESEND ---------- */
+
+btn = document.getElementById("createFareBtn");
 btn?.addEventListener("click", async()=>{
 
   const pickup=pickupInput.value.trim();
