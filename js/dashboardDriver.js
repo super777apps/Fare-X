@@ -234,11 +234,11 @@ else if (currentMode === "current") {
   if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
 
   // Only my jobs (NOT broadcast ones)
-  if (
-    f.assignedTo !== currentUser.uid &&
-    f.currentDriverUID !== currentUser.uid &&
-    f.originalDriverUID !== currentUser.uid
-  ) return;
+  const isAssignedToMe = f.assignedTo === currentUser.uid;
+const isMine = f.currentDriverUID === currentUser.uid;
+const isCreator = f.originalDriverUID === currentUser.uid;
+
+if (!(isAssignedToMe || isMine || isCreator)) return;
 }
 
 // 🔥 PAST MODE
