@@ -341,7 +341,7 @@ btn?.addEventListener("click", async()=>{
     currentDriverUID:null,
     currentDriverName:null,
 
-    assignedTo:null,
+    assignedTo: assignedTo,
     broadcast:isBroadcast,
     autoDispatch:isAuto,
 
