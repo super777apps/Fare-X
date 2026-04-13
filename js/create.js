@@ -1,5 +1,4 @@
 import { db, auth } from "./firebase.js";
-import { autoDispatch } from "./dispatch.js";
 
 import {
   collection, addDoc, query,
@@ -322,7 +321,18 @@ btn?.addEventListener("click", async()=>{
   }
 
   const isBroadcast = sendType.value === "broadcast";
-  const isAuto = sendType.value === "auto";
+const isAuto = sendType.value === "auto";
+
+// 🔁 RESEND FIX
+if (editId) {
+  await updateDoc(doc(db, "fares", editId), {
+    status: "deleted",
+    updatedAt: serverTimestamp()
+  });
+}
+
+// ✅ CREATE NEW JOB
+
 
   await addDoc(collection(db,"fares"),{
     pickup,drop,
