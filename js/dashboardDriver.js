@@ -22,6 +22,7 @@ let currentMode = "current";
 let isOnline = false;
 let watchId = null;
 let unsubscribe = null;
+let lastStatusMap = {};
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
@@ -215,6 +216,25 @@ unsubscribe = onSnapshot(q, snap => {
     snap.forEach(d => {
 
       const f = d.data();
+      // 🔊 SOUND FOR ORIGINAL DRIVER (A)
+if (f.originalDriverUID === currentUser.uid) {
+
+  if (lastStatusMap[d.id] !== f.status) {
+
+    if (f.status === "accepted") {
+      acceptSound.play();
+    }
+
+    if (f.status === "returned") {
+      declineSound.play();
+    }
+
+  }
+
+}
+
+// save latest status
+lastStatusMap[d.id] = f.status;
 
 const isBroadcast = f.broadcast === true;
 const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
