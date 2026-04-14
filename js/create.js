@@ -324,13 +324,14 @@ btn?.addEventListener("click", async()=>{
 const isAuto = sendType.value === "auto";
 
 // 🔁 RESEND FIX
-if (editId) {
+const isResend = btn?.textContent.includes("Resend");
+
+if (editId && isResend) {
   await updateDoc(doc(db, "fares", editId), {
     status: "deleted",
     updatedAt: serverTimestamp()
   });
 }
-
 // ✅ CREATE NEW JOB
 
 
