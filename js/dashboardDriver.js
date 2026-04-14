@@ -223,10 +223,12 @@ if (f.originalDriverUID === currentUser.uid) {
 
     if (f.status === "accepted") {
       acceptSound.play();
+      showMiniPopup(`✅ Accepted by ${f.currentDriverName || "Driver"}`);
     }
 
     if (f.status === "returned") {
       declineSound.play();
+      showMiniPopup(`❌ Driver declined`);
     }
 
   }

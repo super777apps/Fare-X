@@ -44,9 +44,10 @@ function listenGlobalJobs() {
 
       // 🎯 Only show new incoming jobs
       if (
-        f.status === "waiting response" &&
-        (isAssigned || isBroadcast)
-      ) {
+  f.status === "waiting response" &&
+  !f.soundPlayed &&
+  (isAssigned || isBroadcast)
+) {
 
         // 🔊 PLAY SOUND
         jobSound.play();
