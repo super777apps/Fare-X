@@ -219,7 +219,7 @@ if(sendType && friendSelect){
   });
 }
   passengerSelect = document.getElementById("passengerSelect");
-  
+  btn = document.getElementById("createFareBtn");
 
   initMaps();
   bindInputs();
@@ -290,14 +290,10 @@ function loadPassengers(uid){
   });
 }
 
+/* ---------- SEND TYPE UI ---------- */
 
 /* ---------- CREATE / RESEND ---------- */
-
-btn = document.getElementById("createFareBtn");
-
 btn?.addEventListener("click", async()=>{
-
-  console.log("CLICK WORKING"); // 🔥 debug
 
   const pickup=pickupInput.value.trim();
   const drop=dropInput.value.trim();
@@ -324,6 +320,32 @@ btn?.addEventListener("click", async()=>{
   const isBroadcast = sendType.value === "broadcast";
   const isAuto = sendType.value === "auto";
 
+  if(editId){
+
+    await updateDoc(doc(db,"fares",editId),{
+      pickup,drop,
+      pickupSuburb:getSuburb(pickup),
+      dropSuburb:getSuburb(drop),
+
+      pickupLat,pickupLng,
+      dropLat,dropLng,
+
+      time,price,notes,
+      passengerUID,passengerName,
+
+      currentDriverUID: currentUser.uid,
+      currentDriverName: myName,
+
+      status:"waiting response",
+      assignedTo,
+      soundPlayed:false,
+      declinedBy:[]
+    });
+
+    alert("Job resent");
+    return location.href="dashboardDriver.html";
+  }
+
   await addDoc(collection(db,"fares"),{
     pickup,drop,
     pickupSuburb:getSuburb(pickup),
@@ -341,7 +363,7 @@ btn?.addEventListener("click", async()=>{
     currentDriverUID:null,
     currentDriverName:null,
 
-    assignedTo: assignedTo,
+    assignedTo:null,
     broadcast:isBroadcast,
     autoDispatch:isAuto,
 

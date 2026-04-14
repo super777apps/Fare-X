@@ -22,7 +22,6 @@ let currentMode = "current";
 let isOnline = false;
 let watchId = null;
 let unsubscribe = null;
-let lastStatusMap = {};
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
@@ -216,27 +215,6 @@ unsubscribe = onSnapshot(q, snap => {
     snap.forEach(d => {
 
       const f = d.data();
-      // 🔊 SOUND FOR ORIGINAL DRIVER (A)
-if (f.originalDriverUID === currentUser.uid) {
-
-  if (lastStatusMap[d.id] !== f.status) {
-
-    if (f.status === "accepted") {
-      acceptSound.play();
-      showMiniPopup(`✅ Accepted by ${f.currentDriverName || "Driver"}`);
-    }
-
-    if (f.status === "returned") {
-      declineSound.play();
-      showMiniPopup(`❌ Driver declined`);
-    }
-
-  }
-
-}
-
-// save latest status
-lastStatusMap[d.id] = f.status;
 
 const isBroadcast = f.broadcast === true;
 const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
@@ -256,11 +234,11 @@ else if (currentMode === "current") {
   if (!["waiting response","accepted","assigned","returned","arrived","in progress"].includes(f.status)) return;
 
   // Only my jobs (NOT broadcast ones)
-  const isAssignedToMe = f.assignedTo === currentUser.uid;
-const isMine = f.currentDriverUID === currentUser.uid;
-const isCreator = f.originalDriverUID === currentUser.uid;
-
-if (!(isAssignedToMe || isMine || isCreator)) return;
+  if (
+    f.assignedTo !== currentUser.uid &&
+    f.currentDriverUID !== currentUser.uid &&
+    f.originalDriverUID !== currentUser.uid
+  ) return;
 }
 
 // 🔥 PAST MODE
