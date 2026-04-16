@@ -22,6 +22,8 @@ let currentMode = "current";
 let isOnline = false;
 let watchId = null;
 let unsubscribe = null;
+let popupAudio = new Audio("assets/job.mp3");
+let popupInterval = null;
 
 // 🔊 Sounds
 const jobSound = new Audio("assets/job.mp3");
@@ -679,6 +681,9 @@ function updateHeading() {
   }
 }
 
+let popupSoundInterval = null;
+let popupPlayCount = 0;
+
 function showPopup(text) {
   const popup = document.getElementById("jobPopup");
   const txt = document.getElementById("popupText");
@@ -686,9 +691,39 @@ function showPopup(text) {
   if (!popup || !txt) return;
 
   txt.textContent = text;
+
+  // ✅ CENTER FIX
+  popup.style.left = "50%";
+  popup.style.top = "20px";
+  popup.style.transform = "translateX(-50%)";
+
   popup.classList.remove("hidden");
+
+  // 🔊 PLAY SOUND MAX 4 TIMES
+  popupPlayCount = 0;
+
+  if (popupSoundInterval) clearInterval(popupSoundInterval);
+
+  popupSoundInterval = setInterval(() => {
+    if (popupPlayCount >= 4) {
+      clearInterval(popupSoundInterval);
+      return;
+    }
+
+    jobSound.currentTime = 0;
+    jobSound.play();
+
+    popupPlayCount++;
+  }, 3000);
 }
 
 window.closePopup = function () {
-  document.getElementById("jobPopup").classList.add("hidden");
+  const popup = document.getElementById("jobPopup");
+
+  if (popup) popup.classList.add("hidden");
+
+  // 🔇 STOP SOUND
+  if (popupSoundInterval) clearInterval(popupSoundInterval);
+  jobSound.pause();
+  jobSound.currentTime = 0;
 };
