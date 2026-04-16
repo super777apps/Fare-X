@@ -321,6 +321,9 @@ btn?.addEventListener("click", async()=>{
     if(!assignedTo) return alert("Select friend driver");
   }
 
+
+const isBroadcast = sendType.value === "broadcast";
+const isAuto = sendType.value === "auto";
   // 🔁 RESEND FIX (VERY SAFE)
 if (editId) {
   await updateDoc(doc(db, "fares", editId), {
