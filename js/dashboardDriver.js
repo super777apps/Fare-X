@@ -215,6 +215,18 @@ unsubscribe = onSnapshot(q, snap => {
     snap.forEach(d => {
 
       const f = d.data();
+      
+      if (
+  f.status === "waiting response" &&
+  f.assignedTo === currentUser.uid &&
+  !f.popupShown
+) {
+  showPopup(`Pickup: ${f.pickupSuburb} → ${f.dropSuburb}`);
+
+  updateDoc(doc(db, "fares", d.id), {
+    popupShown: true
+  });
+}
 
 const isBroadcast = f.broadcast === true;
 const declinedByMe = (f.declinedBy || []).includes(currentUser.uid);
@@ -666,3 +678,17 @@ function updateHeading() {
     h.textContent = "Pool Broadcast Jobs";
   }
 }
+
+function showPopup(text) {
+  const popup = document.getElementById("jobPopup");
+  const txt = document.getElementById("popupText");
+
+  if (!popup || !txt) return;
+
+  txt.textContent = text;
+  popup.classList.remove("hidden");
+}
+
+window.closePopup = function () {
+  document.getElementById("jobPopup").classList.add("hidden");
+};
