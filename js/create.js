@@ -231,9 +231,80 @@ if(sendType && friendSelect){
   const params = new URLSearchParams(window.location.search);
   editId = params.get("id");
 
-  if(editId){
-    setTimeout(()=>loadExistingJob(editId),800);
+ if(editId){
+  setTimeout(()=>loadExistingJob(editId),800);
+}
+
+/* ---------- CREATE / RESEND ---------- */
+
+btn = document.getElementById("createFareBtn");
+
+btn?.addEventListener("click", async()=>{
+
+  const pickup=pickupInput.value.trim();
+  const drop=dropInput.value.trim();
+  const time=document.getElementById("datetime").value;
+  const price=document.getElementById("price").value.trim();
+  const notes=document.getElementById("notes").value.trim();
+  const passengerUID=passengerSelect.value;
+
+  if(!pickup||!drop||!time||!price||!passengerUID){
+    return alert("Fill all fields");
   }
+
+  const passengerSnap = await getDoc(doc(db,"users",passengerUID));
+  const passengerName = passengerSnap.data()?.nickName || "Passenger";
+
+  const myName = currentUserData.nickName || currentUser.email;
+
+  let assignedTo=null;
+  if(sendType.value==="friend"){
+    assignedTo=friendSelect.value;
+    if(!assignedTo) return alert("Select friend driver");
+  }
+
+  const isBroadcast = sendType.value === "broadcast";
+  const isAuto = sendType.value === "auto";
+
+  // ✅ DELETE OLD JOB IF RESEND
+  if (editId) {
+    await updateDoc(doc(db, "fares", editId), {
+      status: "deleted",
+      updatedAt: serverTimestamp()
+    });
+  }
+
+  // ✅ CREATE NEW JOB
+  await addDoc(collection(db,"fares"),{
+    pickup,drop,
+    pickupSuburb:getSuburb(pickup),
+    dropSuburb:getSuburb(drop),
+
+    pickupLat,pickupLng,
+    dropLat,dropLng,
+
+    time,price,notes,
+    passengerUID,passengerName,
+
+    originalDriverUID: currentUser.uid,
+    originalDriverName: myName,
+
+    currentDriverUID:null,
+    currentDriverName:null,
+
+    assignedTo: assignedTo,
+    broadcast:isBroadcast,
+    autoDispatch:isAuto,
+
+    status:"waiting response",
+    createdAt:serverTimestamp(),
+    soundPlayed:false
+  });
+
+  alert("Job sent");
+  location.href="dashboardDriver.html";
+});
+
 });
 
 /* ---------- FRIENDS ---------- */
@@ -293,70 +364,3 @@ function loadPassengers(uid){
 
 /* ---------- CREATE / RESEND ---------- */
 
-btn = document.getElementById("createFareBtn");
-
-btn?.addEventListener("click", async()=>{
-
-  console.log("CLICK WORKING"); // 🔥 debug
-
-  const pickup=pickupInput.value.trim();
-  const drop=dropInput.value.trim();
-  const time=document.getElementById("datetime").value;
-  const price=document.getElementById("price").value.trim();
-  const notes=document.getElementById("notes").value.trim();
-  const passengerUID=passengerSelect.value;
-
-  if(!pickup||!drop||!time||!price||!passengerUID){
-    return alert("Fill all fields");
-  }
-
-  const passengerSnap = await getDoc(doc(db,"users",passengerUID));
-  const passengerName = passengerSnap.data()?.nickName || "Passenger";
-
-  const myName = currentUserData.nickName || currentUser.email;
-
-  let assignedTo=null;
-  if(sendType.value==="friend"){
-    assignedTo=friendSelect.value;
-    if(!assignedTo) return alert("Select friend driver");
-  }
-
-
-const isBroadcast = sendType.value === "broadcast";
-const isAuto = sendType.value === "auto";
-  // 🔁 RESEND FIX (VERY SAFE)
-if (editId) {
-  await updateDoc(doc(db, "fares", editId), {
-    status: "deleted",
-    updatedAt: serverTimestamp()
-  });
-}
-  await addDoc(collection(db,"fares"),{
-    pickup,drop,
-    pickupSuburb:getSuburb(pickup),
-    dropSuburb:getSuburb(drop),
-
-    pickupLat,pickupLng,
-    dropLat,dropLng,
-
-    time,price,notes,
-    passengerUID,passengerName,
-
-    originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
-
-    currentDriverUID:null,
-    currentDriverName:null,
-
-    assignedTo: assignedTo,
-    broadcast:isBroadcast,
-    autoDispatch:isAuto,
-
-    status:"waiting response",
-    createdAt:serverTimestamp(),
-    soundPlayed:false
-  });
-
-  alert("Job sent");
-  location.href="dashboardDriver.html";
-});
