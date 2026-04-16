@@ -343,21 +343,7 @@ html, body {
   justify-content:center;
 }
 
-.job-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #111;
-  color: #fff;
-  padding: 25px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 350px;
-  text-align: center;
-  z-index: 9999;
-  box-shadow: 0 0 30px rgba(255,215,0,0.4);
-}
+
 
 .job-popup button {
   margin: 10px;
