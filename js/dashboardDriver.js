@@ -332,6 +332,12 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
       div.innerHTML = `
   <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
   <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || f.drop}</b></div>
+  
+  <div class="fare-row">
+  <span>Job ID:</span>
+  <b>${f.jobId || "N/A"}</b>
+</div>
+
   <div class="fare-row"><span>Status:</span><b class="status-text">${displayStatus}</b></div>
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>

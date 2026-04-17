@@ -274,8 +274,10 @@ btn?.addEventListener("click", async()=>{
     });
   }
 
+const jobId = generateJobId();
   // ✅ CREATE NEW JOB
   await addDoc(collection(db,"fares"),{
+    jobId,   // ✅ ADD THIS
     pickup,drop,
     pickupSuburb:getSuburb(pickup),
     dropSuburb:getSuburb(drop),
@@ -364,3 +366,6 @@ function loadPassengers(uid){
 
 /* ---------- CREATE / RESEND ---------- */
 
+function generateJobId() {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
