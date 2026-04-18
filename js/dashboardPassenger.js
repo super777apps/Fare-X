@@ -14,10 +14,12 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+/* ---------------- STATE ---------------- */
 let currentUser = null;
+let currentMode = "current";
 
 /* =========================================================
-   AUTH + ROLE FIX
+   AUTH
 ========================================================= */
 onAuthStateChanged(auth, async user => {
 
@@ -25,6 +27,8 @@ onAuthStateChanged(auth, async user => {
     location.href = "index.html";
     return;
   }
+
+  currentUser = user;
 
   const snap = await getDoc(doc(db, "users", user.uid));
 
@@ -35,22 +39,75 @@ onAuthStateChanged(auth, async user => {
 
   const u = snap.data();
 
-  // ✅ STRICT ROLE CHECK
-  if (u.role !== "passenger") {
-    location.href = "dashboardDriver.html";
-    return;
-  }
+  document.getElementById("userName").textContent =
+    u.nickName || user.email;
 
-  currentUser = user;
+  document.getElementById("userRole").textContent =
+    "Passenger";
 
-  document.getElementById("userName").textContent = user.email;
-  document.getElementById("userRole").textContent = "Passenger";
-
+  bindButtons();
   listenMyJobs();
 });
 
 /* =========================================================
-   JOBS
+   BUTTONS
+========================================================= */
+function bindButtons() {
+
+  const createBtn  = document.getElementById("createFareBtn");
+  const driversBtn = document.getElementById("driversBtn");
+  const profileBtn = document.getElementById("profileBtn");
+  const logoutBtn  = document.getElementById("logoutBtn");
+
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn    = document.getElementById("pastJobsBtn");
+
+  /* ---------- NAV ---------- */
+
+  if (createBtn) {
+    createBtn.onclick = () => {
+      location.href = "createPassenger.html";
+    };
+  }
+
+  if (driversBtn) {
+    driversBtn.onclick = () => {
+      alert("Drivers page not linked yet");
+    };
+  }
+
+  if (profileBtn) {
+    profileBtn.onclick = () => {
+      alert("Profile page not linked yet");
+    };
+  }
+
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+      location.href = "index.html";
+    };
+  }
+
+  /* ---------- JOB FILTER ---------- */
+
+  if (currentBtn) {
+    currentBtn.onclick = () => {
+      currentMode = "current";
+      listenMyJobs();
+    };
+  }
+
+  if (pastBtn) {
+    pastBtn.onclick = () => {
+      currentMode = "past";
+      listenMyJobs();
+    };
+  }
+}
+
+/* =========================================================
+   JOB LIST
 ========================================================= */
 function listenMyJobs() {
 
@@ -66,7 +123,7 @@ function listenMyJobs() {
     box.innerHTML = "";
 
     if (snap.empty) {
-      box.innerHTML = `<div class="gold">No jobs</div>`;
+      box.innerHTML = `<div class="gold">No jobs found</div>`;
       return;
     }
 
@@ -74,13 +131,46 @@ function listenMyJobs() {
 
       const f = d.data();
 
+      const isPast =
+        f.status === "completed" ||
+        f.status === "deleted";
+
+      /* ---------- FILTER ---------- */
+
+      if (currentMode === "current" && isPast) return;
+
+      if (currentMode === "past" && !isPast) return;
+
+      /* ---------- CARD ---------- */
+
       const div = document.createElement("div");
       div.className = "fare-card";
 
       div.innerHTML = `
-        <div class="fare-row"><span>Pickup:</span><b>${f.pickup}</b></div>
-        <div class="fare-row"><span>Drop:</span><b>${f.drop}</b></div>
-        <div class="fare-row"><span>Status:</span><b>${f.status}</b></div>
+        <div class="fare-row">
+          <span>Job ID:</span>
+          <b>${f.jobId || "N/A"}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Pickup:</span>
+          <b>${f.pickupSuburb || f.pickup}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Drop:</span>
+          <b>${f.dropSuburb || f.drop}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Status:</span>
+          <b>${f.status}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Driver:</span>
+          <b>${f.currentDriverName || "-"}</b>
+        </div>
       `;
 
       box.appendChild(div);
@@ -88,11 +178,3 @@ function listenMyJobs() {
 
   });
 }
-
-/* =========================================================
-   LOGOUT
-========================================================= */
-document.getElementById("logoutBtn").onclick = async () => {
-  await signOut(auth);
-  location.href = "index.html";
-};
