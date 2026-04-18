@@ -9,15 +9,14 @@ import {
   serverTimestamp,
   doc,
   getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+}
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
   onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+}
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* =====================================================
-   STATE
-===================================================== */
 let currentUser = null;
 
 let pickupLat = null;
@@ -25,412 +24,189 @@ let pickupLng = null;
 let dropLat = null;
 let dropLng = null;
 
-let pickupMap = null;
-let dropMap = null;
+let pickupMap, dropMap;
+let pickupMarker, dropMarker;
 
-let pickupMarker = null;
-let dropMarker = null;
-
-/* DOM elements */
-let pickupInput;
-let dropInput;
-let pickupBox;
-let dropBox;
-let gpsBtn;
-let createBtn;
-
-/* =====================================================
-   DOM READY
-===================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-
-  pickupInput = document.getElementById("pickup");
-  dropInput = document.getElementById("drop");
-
-  pickupBox = document.getElementById("pickupSuggestions");
-  dropBox = document.getElementById("dropSuggestions");
-
-  gpsBtn = document.getElementById("gpsBtn");
-  createBtn = document.getElementById("createFareBtn");
-
-  bindInputs();
-  bindGPS();
-  bindCreate();
-});
-
-/* =====================================================
-   HELPERS
-===================================================== */
-function getSuburb(fullAddress){
-  if(!fullAddress) return "";
-  return fullAddress.split(",")[0];
+function getSuburb(x){
+  if(!x) return "";
+  return x.split(",")[0];
 }
 
 function generateJobId(){
   return Math.random().toString(36).substring(2,10).toUpperCase();
 }
 
-function debounce(fn, delay = 400){
-  let t;
-  return (...args)=>{
-    clearTimeout(t);
-    t = setTimeout(()=>fn(...args), delay);
-  };
-}
+/* ---------------- PAGE LOAD ---------------- */
+document.addEventListener("DOMContentLoaded", ()=>{
 
-/* =====================================================
-   SEARCH
-===================================================== */
-async function searchAddress(q){
+  const pickupInput = document.getElementById("pickup");
+  const dropInput   = document.getElementById("drop");
+  const gpsBtn      = document.getElementById("gpsBtn");
+  const createBtn   = document.getElementById("createFareBtn");
 
-  if(!q || q.length < 3) return [];
+  const driverSelect = document.getElementById("driverSelect");
 
-  try{
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
-    );
+  /* ---------- MAPS ---------- */
+  pickupMap = L.map("pickupMap").setView([31.52,74.35],13);
+  dropMap   = L.map("dropMap").setView([31.52,74.35],13);
 
-    return await res.json();
-  }catch(e){
-    return [];
-  }
-}
+  const tile = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-/* =====================================================
-   REVERSE GEOCODE
-===================================================== */
-async function reverseGeocode(lat,lng){
+  L.tileLayer(tile).addTo(pickupMap);
+  L.tileLayer(tile).addTo(dropMap);
 
-  try{
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-    );
+  /* ---------- PICKUP MAP ---------- */
+  pickupMap.on("click", e=>{
 
-    const data = await res.json();
+    pickupLat = e.latlng.lat;
+    pickupLng = e.latlng.lng;
 
-    return data.display_name || "Selected location";
+    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
 
-  }catch(e){
-    return "Selected location";
-  }
-}
+    pickupMarker = L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+  });
 
-/* =====================================================
-   MAPS
-===================================================== */
-function initMaps(){
+  /* ---------- DROP MAP ---------- */
+  dropMap.on("click", e=>{
 
-  if(!document.getElementById("pickupMap")) return;
-  if(!document.getElementById("dropMap")) return;
+    dropLat = e.latlng.lat;
+    dropLng = e.latlng.lng;
 
-  setTimeout(()=>{
+    if(dropMarker) dropMap.removeLayer(dropMarker);
 
-    pickupMap = L.map("pickupMap").setView([31.52,74.35],13);
-    dropMap   = L.map("dropMap").setView([31.52,74.35],13);
+    dropMarker = L.marker([dropLat,dropLng]).addTo(dropMap);
+  });
 
-    const tile = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  /* ---------- GPS ---------- */
+  gpsBtn.onclick = ()=>{
 
-    L.tileLayer(tile).addTo(pickupMap);
-    L.tileLayer(tile).addTo(dropMap);
+    navigator.geolocation.getCurrentPosition(pos=>{
 
-    setTimeout(()=>{
-      pickupMap.invalidateSize();
-      dropMap.invalidateSize();
-    },300);
+      pickupLat = pos.coords.latitude;
+      pickupLng = pos.coords.longitude;
 
-    /* pickup click */
-    pickupMap.on("click", async e => {
-
-      pickupLat = e.latlng.lat;
-      pickupLng = e.latlng.lng;
+      pickupMap.setView([pickupLat,pickupLng],15);
 
       if(pickupMarker) pickupMap.removeLayer(pickupMarker);
 
       pickupMarker = L.marker([pickupLat,pickupLng]).addTo(pickupMap);
 
-      pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
-    });
-
-    /* drop click */
-    dropMap.on("click", async e => {
-
-      dropLat = e.latlng.lat;
-      dropLng = e.latlng.lng;
-
-      if(dropMarker) dropMap.removeLayer(dropMarker);
-
-      dropMarker = L.marker([dropLat,dropLng]).addTo(dropMap);
-
-      dropInput.value = await reverseGeocode(dropLat,dropLng);
-    });
-
-  },300);
-}
-
-/* =====================================================
-   SUGGESTIONS
-===================================================== */
-function showSuggestions(list, box, input, type){
-
-  if(!box) return;
-
-  box.innerHTML = "";
-  box.style.display = "block";
-
-  list.forEach(item => {
-
-    const div = document.createElement("div");
-    div.textContent = item.display_name;
-
-    div.onclick = ()=>{
-
-      input.value = item.display_name;
-
-      const lat = parseFloat(item.lat);
-      const lng = parseFloat(item.lon);
-
-      if(type === "pickup"){
-
-        pickupLat = lat;
-        pickupLng = lng;
-
-        if(pickupMap){
-          pickupMap.setView([lat,lng],15);
-
-          if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-
-          pickupMarker = L.marker([lat,lng]).addTo(pickupMap);
-        }
-      }
-
-      if(type === "drop"){
-
-        dropLat = lat;
-        dropLng = lng;
-
-        if(dropMap){
-          dropMap.setView([lat,lng],15);
-
-          if(dropMarker) dropMap.removeLayer(dropMarker);
-
-          dropMarker = L.marker([lat,lng]).addTo(dropMap);
-        }
-      }
-
-      box.innerHTML = "";
-    };
-
-    box.appendChild(div);
-  });
-}
-
-/* =====================================================
-   BIND INPUTS
-===================================================== */
-function bindInputs(){
-
-  if(pickupInput){
-    pickupInput.addEventListener("input", debounce(async ()=>{
-
-      const list = await searchAddress(pickupInput.value);
-      showSuggestions(list, pickupBox, pickupInput, "pickup");
-
-    }));
-  }
-
-  if(dropInput){
-    dropInput.addEventListener("input", debounce(async ()=>{
-
-      const list = await searchAddress(dropInput.value);
-      showSuggestions(list, dropBox, dropInput, "drop");
-
-    }));
-  }
-}
-
-/* =====================================================
-   GPS
-===================================================== */
-function bindGPS(){
-
-  if(!gpsBtn) return;
-
-  gpsBtn.onclick = ()=>{
-
-    navigator.geolocation.getCurrentPosition(async pos => {
-
-      pickupLat = pos.coords.latitude;
-      pickupLng = pos.coords.longitude;
-
-      if(pickupMap){
-
-        pickupMap.setView([pickupLat,pickupLng],15);
-
-        if(pickupMarker) pickupMap.removeLayer(pickupMarker);
-
-        pickupMarker = L.marker([pickupLat,pickupLng]).addTo(pickupMap);
-      }
-
-      pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
-
-    }, ()=>{
-
-      alert("Enable location permission");
-
-    });
+    },()=>alert("Enable location"));
   };
-}
 
-/* =====================================================
-   AUTH
-===================================================== */
-onAuthStateChanged(auth, user => {
+  /* ---------- AUTH ---------- */
+  onAuthStateChanged(auth, async user=>{
 
-  if(!user){
-    location.href = "index.html";
-    return;
-  }
+    if(!user){
+      location.href="index.html";
+      return;
+    }
 
-  currentUser = user;
+    currentUser = user;
 
-  loadDrivers();
-  initMaps();
-});
+    /* ---------- LOAD DRIVERS ---------- */
+    const q = query(
+      collection(db,"friends"),
+      where("owner","==",user.uid)
+    );
 
-/* =====================================================
-   LOAD DRIVERS
-===================================================== */
-function loadDrivers(){
+    onSnapshot(q,snap=>{
 
-  const select = document.getElementById("driverSelect");
-  if(!select) return;
+      driverSelect.innerHTML =
+      `<option value="">Select Driver</option>`;
 
-  const q = query(
-    collection(db,"friends"),
-    where("owner","==",currentUser.uid)
-  );
+      snap.forEach(d=>{
 
-  onSnapshot(q, snap => {
+        const f = d.data();
 
-    select.innerHTML = `<option value="">Select Driver</option>`;
+        const uid =
+          f.friendUID || f.uid || "";
 
-    snap.forEach(d => {
+        const name =
+          f.nickName ||
+          f.name ||
+          f.email ||
+          "Driver";
 
-      const f = d.data();
+        if(!uid) return;
 
-      const uid =
-        f.friendUID ||
-        f.uid ||
-        f.driverUID ||
-        "";
+        const opt = document.createElement("option");
 
-      const name =
-        f.nickName ||
-        f.name ||
-        f.email ||
-        "Driver";
+        opt.value = uid;
+        opt.textContent = name;
 
-      if(!uid) return;
-
-      const opt = document.createElement("option");
-      opt.value = uid;
-      opt.textContent = name;
-
-      select.appendChild(opt);
+        driverSelect.appendChild(opt);
+      });
     });
   });
-}
 
-/* =====================================================
-   CREATE JOB
-===================================================== */
-function bindCreate(){
-
-  if(!createBtn) return;
-
+  /* ---------- CREATE ---------- */
   createBtn.onclick = async ()=>{
 
     if(!currentUser){
-      alert("Please login again");
+      alert("Wait loading...");
       return;
     }
 
     const pickup = pickupInput.value.trim();
     const drop   = dropInput.value.trim();
-
-    const time  = document.getElementById("datetime").value;
-    const price = document.getElementById("price").value.trim();
-
-    const driverUID =
-      document.getElementById("driverSelect").value;
+    const time   = document.getElementById("datetime").value;
+    const price  = document.getElementById("price").value.trim();
+    const driverUID = driverSelect.value;
 
     if(!pickup || !drop || !time || !price || !driverUID){
       alert("Fill all fields");
       return;
     }
 
-    try{
+    const snap = await getDoc(
+      doc(db,"users",currentUser.uid)
+    );
 
-      createBtn.disabled = true;
-      createBtn.textContent = "Sending...";
+    const passengerName =
+      snap.exists()
+      ? snap.data().nickName || currentUser.email
+      : currentUser.email;
 
-      const userSnap = await getDoc(
-        doc(db,"users",currentUser.uid)
-      );
+    await addDoc(collection(db,"fares"),{
 
-      const passengerName =
-        userSnap.exists()
-        ? userSnap.data().nickName || currentUser.email
-        : currentUser.email;
+      jobId: generateJobId(),
 
-      const jobId = generateJobId();
+      pickup,
+      drop,
 
-      await addDoc(collection(db,"fares"),{
+      pickupSuburb:getSuburb(pickup),
+      dropSuburb:getSuburb(drop),
 
-        jobId,
+      pickupLat,
+      pickupLng,
+      dropLat,
+      dropLng,
 
-        pickup,
-        drop,
+      time,
+      price,
 
-        pickupSuburb: getSuburb(pickup),
-        dropSuburb: getSuburb(drop),
+      passengerUID: currentUser.uid,
+      passengerName,
 
-        pickupLat,
-        pickupLng,
-        dropLat,
-        dropLng,
+      originalDriverUID: driverUID,
+      assignedTo: driverUID,
 
-        time,
-        price,
+      currentDriverUID:null,
+      currentDriverName:null,
 
-        passengerUID: currentUser.uid,
-        passengerName,
+      broadcast:false,
+      autoDispatch:false,
 
-        originalDriverUID: driverUID,
-        assignedTo: driverUID,
+      status:"waiting response",
 
-        currentDriverUID: null,
-        currentDriverName: null,
+      createdAt:serverTimestamp(),
+      soundPlayed:false
+    });
 
-        broadcast: false,
-        autoDispatch: false,
+    alert("Job sent");
 
-        status: "waiting response",
-
-        createdAt: serverTimestamp(),
-        soundPlayed: false
-      });
-
-      alert("Job sent");
-
-      location.href = "dashboardPassenger.html";
-
-    }catch(e){
-
-      alert("Failed to send job");
-
-      createBtn.disabled = false;
-      createBtn.textContent = "Send to Driver";
-    }
+    location.href="dashboardPassenger.html";
   };
-}
+
+});
