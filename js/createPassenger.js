@@ -15,7 +15,9 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* ---------------- STATE ---------------- */
+/* =====================================================
+   STATE
+===================================================== */
 let currentUser = null;
 
 let pickupLat = null;
@@ -23,20 +25,42 @@ let pickupLng = null;
 let dropLat = null;
 let dropLng = null;
 
-let pickupMap, dropMap;
-let pickupMarker, dropMarker;
+let pickupMap = null;
+let dropMap = null;
 
-/* ---------------- ELEMENTS ---------------- */
-const pickupInput = document.getElementById("pickup");
-const dropInput = document.getElementById("drop");
+let pickupMarker = null;
+let dropMarker = null;
 
-const pickupBox = document.getElementById("pickupSuggestions");
-const dropBox = document.getElementById("dropSuggestions");
+/* DOM elements */
+let pickupInput;
+let dropInput;
+let pickupBox;
+let dropBox;
+let gpsBtn;
+let createBtn;
 
-const gpsBtn = document.getElementById("gpsBtn");
-const createBtn = document.getElementById("createFareBtn");
+/* =====================================================
+   DOM READY
+===================================================== */
+document.addEventListener("DOMContentLoaded", () => {
 
-/* ---------------- HELPERS ---------------- */
+  pickupInput = document.getElementById("pickup");
+  dropInput = document.getElementById("drop");
+
+  pickupBox = document.getElementById("pickupSuggestions");
+  dropBox = document.getElementById("dropSuggestions");
+
+  gpsBtn = document.getElementById("gpsBtn");
+  createBtn = document.getElementById("createFareBtn");
+
+  bindInputs();
+  bindGPS();
+  bindCreate();
+});
+
+/* =====================================================
+   HELPERS
+===================================================== */
 function getSuburb(fullAddress){
   if(!fullAddress) return "";
   return fullAddress.split(",")[0];
@@ -46,41 +70,58 @@ function generateJobId(){
   return Math.random().toString(36).substring(2,10).toUpperCase();
 }
 
-function debounce(fn, delay=400){
+function debounce(fn, delay = 400){
   let t;
   return (...args)=>{
     clearTimeout(t);
-    t=setTimeout(()=>fn(...args),delay);
+    t = setTimeout(()=>fn(...args), delay);
   };
 }
 
-/* ---------------- SEARCH ---------------- */
+/* =====================================================
+   SEARCH
+===================================================== */
 async function searchAddress(q){
-  if(q.length < 3) return [];
 
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
-  );
+  if(!q || q.length < 3) return [];
 
-  return await res.json();
+  try{
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
+    );
+
+    return await res.json();
+  }catch(e){
+    return [];
+  }
 }
 
-/* ---------------- REVERSE ---------------- */
+/* =====================================================
+   REVERSE GEOCODE
+===================================================== */
 async function reverseGeocode(lat,lng){
+
   try{
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
     );
 
     const data = await res.json();
+
     return data.display_name || "Selected location";
-  }catch{
+
+  }catch(e){
     return "Selected location";
   }
 }
 
-/* ---------------- MAPS ---------------- */
+/* =====================================================
+   MAPS
+===================================================== */
 function initMaps(){
+
+  if(!document.getElementById("pickupMap")) return;
+  if(!document.getElementById("dropMap")) return;
 
   setTimeout(()=>{
 
@@ -97,7 +138,8 @@ function initMaps(){
       dropMap.invalidateSize();
     },300);
 
-    pickupMap.on("click", async e=>{
+    /* pickup click */
+    pickupMap.on("click", async e => {
 
       pickupLat = e.latlng.lat;
       pickupLng = e.latlng.lng;
@@ -109,7 +151,8 @@ function initMaps(){
       pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
     });
 
-    dropMap.on("click", async e=>{
+    /* drop click */
+    dropMap.on("click", async e => {
 
       dropLat = e.latlng.lat;
       dropLng = e.latlng.lng;
@@ -124,13 +167,17 @@ function initMaps(){
   },300);
 }
 
-/* ---------------- SUGGESTIONS ---------------- */
+/* =====================================================
+   SUGGESTIONS
+===================================================== */
 function showSuggestions(list, box, input, type){
+
+  if(!box) return;
 
   box.innerHTML = "";
   box.style.display = "block";
 
-  list.forEach(item=>{
+  list.forEach(item => {
 
     const div = document.createElement("div");
     div.textContent = item.display_name;
@@ -147,11 +194,13 @@ function showSuggestions(list, box, input, type){
         pickupLat = lat;
         pickupLng = lng;
 
-        pickupMap.setView([lat,lng],15);
+        if(pickupMap){
+          pickupMap.setView([lat,lng],15);
 
-        if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+          if(pickupMarker) pickupMap.removeLayer(pickupMarker);
 
-        pickupMarker = L.marker([lat,lng]).addTo(pickupMap);
+          pickupMarker = L.marker([lat,lng]).addTo(pickupMap);
+        }
       }
 
       if(type === "drop"){
@@ -159,11 +208,13 @@ function showSuggestions(list, box, input, type){
         dropLat = lat;
         dropLng = lng;
 
-        dropMap.setView([lat,lng],15);
+        if(dropMap){
+          dropMap.setView([lat,lng],15);
 
-        if(dropMarker) dropMap.removeLayer(dropMarker);
+          if(dropMarker) dropMap.removeLayer(dropMarker);
 
-        dropMarker = L.marker([lat,lng]).addTo(dropMap);
+          dropMarker = L.marker([lat,lng]).addTo(dropMap);
+        }
       }
 
       box.innerHTML = "";
@@ -173,42 +224,67 @@ function showSuggestions(list, box, input, type){
   });
 }
 
-/* ---------------- INPUT EVENTS ---------------- */
-pickupInput.addEventListener("input", debounce(async ()=>{
+/* =====================================================
+   BIND INPUTS
+===================================================== */
+function bindInputs(){
 
-  const list = await searchAddress(pickupInput.value);
-  showSuggestions(list,pickupBox,pickupInput,"pickup");
+  if(pickupInput){
+    pickupInput.addEventListener("input", debounce(async ()=>{
 
-}));
+      const list = await searchAddress(pickupInput.value);
+      showSuggestions(list, pickupBox, pickupInput, "pickup");
 
-dropInput.addEventListener("input", debounce(async ()=>{
+    }));
+  }
 
-  const list = await searchAddress(dropInput.value);
-  showSuggestions(list,dropBox,dropInput,"drop");
+  if(dropInput){
+    dropInput.addEventListener("input", debounce(async ()=>{
 
-}));
+      const list = await searchAddress(dropInput.value);
+      showSuggestions(list, dropBox, dropInput, "drop");
 
-/* ---------------- GPS ---------------- */
-gpsBtn.onclick = ()=>{
+    }));
+  }
+}
 
-  navigator.geolocation.getCurrentPosition(async pos=>{
+/* =====================================================
+   GPS
+===================================================== */
+function bindGPS(){
 
-    pickupLat = pos.coords.latitude;
-    pickupLng = pos.coords.longitude;
+  if(!gpsBtn) return;
 
-    pickupMap.setView([pickupLat,pickupLng],15);
+  gpsBtn.onclick = ()=>{
 
-    if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+    navigator.geolocation.getCurrentPosition(async pos => {
 
-    pickupMarker = L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+      pickupLat = pos.coords.latitude;
+      pickupLng = pos.coords.longitude;
 
-    pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+      if(pickupMap){
 
-  },()=>alert("Enable location permission"));
-};
+        pickupMap.setView([pickupLat,pickupLng],15);
 
-/* ---------------- AUTH ---------------- */
-onAuthStateChanged(auth, user=>{
+        if(pickupMarker) pickupMap.removeLayer(pickupMarker);
+
+        pickupMarker = L.marker([pickupLat,pickupLng]).addTo(pickupMap);
+      }
+
+      pickupInput.value = await reverseGeocode(pickupLat,pickupLng);
+
+    }, ()=>{
+
+      alert("Enable location permission");
+
+    });
+  };
+}
+
+/* =====================================================
+   AUTH
+===================================================== */
+onAuthStateChanged(auth, user => {
 
   if(!user){
     location.href = "index.html";
@@ -221,26 +297,38 @@ onAuthStateChanged(auth, user=>{
   initMaps();
 });
 
-/* ---------------- LOAD DRIVERS ---------------- */
+/* =====================================================
+   LOAD DRIVERS
+===================================================== */
 function loadDrivers(){
 
   const select = document.getElementById("driverSelect");
+  if(!select) return;
 
   const q = query(
     collection(db,"friends"),
     where("owner","==",currentUser.uid)
   );
 
-  onSnapshot(q, snap=>{
+  onSnapshot(q, snap => {
 
     select.innerHTML = `<option value="">Select Driver</option>`;
 
-    snap.forEach(d=>{
+    snap.forEach(d => {
 
       const f = d.data();
 
-      const uid = f.friendUID || f.uid || "";
-      const name = f.nickName || f.name || f.email || "Driver";
+      const uid =
+        f.friendUID ||
+        f.uid ||
+        f.driverUID ||
+        "";
+
+      const name =
+        f.nickName ||
+        f.name ||
+        f.email ||
+        "Driver";
 
       if(!uid) return;
 
@@ -253,67 +341,96 @@ function loadDrivers(){
   });
 }
 
-/* ---------------- CREATE JOB ---------------- */
-createBtn.onclick = async ()=>{
+/* =====================================================
+   CREATE JOB
+===================================================== */
+function bindCreate(){
 
-  const pickup = pickupInput.value.trim();
-  const drop   = dropInput.value.trim();
-  const time   = document.getElementById("datetime").value;
-  const price  = document.getElementById("price").value.trim();
+  if(!createBtn) return;
 
-  const driverUID = document.getElementById("driverSelect").value;
+  createBtn.onclick = async ()=>{
 
-  if(!pickup || !drop || !time || !price || !driverUID){
-    alert("Fill all fields");
-    return;
-  }
+    if(!currentUser){
+      alert("Please login again");
+      return;
+    }
 
-  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
+    const pickup = pickupInput.value.trim();
+    const drop   = dropInput.value.trim();
 
-  const passengerName =
-    userSnap.exists()
-    ? userSnap.data().nickName || currentUser.email
-    : currentUser.email;
+    const time  = document.getElementById("datetime").value;
+    const price = document.getElementById("price").value.trim();
 
-  const jobId = generateJobId();
+    const driverUID =
+      document.getElementById("driverSelect").value;
 
-  await addDoc(collection(db,"fares"),{
+    if(!pickup || !drop || !time || !price || !driverUID){
+      alert("Fill all fields");
+      return;
+    }
 
-    jobId,
+    try{
 
-    pickup,
-    drop,
+      createBtn.disabled = true;
+      createBtn.textContent = "Sending...";
 
-    pickupSuburb: getSuburb(pickup),
-    dropSuburb: getSuburb(drop),
+      const userSnap = await getDoc(
+        doc(db,"users",currentUser.uid)
+      );
 
-    pickupLat,
-    pickupLng,
-    dropLat,
-    dropLng,
+      const passengerName =
+        userSnap.exists()
+        ? userSnap.data().nickName || currentUser.email
+        : currentUser.email;
 
-    time,
-    price,
+      const jobId = generateJobId();
 
-    passengerUID: currentUser.uid,
-    passengerName,
+      await addDoc(collection(db,"fares"),{
 
-    originalDriverUID: driverUID,
-    assignedTo: driverUID,
+        jobId,
 
-    currentDriverUID: null,
-    currentDriverName: null,
+        pickup,
+        drop,
 
-    broadcast: false,
-    autoDispatch: false,
+        pickupSuburb: getSuburb(pickup),
+        dropSuburb: getSuburb(drop),
 
-    status: "waiting response",
+        pickupLat,
+        pickupLng,
+        dropLat,
+        dropLng,
 
-    createdAt: serverTimestamp(),
-    soundPlayed: false
-  });
+        time,
+        price,
 
-  alert("Job sent");
+        passengerUID: currentUser.uid,
+        passengerName,
 
-  location.href = "dashboardPassenger.html";
-};
+        originalDriverUID: driverUID,
+        assignedTo: driverUID,
+
+        currentDriverUID: null,
+        currentDriverName: null,
+
+        broadcast: false,
+        autoDispatch: false,
+
+        status: "waiting response",
+
+        createdAt: serverTimestamp(),
+        soundPlayed: false
+      });
+
+      alert("Job sent");
+
+      location.href = "dashboardPassenger.html";
+
+    }catch(e){
+
+      alert("Failed to send job");
+
+      createBtn.disabled = false;
+      createBtn.textContent = "Send to Driver";
+    }
+  };
+}
