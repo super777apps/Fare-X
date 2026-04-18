@@ -411,12 +411,25 @@ if (f.broadcast === true && f.status === "waiting response") {
   }
 
   // CURRENT DRIVER
-  if (f.currentDriverUID === currentUser.uid && 
-    ["accepted","arrived","in progress"].includes(f.status)) {
+// CURRENT DRIVER
+if (
+  f.currentDriverUID === currentUser.uid &&
+  ["accepted", "arrived", "in progress"].includes(f.status)
+) {
+
+  let extraBtns = "";
+
+  // Passenger-created job
+  if (f.passengerUID) {
+    extraBtns = `
+      <button class="lux-btn" onclick="editJob('${id}')">Resend</button>
+    `;
+  }
 
   return `
     ${viewBtn}
     <div class="fare-actions">
+      ${extraBtns}
       <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
       <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
       <button class="lux-btn" onclick="markCompleted('${id}')">Complete</button>
