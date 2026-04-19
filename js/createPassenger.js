@@ -236,7 +236,9 @@ async function createJob() {
   const drop = dropInput.value.trim();
 
   const time = document.getElementById("datetime").value;
-  const price = document.getElementById("price").value.trim();
+const priceType = document.getElementById("priceType").value;
+const price = document.getElementById("price").value.trim();
+const notes = document.getElementById("notes").value.trim();
   const driverUID = document.getElementById("driverSelect").value;
 
   if (!pickup || !drop || !time || !price || !driverUID) {
@@ -269,7 +271,10 @@ async function createJob() {
     dropLng,
 
     time,
-    price,
+
+priceType,
+price,
+notes,
 
     passengerUID: currentUser.uid,
     passengerName,
