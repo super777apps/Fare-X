@@ -84,12 +84,11 @@ function bindButtons() {
     });
   }
 
-  if (helpBtn) {
-    helpBtn.addEventListener("click", () => {
-      location.href = "help.html";
-    });
-  }
-
+if (helpBtn) {
+  helpBtn.onclick = () => {
+    window.location.href = "help.html";
+  };
+}
   if (currentBtn) {
     currentBtn.addEventListener("click", () => {
       currentMode = "current";
