@@ -5,6 +5,7 @@ import {
   query,
   where,
   onSnapshot,
+  orderBy,
   getDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -14,14 +15,17 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* ---------------- STATE ---------------- */
+/* --------------------------------------------------
+   STATE
+-------------------------------------------------- */
 let currentUser = null;
-let currentMode = "current";
+let currentMode = "current"; // current / past
+let unsubscribe = null;
 
-/* =========================================================
+/* --------------------------------------------------
    AUTH
-========================================================= */
-onAuthStateChanged(auth, async user => {
+-------------------------------------------------- */
+onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
     location.href = "index.html";
@@ -42,27 +46,26 @@ onAuthStateChanged(auth, async user => {
   document.getElementById("userName").textContent =
     u.nickName || user.email;
 
-  document.getElementById("userRole").textContent =
-    "Passenger";
+  document.getElementById("userRole").textContent = "Passenger";
 
   bindButtons();
-  listenMyJobs();
+  updateHeading();
+  listenJobs();
 });
 
-/* =========================================================
+/* --------------------------------------------------
    BUTTONS
-========================================================= */
+-------------------------------------------------- */
 function bindButtons() {
 
-  const createBtn  = document.getElementById("createFareBtn");
+  const createBtn = document.getElementById("createFareBtn");
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn = document.getElementById("pastJobsBtn");
+  const helpBtn = document.getElementById("helpBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
   const driversBtn = document.getElementById("driversBtn");
   const profileBtn = document.getElementById("profileBtn");
-  const logoutBtn  = document.getElementById("logoutBtn");
-
-  const currentBtn = document.getElementById("currentJobsBtn");
-  const pastBtn    = document.getElementById("pastJobsBtn");
-
-  /* ---------- NAV ---------- */
 
   if (createBtn) {
     createBtn.onclick = () => {
@@ -70,15 +73,37 @@ function bindButtons() {
     };
   }
 
+  if (currentBtn) {
+    currentBtn.onclick = () => {
+      currentMode = "current";
+      updateHeading();
+      listenJobs();
+    };
+  }
+
+  if (pastBtn) {
+    pastBtn.onclick = () => {
+      currentMode = "past";
+      updateHeading();
+      listenJobs();
+    };
+  }
+
   if (driversBtn) {
     driversBtn.onclick = () => {
-      alert("Drivers page not linked yet");
+      location.href = "passengerDriver.html";
     };
   }
 
   if (profileBtn) {
     profileBtn.onclick = () => {
-      alert("Profile page not linked yet");
+      location.href = "passengerProfile.html";
+    };
+  }
+
+  if (helpBtn) {
+    helpBtn.onclick = () => {
+      location.href = "helpPassenger.html";
     };
   }
 
@@ -88,41 +113,43 @@ function bindButtons() {
       location.href = "index.html";
     };
   }
+}
+/* --------------------------------------------------
+   HEADING
+-------------------------------------------------- */
+function updateHeading(){
 
-  /* ---------- JOB FILTER ---------- */
+  const title = document.querySelector(".section-title");
 
-  if (currentBtn) {
-    currentBtn.onclick = () => {
-      currentMode = "current";
-      listenMyJobs();
-    };
-  }
+  if(!title) return;
 
-  if (pastBtn) {
-    pastBtn.onclick = () => {
-      currentMode = "past";
-      listenMyJobs();
-    };
+  if(currentMode === "current"){
+    title.textContent = "Current Jobs";
+  }else{
+    title.textContent = "Past Jobs";
   }
 }
 
-/* =========================================================
-   JOB LIST
-========================================================= */
-function listenMyJobs() {
+/* --------------------------------------------------
+   LISTEN JOBS
+-------------------------------------------------- */
+function listenJobs(){
 
   const box = document.getElementById("jobsList");
 
   const q = query(
     collection(db, "fares"),
-    where("passengerUID", "==", currentUser.uid)
+    where("passengerUID", "==", currentUser.uid),
+    orderBy("createdAt", "desc")
   );
 
-  onSnapshot(q, snap => {
+  if(unsubscribe) unsubscribe();
+
+  unsubscribe = onSnapshot(q, snap => {
 
     box.innerHTML = "";
 
-    if (snap.empty) {
+    if(snap.empty){
       box.innerHTML = `<div class="gold">No jobs found</div>`;
       return;
     }
@@ -131,17 +158,64 @@ function listenMyJobs() {
 
       const f = d.data();
 
-      const isPast =
-        f.status === "completed" ||
-        f.status === "deleted";
+      /* ---------------- CURRENT / PAST FILTER ---------------- */
 
-      /* ---------- FILTER ---------- */
+      const currentStatuses = [
+        "waiting response",
+        "accepted",
+        "assigned",
+        "returned",
+        "arrived",
+        "in progress"
+      ];
 
-      if (currentMode === "current" && isPast) return;
+      const pastStatuses = [
+        "completed",
+        "deleted",
+        "cancelled"
+      ];
 
-      if (currentMode === "past" && !isPast) return;
+      if(currentMode === "current"){
+        if(!currentStatuses.includes(f.status)) return;
+      }
 
-      /* ---------- CARD ---------- */
+      if(currentMode === "past"){
+        if(!pastStatuses.includes(f.status)) return;
+      }
+
+      /* ---------------- STATUS DISPLAY ---------------- */
+
+      let displayStatus = f.status;
+
+      if(f.status === "waiting response"){
+        displayStatus = "Waiting for driver";
+      }
+
+      if(f.status === "accepted"){
+        displayStatus =
+          "Accepted by " +
+          (f.currentDriverName || "Driver");
+      }
+
+      if(f.status === "arrived"){
+        displayStatus =
+          (f.currentDriverName || "Driver") +
+          " arrived";
+      }
+
+      if(f.status === "in progress"){
+        displayStatus = "Trip in progress";
+      }
+
+      if(f.status === "completed"){
+        displayStatus = "Completed";
+      }
+
+      if(f.status === "deleted"){
+        displayStatus = "Cancelled";
+      }
+
+      /* ---------------- CARD ---------------- */
 
       const div = document.createElement("div");
       div.className = "fare-card";
@@ -154,27 +228,41 @@ function listenMyJobs() {
 
         <div class="fare-row">
           <span>Pickup:</span>
-          <b>${f.pickupSuburb || f.pickup}</b>
+          <b>${f.pickupSuburb || f.pickup || "-"}</b>
         </div>
 
         <div class="fare-row">
           <span>Drop:</span>
-          <b>${f.dropSuburb || f.drop}</b>
+          <b>${f.dropSuburb || f.drop || "-"}</b>
         </div>
 
         <div class="fare-row">
           <span>Status:</span>
-          <b>${f.status}</b>
+          <b class="status-text">${displayStatus}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Price:</span>
+          <b>${f.price || "-"}</b>
         </div>
 
         <div class="fare-row">
           <span>Driver:</span>
-          <b>${f.currentDriverName || "-"}</b>
+          <b>${f.originalDriverName || f.currentDriverName || "-"}</b>
+        </div>
+
+        <div class="fare-row">
+          <span>Time:</span>
+          <b>${f.time || "-"}</b>
         </div>
       `;
 
       box.appendChild(div);
     });
+
+    if(box.innerHTML.trim() === ""){
+      box.innerHTML = `<div class="gold">No jobs found</div>`;
+    }
 
   });
 }
