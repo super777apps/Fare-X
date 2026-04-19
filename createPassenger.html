@@ -61,8 +61,17 @@ Use My Current Location
 
 <input id="datetime" type="datetime-local">
 
-<input id="price" placeholder="Fare Price">
+<<!-- PRICE TYPE -->
+<select id="priceType">
+  <option value="Fixed Price">Fixed Price</option>
+  <option value="Meter + Extra">Meter + Extra</option>
+</select>
 
+<!-- PRICE -->
+<input id="price" placeholder="Enter Price / Extra">
+
+<!-- NOTES -->
+<textarea id="notes" placeholder="Notes (bags, baby seat, waiting, gate no, etc)"></textarea>
 <select id="driverSelect">
 <option value="">Select Driver</option>
 </select>
