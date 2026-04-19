@@ -448,3 +448,9 @@ html, body {
 .hidden {
   display: none;
 }
+
+.suggestions{
+  display:block;
+  position:relative;
+  z-index:99999;
+}
