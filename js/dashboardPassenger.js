@@ -58,63 +58,61 @@ onAuthStateChanged(auth, async (user) => {
 -------------------------------------------------- */
 function bindButtons() {
 
-  const createBtn = document.getElementById("createFareBtn");
-  const currentBtn = document.getElementById("currentJobsBtn");
-  const pastBtn = document.getElementById("pastJobsBtn");
-  const helpBtn = document.getElementById("helpBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  const driversBtn = document.getElementById("driversBtn");
-  const profileBtn = document.getElementById("profileBtn");
+  const createBtn   = document.getElementById("createFareBtn");
+  const currentBtn  = document.getElementById("currentJobsBtn");
+  const pastBtn     = document.getElementById("pastJobsBtn");
+  const helpBtn     = document.getElementById("helpBtn");
+  const logoutBtn   = document.getElementById("logoutBtn");
+  const driversBtn  = document.getElementById("driversBtn");
+  const profileBtn  = document.getElementById("profileBtn");
 
   if (createBtn) {
-    createBtn.onclick = () => {
+    createBtn.addEventListener("click", () => {
       location.href = "createPassenger.html";
-    };
-  }
-
-  if (currentBtn) {
-    currentBtn.onclick = () => {
-      currentMode = "current";
-      updateHeading();
-      listenJobs();
-    };
-  }
-
-  if (pastBtn) {
-    pastBtn.onclick = () => {
-      currentMode = "past";
-      updateHeading();
-      listenJobs();
-    };
+    });
   }
 
   if (driversBtn) {
-    driversBtn.onclick = () => {
+    driversBtn.addEventListener("click", () => {
       location.href = "passengerDriver.html";
-    };
+    });
   }
 
   if (profileBtn) {
-    profileBtn.onclick = () => {
+    profileBtn.addEventListener("click", () => {
       location.href = "passengerProfile.html";
-    };
+    });
   }
 
   if (helpBtn) {
-    helpBtn.onclick = () => {
-      location.href = "helpPassenger.html";
-    };
+    helpBtn.addEventListener("click", () => {
+      location.href = "help.html";
+    });
+  }
+
+  if (currentBtn) {
+    currentBtn.addEventListener("click", () => {
+      currentMode = "current";
+      updateHeading();
+      listenJobs();
+    });
+  }
+
+  if (pastBtn) {
+    pastBtn.addEventListener("click", () => {
+      currentMode = "past";
+      updateHeading();
+      listenJobs();
+    });
   }
 
   if (logoutBtn) {
-    logoutBtn.onclick = async () => {
+    logoutBtn.addEventListener("click", async () => {
       await signOut(auth);
       location.href = "index.html";
-    };
+    });
   }
-}
-/* --------------------------------------------------
+}/* --------------------------------------------------
    HEADING
 -------------------------------------------------- */
 function updateHeading(){
