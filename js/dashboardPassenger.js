@@ -34,25 +34,27 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
 
-  const snap = await getDoc(doc(db, "users", user.uid));
-
-  if (!snap.exists()) {
-    location.href = "index.html";
-    return;
-  }
-
-  const u = snap.data();
-
-  document.getElementById("userName").textContent =
-    u.nickName || user.email;
-
+  /* SHOW INSTANTLY */
+  document.getElementById("userName").textContent = user.email;
   document.getElementById("userRole").textContent = "Passenger";
 
   bindButtons();
   updateHeading();
   listenJobs();
-});
 
+  /* LOAD PROFILE IN BACKGROUND */
+  try{
+    const snap = await getDoc(doc(db, "users", user.uid));
+
+    if (snap.exists()) {
+      const u = snap.data();
+
+      if (u.nickName) {
+        document.getElementById("userName").textContent = u.nickName;
+      }
+    }
+  }catch(e){}
+});
 /* --------------------------------------------------
    BUTTONS
 -------------------------------------------------- */
