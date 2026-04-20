@@ -140,10 +140,9 @@ function listenJobs() {
   const box = document.getElementById("jobsList");
 
   const q = query(
-    collection(db, "fares"),
-    where("passengerUID", "==", currentUser.uid),
-    orderBy("createdAt", "desc")
-  );
+  collection(db, "fares"),
+  where("passengerUID", "==", currentUser.uid)
+);
 
   if (unsubscribe) unsubscribe();
 
