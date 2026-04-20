@@ -232,19 +232,13 @@ function loadDrivers() {
 /* ---------------- CREATE JOB ---------------- */
 async function createJob() {
 
-  console.log("🚀 Create button clicked");
+  alert("Create button clicked");
 
   const pickup = pickupInput.value.trim();
-  const drop   = dropInput.value.trim();
-
-  const time   = document.getElementById("datetime").value;
-  const priceType = document.getElementById("priceType").value;
-  const price  = document.getElementById("price").value.trim();
-  const notes  = document.getElementById("notes").value.trim();
-
+  const drop = dropInput.value.trim();
+  const time = document.getElementById("datetime").value;
+  const price = document.getElementById("price").value.trim();
   const driverUID = document.getElementById("driverSelect").value;
-
-  console.log({pickup, drop, time, price, driverUID});
 
   if (!pickup || !drop || !time || !price || !driverUID) {
     alert("Fill all fields");
@@ -253,6 +247,8 @@ async function createJob() {
 
   try {
 
+    alert("Preparing Firebase save");
+
     const userSnap = await getDoc(doc(db, "users", currentUser.uid));
 
     const passengerName =
@@ -260,58 +256,24 @@ async function createJob() {
         ? userSnap.data().nickName || currentUser.email
         : currentUser.email;
 
-    const jobId = Math.random().toString(36).substring(2,10).toUpperCase();
-
-    console.log("🔥 Sending to Firebase...");
-
     await addDoc(collection(db, "fares"), {
-
-      jobId,
       pickup,
       drop,
-
-      pickupSuburb: pickup.split(",")[0],
-      dropSuburb: drop.split(",")[0],
-
-      pickupLat,
-      pickupLng,
-      dropLat,
-      dropLng,
-
       time,
       price,
-      priceType,
-      notes,
-
       passengerUID: currentUser.uid,
       passengerName,
-
-      originalDriverUID: driverUID,
       assignedTo: driverUID,
-
-      currentDriverUID: null,
-      currentDriverName: null,
-
-      broadcast: false,
-      autoDispatch: false,
-
-      jobSource: "passenger_app",
-
       status: "waiting response",
-
-      createdAt: serverTimestamp(),
-      soundPlayed: false
+      createdAt: serverTimestamp()
     });
 
-    console.log("✅ Job successfully created");
-
-    alert("Job sent to driver");
+    alert("SUCCESS - Job saved");
 
     location.href = "dashboardPassenger.html";
 
   } catch (e) {
-    console.error("❌ ERROR:", e);
-    alert("Error creating job: " + e.message);
+    alert("Firebase Error: " + e.message);
   }
 }
 /* ---------------- AUTH ---------------- */
