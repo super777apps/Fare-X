@@ -232,75 +232,88 @@ function loadDrivers() {
 /* ---------------- CREATE JOB ---------------- */
 async function createJob() {
 
-  const pickup = pickupInput.value.trim();
-  const drop = dropInput.value.trim();
+  console.log("🚀 Create button clicked");
 
-  const time = document.getElementById("datetime").value;
-const priceType = document.getElementById("priceType").value;
-const price = document.getElementById("price").value.trim();
-const notes = document.getElementById("notes").value.trim();
+  const pickup = pickupInput.value.trim();
+  const drop   = dropInput.value.trim();
+
+  const time   = document.getElementById("datetime").value;
+  const priceType = document.getElementById("priceType").value;
+  const price  = document.getElementById("price").value.trim();
+  const notes  = document.getElementById("notes").value.trim();
+
   const driverUID = document.getElementById("driverSelect").value;
+
+  console.log({pickup, drop, time, price, driverUID});
 
   if (!pickup || !drop || !time || !price || !driverUID) {
     alert("Fill all fields");
     return;
   }
 
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  try {
 
-  const passengerName =
-    userSnap.exists()
-      ? userSnap.data().nickName || currentUser.email
-      : currentUser.email;
+    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
 
-  const jobId = generateJobId();
+    const passengerName =
+      userSnap.exists()
+        ? userSnap.data().nickName || currentUser.email
+        : currentUser.email;
 
-  await addDoc(collection(db, "fares"), {
+    const jobId = Math.random().toString(36).substring(2,10).toUpperCase();
 
-    jobId,
+    console.log("🔥 Sending to Firebase...");
 
-    pickup,
-    drop,
+    await addDoc(collection(db, "fares"), {
 
-    pickupSuburb: getSuburb(pickup),
-    dropSuburb: getSuburb(drop),
+      jobId,
+      pickup,
+      drop,
 
-    pickupLat,
-    pickupLng,
-    dropLat,
-    dropLng,
+      pickupSuburb: pickup.split(",")[0],
+      dropSuburb: drop.split(",")[0],
 
-    time,
+      pickupLat,
+      pickupLng,
+      dropLat,
+      dropLng,
 
-priceType,
-price,
-notes,
+      time,
+      price,
+      priceType,
+      notes,
 
-    passengerUID: currentUser.uid,
-    passengerName,
+      passengerUID: currentUser.uid,
+      passengerName,
 
-    originalDriverUID: driverUID,
-    assignedTo: driverUID,
+      originalDriverUID: driverUID,
+      assignedTo: driverUID,
 
-    currentDriverUID: null,
-    currentDriverName: null,
+      currentDriverUID: null,
+      currentDriverName: null,
 
-    broadcast: false,
-    autoDispatch: false,
+      broadcast: false,
+      autoDispatch: false,
 
-    jobSource: "passenger_app",
+      jobSource: "passenger_app",
 
-    status: "waiting response",
+      status: "waiting response",
 
-    createdAt: serverTimestamp(),
-    soundPlayed: false
-  });
+      createdAt: serverTimestamp(),
+      soundPlayed: false
+    });
 
-  alert("Job sent to driver");
+    console.log("✅ Job successfully created");
 
-  location.href = "dashboardPassenger.html";
+    alert("Job sent to driver");
+
+    location.href = "dashboardPassenger.html";
+
+  } catch (e) {
+    console.error("❌ ERROR:", e);
+    alert("Error creating job: " + e.message);
+  }
 }
-
 /* ---------------- AUTH ---------------- */
 onAuthStateChanged(auth, (user) => {
 
