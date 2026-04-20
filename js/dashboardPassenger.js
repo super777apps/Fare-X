@@ -43,7 +43,7 @@ onAuthStateChanged(auth, async (user) => {
   listenJobs();
 
   /* LOAD PROFILE IN BACKGROUND */
-  try{
+  try {
     const snap = await getDoc(doc(db, "users", user.uid));
 
     if (snap.exists()) {
@@ -53,86 +53,89 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("userName").textContent = u.nickName;
       }
     }
-  }catch(e){}
+  } catch (e) {}
 });
+
 /* --------------------------------------------------
    BUTTONS
 -------------------------------------------------- */
 function bindButtons() {
 
-  const createBtn   = document.getElementById("createFareBtn");
-  const currentBtn  = document.getElementById("currentJobsBtn");
-  const pastBtn     = document.getElementById("pastJobsBtn");
-  const helpBtn     = document.getElementById("helpBtn");
-  const logoutBtn   = document.getElementById("logoutBtn");
-  const driversBtn  = document.getElementById("driversBtn");
-  const profileBtn  = document.getElementById("profileBtn");
+  const createBtn  = document.getElementById("createFareBtn");
+  const currentBtn = document.getElementById("currentJobsBtn");
+  const pastBtn    = document.getElementById("pastJobsBtn");
+  const helpBtn    = document.getElementById("helpBtn");
+  const logoutBtn  = document.getElementById("logoutBtn");
+  const driversBtn = document.getElementById("driversBtn");
+  const profileBtn = document.getElementById("profileBtn");
 
   if (createBtn) {
-    createBtn.addEventListener("click", () => {
+    createBtn.onclick = () => {
       location.href = "createPassenger.html";
-    });
+    };
   }
 
   if (driversBtn) {
-    driversBtn.addEventListener("click", () => {
+    driversBtn.onclick = () => {
       location.href = "passengerDriver.html";
-    });
+    };
   }
 
   if (profileBtn) {
-    profileBtn.addEventListener("click", () => {
+    profileBtn.onclick = () => {
       location.href = "passengerProfile.html";
-    });
+    };
   }
 
-if (helpBtn) {
-  helpBtn.onclick = () => {
-    window.location.href = "help.html";
-  };
-}
+  if (helpBtn) {
+    helpBtn.onclick = () => {
+      location.href = "help.html";
+    };
+  }
+
   if (currentBtn) {
-    currentBtn.addEventListener("click", () => {
+    currentBtn.onclick = () => {
       currentMode = "current";
       updateHeading();
       listenJobs();
-    });
+    };
   }
 
   if (pastBtn) {
-    pastBtn.addEventListener("click", () => {
+    pastBtn.onclick = () => {
       currentMode = "past";
       updateHeading();
       listenJobs();
-    });
+    };
   }
 
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
+    logoutBtn.onclick = async () => {
       await signOut(auth);
       location.href = "index.html";
-    });
+    };
   }
-}/* --------------------------------------------------
+}
+
+/* --------------------------------------------------
    HEADING
 -------------------------------------------------- */
-function updateHeading(){
+function updateHeading() {
 
   const title = document.querySelector(".section-title");
 
-  if(!title) return;
+  if (!title) return;
 
-  if(currentMode === "current"){
-    title.textContent = "Current Jobs";
-  }else{
-    title.textContent = "Past Jobs";
-  }
+  title.textContent =
+    currentMode === "current"
+      ? "Current Jobs"
+      : "Past Jobs";
 }
 
 /* --------------------------------------------------
    LISTEN JOBS
 -------------------------------------------------- */
-function listenJobs(){
+function listenJobs() {
 
   const box = document.getElementById("jobsList");
 
@@ -142,13 +145,13 @@ function listenJobs(){
     orderBy("createdAt", "desc")
   );
 
-  if(unsubscribe) unsubscribe();
+  if (unsubscribe) unsubscribe();
 
   unsubscribe = onSnapshot(q, snap => {
 
     box.innerHTML = "";
 
-    if(snap.empty){
+    if (snap.empty) {
       box.innerHTML = `<div class="gold">No jobs found</div>`;
       return;
     }
@@ -157,60 +160,83 @@ function listenJobs(){
 
       const f = d.data();
 
+      const status = (f.status || "requested").toLowerCase();
+
       /* ---------------- CURRENT / PAST FILTER ---------------- */
 
       const currentStatuses = [
+        "requested",
         "waiting response",
+        "pending",
         "accepted",
         "assigned",
         "returned",
         "arrived",
-        "in progress"
+        "in progress",
+        "started"
       ];
 
       const pastStatuses = [
         "completed",
+        "complete",
         "deleted",
-        "cancelled"
+        "cancelled",
+        "cancel"
       ];
 
-      if(currentMode === "current"){
-        if(!currentStatuses.includes(f.status)) return;
+      if (currentMode === "current") {
+        if (pastStatuses.includes(status)) return;
       }
 
-      if(currentMode === "past"){
-        if(!pastStatuses.includes(f.status)) return;
+      if (currentMode === "past") {
+        if (!pastStatuses.includes(status)) return;
       }
 
       /* ---------------- STATUS DISPLAY ---------------- */
 
-      let displayStatus = f.status;
+      let displayStatus = status;
 
-      if(f.status === "waiting response"){
+      if (status === "requested") {
+        displayStatus = "Requested";
+      }
+
+      if (status === "waiting response") {
         displayStatus = "Waiting for driver";
       }
 
-      if(f.status === "accepted"){
+      if (status === "accepted") {
         displayStatus =
           "Accepted by " +
           (f.currentDriverName || "Driver");
       }
 
-      if(f.status === "arrived"){
+      if (status === "assigned") {
+        displayStatus = "Assigned";
+      }
+
+      if (status === "returned") {
+        displayStatus = "Returned";
+      }
+
+      if (status === "arrived") {
         displayStatus =
           (f.currentDriverName || "Driver") +
           " arrived";
       }
 
-      if(f.status === "in progress"){
+      if (status === "in progress" || status === "started") {
         displayStatus = "Trip in progress";
       }
 
-      if(f.status === "completed"){
+      if (status === "completed" || status === "complete") {
         displayStatus = "Completed";
       }
 
-      if(f.status === "deleted"){
+      if (
+        status === "deleted" ||
+        status === "cancelled" ||
+        status === "cancel"
+      ) {
         displayStatus = "Cancelled";
       }
 
@@ -242,7 +268,7 @@ function listenJobs(){
 
         <div class="fare-row">
           <span>Price:</span>
-          <b>${f.price || "-"}</b>
+          <b>${f.priceType || ""} ${f.price || "-"}</b>
         </div>
 
         <div class="fare-row">
@@ -254,12 +280,17 @@ function listenJobs(){
           <span>Time:</span>
           <b>${f.time || "-"}</b>
         </div>
+
+        <div class="fare-row">
+          <span>Notes:</span>
+          <b>${f.notes || "-"}</b>
+        </div>
       `;
 
       box.appendChild(div);
     });
 
-    if(box.innerHTML.trim() === ""){
+    if (box.innerHTML.trim() === "") {
       box.innerHTML = `<div class="gold">No jobs found</div>`;
     }
 
