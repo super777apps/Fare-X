@@ -149,7 +149,7 @@ window.cancelPassengerJob = async function(id) {
 
     /* play sound if file exists */
     try {
-      new Audio("decline.mp3").play();
+      new Audio("assets/decline.mp3").play();
     } catch(e){}
 
     alert("Job cancelled successfully");
