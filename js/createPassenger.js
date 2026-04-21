@@ -43,6 +43,18 @@ function debounce(fn, delay = 400) {
   };
 }
 
+/* PROFESSIONAL JOB ID */
+function generateJobId() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let id = "FX-";
+
+  for (let i = 0; i < 6; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return id;
+}
+
 /* ---------------- SEARCH ADDRESS ---------------- */
 async function searchAddress(q) {
   if (!q || q.trim().length < 3) return [];
@@ -215,7 +227,10 @@ async function createJob() {
         ? userSnap.data().nickName || currentUser.email
         : currentUser.email;
 
+    const jobId = generateJobId();
+
     await addDoc(collection(db, "fares"), {
+      jobId,
       pickup,
       drop,
       time,
