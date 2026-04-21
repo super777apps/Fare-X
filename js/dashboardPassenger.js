@@ -6,7 +6,8 @@ import {
   where,
   onSnapshot,
   getDoc,
-  doc
+  doc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -132,6 +133,33 @@ function updateHeading() {
 }
 
 /* --------------------------------------------------
+   CANCEL JOB
+-------------------------------------------------- */
+window.cancelPassengerJob = async function(id) {
+
+  const ok = confirm("Cancel this job?");
+
+  if (!ok) return;
+
+  try {
+
+    await updateDoc(doc(db, "fares", id), {
+      status: "cancelled by passenger"
+    });
+
+    /* play sound if file exists */
+    try {
+      new Audio("decline.mp3").play();
+    } catch(e){}
+
+    alert("Job cancelled successfully");
+
+  } catch (e) {
+    alert("Error cancelling job");
+  }
+};
+
+/* --------------------------------------------------
    LISTEN JOBS
 -------------------------------------------------- */
 function listenJobs() {
@@ -139,9 +167,9 @@ function listenJobs() {
   const box = document.getElementById("jobsList");
 
   const q = query(
-  collection(db, "fares"),
-  where("passengerUID", "==", currentUser.uid)
-);
+    collection(db, "fares"),
+    where("passengerUID", "==", currentUser.uid)
+  );
 
   if (unsubscribe) unsubscribe();
 
@@ -156,30 +184,20 @@ function listenJobs() {
 
     snap.forEach(d => {
 
+      const id = d.id;
       const f = d.data();
 
       const status = (f.status || "requested").toLowerCase();
 
       /* ---------------- CURRENT / PAST FILTER ---------------- */
 
-      const currentStatuses = [
-        "requested",
-        "waiting response",
-        "pending",
-        "accepted",
-        "assigned",
-        "returned",
-        "arrived",
-        "in progress",
-        "started"
-      ];
-
       const pastStatuses = [
         "completed",
         "complete",
         "deleted",
         "cancelled",
-        "cancel"
+        "cancel",
+        "cancelled by passenger"
       ];
 
       if (currentMode === "current") {
@@ -238,6 +256,25 @@ function listenJobs() {
         displayStatus = "Cancelled";
       }
 
+      if (status === "cancelled by passenger") {
+        displayStatus = "Cancelled by Passenger";
+      }
+
+      /* ---------------- CANCEL BUTTON ---------------- */
+
+      let cancelBtn = "";
+
+      if (currentMode === "current") {
+        cancelBtn = `
+          <div style="margin-top:12px;">
+            <button class="lux-btn danger full"
+              onclick="cancelPassengerJob('${id}')">
+              Cancel Job
+            </button>
+          </div>
+        `;
+      }
+
       /* ---------------- CARD ---------------- */
 
       const div = document.createElement("div");
@@ -283,6 +320,8 @@ function listenJobs() {
           <span>Notes:</span>
           <b>${f.notes || "-"}</b>
         </div>
+
+        ${cancelBtn}
       `;
 
       box.appendChild(div);
