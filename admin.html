@@ -22,7 +22,7 @@
 }
 </style>
 
-<link rel="manifest" href="manifest.json">
+<<link rel="manifest" href="/Fare-X/manifest.json">
 
 <meta name="theme-color" content="#000000">
 
@@ -75,5 +75,15 @@
       .catch(err => console.log("SW failed", err));
   }
 </script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(() => console.log("SW registered"))
+      .catch(err => console.log("SW failed", err));
+  }
+</script>
+
+
 </body>
 </html>
