@@ -118,13 +118,10 @@ Send Until Cancelled / Accepted
 <script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/create.js?v=FINAL_FIX_1"></script>
 
-
 <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/service-worker.js")
-      .then(() => console.log("SW registered"))
-      .catch(err => console.log("SW failed", err));
-  }
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/Fare-X/service-worker.js");
+}
 </script>
 </body>
 </html>
