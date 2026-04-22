@@ -749,6 +749,9 @@ function showPopup(text) {
   const txt = document.getElementById("popupText");
 
   if (!popup || !txt) return;
+  currentMode = "current";
+updateHeading();
+listenJobs();
 
   txt.textContent = text;
 
