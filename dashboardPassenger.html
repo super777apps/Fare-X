@@ -9,6 +9,15 @@
 
   <!-- ✅ REQUIRED FOR MAP -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  
+  <link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#000000">
+
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
 </head>
 
 <body>
@@ -54,5 +63,15 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="js/firebase.js"></script>
 <script type="module" src="js/dashboardPassenger.js"></script>
+
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(() => console.log("SW registered"))
+      .catch(err => console.log("SW failed", err));
+  }
+</script>
+
 </body>
 </html>

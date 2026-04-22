@@ -36,6 +36,15 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   background:#222;
 }
 </style>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#000000">
+
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
 </head>
 
 <body>
@@ -85,6 +94,15 @@ Send to Driver
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module" src="js/createPassenger.js?v=2"></script>
+
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(() => console.log("SW registered"))
+      .catch(err => console.log("SW failed", err));
+  }
+</script>
 
 </body>
 </html>
