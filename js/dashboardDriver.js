@@ -488,21 +488,62 @@ window.acceptJob = async (id) => {
 
 window.rejectJob = async (id) => {
 
-  const snap = await getDoc(doc(db,"fares",id));
+  const jobRef = doc(db, "fares", id);
+  const snap = await getDoc(jobRef);
+
+  if (!snap.exists()) return;
+
   const f = snap.data();
 
   const declinedList = f.declinedBy || [];
 
-  await updateDoc(doc(db,"fares",id),{
-    status:"returned",
-    currentDriverUID: f.originalDriverUID,
-    currentDriverName: f.originalDriverName,
-    assignedTo:null,
-    soundPlayed:false,
-    declinedBy: [...declinedList, currentUser.uid] // ✅ KEY FIX
+  const isPassengerJob = !!f.passengerUID;
+  const amOriginalDriver =
+    f.originalDriverUID === currentUser.uid;
+
+  // ---------------------------------
+  // CASE 1:
+  // Passenger job and A rejects
+  // Return to passenger
+  // ---------------------------------
+  if (isPassengerJob && amOriginalDriver) {
+
+    await updateDoc(jobRef, {
+      status: "waiting response",
+
+      currentDriverUID: null,
+      currentDriverName: null,
+
+      assignedTo: null,
+      soundPlayed: false,
+
+      declinedBy: [...declinedList, currentUser.uid]
+    });
+
+    jobSound.pause();
+    jobSound.currentTime = 0;
+    declineSound.play();
+    return;
+  }
+
+  // ---------------------------------
+  // CASE 2:
+  // B / C rejects -> return to A
+  // ---------------------------------
+  await updateDoc(jobRef, {
+    status: "returned",
+
+    currentDriverUID: f.originalDriverUID || null,
+    currentDriverName: f.originalDriverName || "Driver",
+
+    assignedTo: null,
+    soundPlayed: false,
+
+    declinedBy: [...declinedList, currentUser.uid]
   });
 
   jobSound.pause();
+  jobSound.currentTime = 0;
   declineSound.play();
 };
 
