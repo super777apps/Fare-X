@@ -306,7 +306,7 @@ function listenJobs() {
           <b>${f.priceType || ""} ${f.price || "-"}</b>
         </div>
 
-        <<div class="fare-row">
+        <div class="fare-row">
   <span>Original Driver:</span>
   <b>${f.originalDriverName || "-"}</b>
 </div>
