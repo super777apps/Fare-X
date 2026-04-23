@@ -63,5 +63,77 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 
+<!-- INSTALL POPUP -->
+<div id="installBox" style="
+position:fixed;
+left:15px;
+right:15px;
+bottom:20px;
+background:#111;
+color:#FFD700;
+padding:18px;
+border-radius:14px;
+box-shadow:0 0 15px rgba(0,0,0,.5);
+z-index:9999;
+display:none;
+text-align:center;
+font-family:Arial;
+">
+
+<div style="font-size:22px;font-weight:bold;margin-bottom:8px;">
+FareX App
+</div>
+
+<div style="font-size:14px;margin-bottom:14px;color:white;">
+Install FareX for faster access like a real app
+</div>
+
+<button onclick="installFareX()" style="
+background:#FFD700;
+color:#000;
+border:none;
+padding:12px 18px;
+border-radius:10px;
+font-weight:bold;
+font-size:16px;
+width:100%;
+margin-bottom:10px;
+">
+Install Now
+</button>
+
+<button onclick="document.getElementById('installBox').style.display='none'" style="
+background:none;
+border:none;
+color:#aaa;
+font-size:14px;
+">
+Later
+</button>
+
+</div>
+
+<script>
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  document.getElementById("installBox").style.display = "block";
+});
+
+function installFareX() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById("installBox").style.display = "none";
+    });
+  }
+}
+</script>
+
 </body>
 </html>
