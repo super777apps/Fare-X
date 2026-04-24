@@ -18,8 +18,6 @@ import {
 /* --------------------------------------------------
    STATE
 -------------------------------------------------- */
-
-let activeJobId = null;
 let currentUser = null;
 let currentMode = "current"; // current / past
 let unsubscribe = null;
@@ -134,45 +132,6 @@ function updateHeading() {
       ? "Current Jobs"
       : "Past Jobs";
 }
-
-function renderContactBar(id, f, displayStatus) {
-
-  const s = (displayStatus || "").toLowerCase();
-
-  const allow =
-    s.includes("accepted") ||
-    s.includes("arrived") ||
-    s.includes("trip started") ||
-    s.includes("in progress");
-
-  if (!allow) return "";
-
-  const phone = f.passengerPhone || f.originalDriverPhone || "";
-
-  return `
-    <div class="mini-actions">
-
-      <button class="mini-btn" title="Chat"
-        onclick='openChat("${id}", ${JSON.stringify(f)})'>
-        💬
-      </button>
-
-      <button class="mini-btn" title="Call"
-        onclick="callPhone('${phone}')">
-        📞
-      </button>
-
-      <button class="mini-btn" title="WhatsApp"
-        onclick="callWhatsApp('${phone}')">
-        🟢
-      </button>
-
-    </div>
-  `;
-}
-
-
-
 
 /* --------------------------------------------------
    CANCEL JOB
@@ -373,7 +332,6 @@ lastJobStates[id] = {
       const div = document.createElement("div");
       div.className = "fare-card";
 
-
       div.innerHTML = `
         <div class="fare-row">
           <span>Job ID:</span>
@@ -390,14 +348,6 @@ lastJobStates[id] = {
           <b>${f.dropSuburb || f.drop || "-"}</b>
         </div>
 
-
-
-  <div class="fare-row">
-    <span>Status:</span>
-    <b>${displayStatus}</b>
-  </div>:
-
-
         <div class="fare-row">
           <span>Status:</span>
           <b class="status-text">${displayStatus}</b>
@@ -407,10 +357,6 @@ lastJobStates[id] = {
           <span>Price:</span>
           <b>${f.priceType || ""} ${f.price || "-"}</b>
         </div>
-
-${renderContactBar(d.id, f, displayStatus)}
-
-
 
         <div class="fare-row">
   <span>Original Driver:</span>
@@ -433,9 +379,6 @@ ${renderContactBar(d.id, f, displayStatus)}
         </div>
 
         ${cancelBtn}
-        
-     
-        
       `;
 
       box.appendChild(div);
@@ -447,114 +390,3 @@ ${renderContactBar(d.id, f, displayStatus)}
 
   });
 }
-
-
-
-function getChatRole(f) {
-
-  const isPassenger = f.passengerUID === currentUser.uid;
-
-  if (isPassenger) return "passenger";
-
-  return "none";
-}
-
-
-window.openChat = (jobId, jobData) => {
-
-  const status = (jobData.status || "").toLowerCase();
-
-  const pastStatuses = [
-    "completed",
-    "complete",
-    "deleted",
-    "cancelled",
-    "cancel",
-    "cancelled by passenger"
-  ];
-
-  if (pastStatuses.includes(status)) {
-    alert("Chat disabled for past jobs");
-    return;
-  }
-
-  activeJobId = jobId;
-
-  document.getElementById("chatModal").style.display = "block";
-
-  const q = query(
-    collection(db, "fares", jobId, "messages"),
-    orderBy("timestamp")
-  );
-
-  onSnapshot(q, snap => {
-
-    const box = document.getElementById("chatBox");
-    box.innerHTML = "";
-
-    snap.forEach(d => {
-      const m = d.data();
-
-      box.innerHTML += `
-        <div><b>${m.senderName}</b>: ${m.text}</div>
-      `;
-    });
-  });
-};
-
-
-window.sendChat = async () => {
-
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-
-  if (!text || !activeJobId) return;
-
-  const jobSnap = await getDoc(doc(db, "fares", activeJobId));
-  const job = jobSnap.data();
-
-  const status = (job.status || "").toLowerCase();
-
-  const pastStatuses = [
-    "completed",
-    "complete",
-    "deleted",
-    "cancelled",
-    "cancel",
-    "cancelled by passenger"
-  ];
-
-  if (pastStatuses.includes(status)) {
-    alert("Chat disabled");
-    return;
-  }
-
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  const name = userSnap.data()?.nickName || currentUser.email;
-
-  await addDoc(collection(db, "fares", activeJobId, "messages"), {
-    text,
-    senderId: currentUser.uid,
-    senderName: name,
-    role: "passenger",
-    timestamp: serverTimestamp()
-  });
-
-  input.value = "";
-};
-
-
-window.callPhone = (phone) => {
-  if (!phone) return alert("No number");
-  window.location.href = `tel:${phone}`;
-};
-
-window.callWhatsApp = (phone) => {
-  if (!phone) return alert("No number");
-  window.open(`https://wa.me/${phone}`, "_blank");
-};
-
-
-window.closeChat = () => {
-document.getElementById("chatModal").style.display="none";
-};

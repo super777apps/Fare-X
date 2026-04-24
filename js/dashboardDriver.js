@@ -14,13 +14,9 @@ import {
 
 import {
   onAuthStateChanged,
-  signOut, addDoc
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-
-
-
-let activeJobId = null;
 let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
@@ -342,22 +338,12 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
   <b>${f.jobId || "N/A"}</b>
 </div>
 
-
-
-
-
-
   <div class="fare-row"><span>Status:</span><b class="status-text">${displayStatus}</b></div>
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
   <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
   <div class="fare-row"><span>Price:</span><b>${f.priceType || ""} ${f.price || "-"}</b></div>
- <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b>
- 
- </div>
-
-
-${renderContactBar(d.id, f, displayStatus)}
+ <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b></div>
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
 `;
@@ -381,36 +367,6 @@ if (statusEl) {
     });
 
   });
-}
-
-function renderContactBar(id, f, displayStatus) {
-
-  const s = (displayStatus || "").toLowerCase();
-
-  const allow =
-    s.includes("accepted") ||
-    s.includes("arrived") ||
-    s.includes("trip started") ||
-    s.includes("in progress");
-
-  if (!allow) return "";
-
-  const phone = f.passengerPhone || f.originalDriverPhone || "";
-
-  return `
-    <div class="mini-bar">
-
-      <button class="mini-btn" title="Chat"
-        onclick='openChat("${id}", ${JSON.stringify(f)})'>💬</button>
-
-      <button class="mini-btn" title="Call"
-        onclick="callPhone('${phone}')">📞</button>
-
-      <button class="mini-btn" title="WhatsApp"
-        onclick="callWhatsApp('${phone}')">🟢</button>
-
-    </div>
-  `;
 }
 
 /* ---------- ACTION BUTTONS ---------- */
@@ -833,79 +789,4 @@ window.closePopup = function () {
   if (popupSoundInterval) clearInterval(popupSoundInterval);
   jobSound.pause();
   jobSound.currentTime = 0;
-};
-
-
-
-
-function getChatRole(f) {
-
-  const isOriginal = f.originalDriverUID === currentUser.uid;
-  const isCurrent = f.currentDriverUID === currentUser.uid;
-
-  if (isOriginal) return "original";
-  if (isCurrent) return "current";
-
-  return "none";
-}
-
-window.openChat = (jobId) => {
-  activeJobId = jobId;
-
-  document.getElementById("chatModal").style.display = "flex";
-
-  document.getElementById("chatInput").value = "";
-  document.getElementById("chatInput").focus();
-
-  const box = document.getElementById("chatBox");
-
-  const q = query(
-    collection(db, "fares", jobId, "messages"),
-    orderBy("timestamp")
-  );
-
-  onSnapshot(q, snap => {
-
-    box.innerHTML = "";
-
-    snap.forEach(d => {
-      const m = d.data();
-
-      box.innerHTML += `
-        <div style="margin:6px 0;">
-          <b>${m.senderName}</b><br>
-          ${m.text}
-        </div>
-      `;
-    });
-
-    box.scrollTop = box.scrollHeight;
-  });
-};
-
-
-
-window.sendChat = async () => {
-
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-
-  if (!text || !activeJobId) return;
-
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  const name = userSnap.data()?.nickName || "User";
-
-  await addDoc(collection(db, "fares", activeJobId, "messages"), {
-    text,
-    senderId: currentUser.uid,
-    senderName: name,
-    timestamp: serverTimestamp()
-  });
-
-  input.value = "";
-};
-
-
-window.closeChat = () => {
-  document.getElementById("chatModal").style.display = "none";
 };
