@@ -847,48 +847,48 @@ function getChatRole(f) {
 }
 
 
-window.openChat = (jobId, jobData) => {
+let chatUnsub = null;
 
-  const status = (jobData.status || "").toLowerCase();
-
-  const pastStatuses = [
-    "completed",
-    "complete",
-    "deleted",
-    "cancelled",
-    "cancel",
-    "cancelled by passenger"
-  ];
-
-  if (pastStatuses.includes(status)) {
-    alert("Chat disabled for past jobs");
-    return;
-  }
+window.openChat = async (jobId, jobData) => {
 
   activeJobId = jobId;
 
-  document.getElementById("chatModal").style.display = "block";
+  const modal = document.getElementById("chatModal");
+  const box = document.getElementById("chatBox");
+
+  modal.style.display = "block";
+  document.getElementById("chatInput").value = "";
+  document.getElementById("chatInput").focus();
+
+  // ❌ STOP old listener (VERY IMPORTANT)
+  if (chatUnsub) {
+    chatUnsub();
+    chatUnsub = null;
+  }
 
   const q = query(
     collection(db, "fares", jobId, "messages"),
     orderBy("timestamp")
   );
 
-  onSnapshot(q, snap => {
+  chatUnsub = onSnapshot(q, snap => {
 
-    const box = document.getElementById("chatBox");
     box.innerHTML = "";
 
     snap.forEach(d => {
       const m = d.data();
 
       box.innerHTML += `
-        <div><b>${m.senderName}</b>: ${m.text}</div>
+        <div style="margin:5px 0;">
+          <b>${m.senderName}:</b> ${m.text}
+        </div>
       `;
     });
+
+    // auto scroll
+    box.scrollTop = box.scrollHeight;
   });
 };
-
 
 window.sendChat = async () => {
 
@@ -897,39 +897,19 @@ window.sendChat = async () => {
 
   if (!text || !activeJobId) return;
 
-  const jobSnap = await getDoc(doc(db, "fares", activeJobId));
-  const job = jobSnap.data();
-
-  const status = (job.status || "").toLowerCase();
-
-  const pastStatuses = [
-    "completed",
-    "complete",
-    "deleted",
-    "cancelled",
-    "cancel",
-    "cancelled by passenger"
-  ];
-
-  if (pastStatuses.includes(status)) {
-    alert("Chat disabled");
-    return;
-  }
-
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  const name = userSnap.data()?.nickName || currentUser.email;
-
-  await addDoc(collection(db, "fares", activeJobId, "messages"), {
-    text,
-    senderId: currentUser.uid,
-    senderName: name,
-    role: getChatRole(job),
-    timestamp: serverTimestamp()
-  });
-
   input.value = "";
-};
 
+  try {
+    await addDoc(collection(db, "fares", activeJobId, "messages"), {
+      text,
+      senderId: currentUser.uid,
+      senderName: currentUser.email,
+      timestamp: serverTimestamp()
+    });
+  } catch (e) {
+    alert("Chat error");
+  }
+};
 
 window.callPhone = (phone) => {
   if (!phone) return alert("No number");
@@ -941,4 +921,11 @@ window.callWhatsApp = (phone) => {
   window.open(`https://wa.me/${phone}`, "_blank");
 };
 
+window.closeChat = () => {
+  document.getElementById("chatModal").style.display = "none";
 
+  if (chatUnsub) {
+    chatUnsub();
+    chatUnsub = null;
+  }
+};
