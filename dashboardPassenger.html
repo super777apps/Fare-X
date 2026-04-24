@@ -59,6 +59,53 @@
 
 </div>
 
+
+<!-- Chat Popup -->
+<div id="chatModal" class="hidden"
+     style="
+       position:fixed;
+       left:10px;
+       right:10px;
+       top:60px;
+       bottom:20px;
+       background:#111;
+       border:1px solid #444;
+       border-radius:12px;
+       z-index:9999;
+       padding:10px;
+     ">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <b style="color:#FFD700;">Job Chat</b>
+
+    <button class="lux-btn"
+      onclick="document.getElementById('chatModal').classList.add('hidden')">
+      Close
+    </button>
+  </div>
+
+  <div id="chatBox"
+       style="
+         margin-top:10px;
+         height:65%;
+         overflow:auto;
+         background:#000;
+         padding:8px;
+         border-radius:8px;
+         color:white;
+       ">
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <input id="chatInput"
+           placeholder="Type message..."
+           style="flex:1;padding:10px;border-radius:8px;border:none;">
+
+    <button class="lux-btn" onclick="sendChat()">Send</button>
+  </div>
+
+</div>
+
 <!-- ✅ REQUIRED FOR MAP -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="js/firebase.js"></script>
