@@ -342,26 +342,6 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
 
 
 
-  <!-- CONTACT BAR -->
-  <div class="fare-actions">
-
-    <button class="lux-btn"
-      onclick='openChat("${d.id}", ${JSON.stringify(f)})'>
-      Chat
-    </button>
-
-    <button class="lux-btn"
-      onclick="callPhone('${f.passengerPhone || f.originalDriverPhone || ""}')">
-      Call
-    </button>
-
-    <button class="lux-btn"
-      onclick="callWhatsApp('${f.passengerPhone || f.originalDriverPhone || ""}')">
-      WhatsApp
-    </button>
-
-  </div>
-
 
 
   <div class="fare-row"><span>Status:</span><b class="status-text">${displayStatus}</b></div>
@@ -372,6 +352,9 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
  <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b>
  
  </div>
+
+
+${renderContactBar(d.id, f, displayStatus)}
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
 `;
@@ -395,6 +378,36 @@ if (statusEl) {
     });
 
   });
+}
+
+function renderContactBar(id, f, displayStatus) {
+
+  const s = (displayStatus || "").toLowerCase();
+
+  const allow =
+    s.includes("accepted") ||
+    s.includes("arrived") ||
+    s.includes("trip started") ||
+    s.includes("in progress");
+
+  if (!allow) return "";
+
+  const phone = f.passengerPhone || f.originalDriverPhone || "";
+
+  return `
+    <div class="mini-bar">
+
+      <button class="mini-btn" title="Chat"
+        onclick='openChat("${id}", ${JSON.stringify(f)})'>💬</button>
+
+      <button class="mini-btn" title="Call"
+        onclick="callPhone('${phone}')">📞</button>
+
+      <button class="mini-btn" title="WhatsApp"
+        onclick="callWhatsApp('${phone}')">🟢</button>
+
+    </div>
+  `;
 }
 
 /* ---------- ACTION BUTTONS ---------- */

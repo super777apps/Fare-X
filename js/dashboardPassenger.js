@@ -135,6 +135,45 @@ function updateHeading() {
       : "Past Jobs";
 }
 
+function renderContactBar(id, f, displayStatus) {
+
+  const s = (displayStatus || "").toLowerCase();
+
+  const allow =
+    s.includes("accepted") ||
+    s.includes("arrived") ||
+    s.includes("trip started") ||
+    s.includes("in progress");
+
+  if (!allow) return "";
+
+  const phone = f.passengerPhone || f.originalDriverPhone || "";
+
+  return `
+    <div class="mini-actions">
+
+      <button class="mini-btn" title="Chat"
+        onclick='openChat("${id}", ${JSON.stringify(f)})'>
+        💬
+      </button>
+
+      <button class="mini-btn" title="Call"
+        onclick="callPhone('${phone}')">
+        📞
+      </button>
+
+      <button class="mini-btn" title="WhatsApp"
+        onclick="callWhatsApp('${phone}')">
+        🟢
+      </button>
+
+    </div>
+  `;
+}
+
+
+
+
 /* --------------------------------------------------
    CANCEL JOB
 -------------------------------------------------- */
@@ -352,25 +391,6 @@ lastJobStates[id] = {
         </div>
 
 
- <!-- CONTACT BAR -->
-  <div class="fare-actions">
-
-    <button class="lux-btn"
-      onclick='openChat("${id}", ${JSON.stringify(f)})'>
-      Chat
-    </button>
-
-    <button class="lux-btn"
-      onclick="callPhone('${f.originalDriverPhone || ""}')">
-      Call Driver
-    </button>
-
-    <button class="lux-btn"
-      onclick="callWhatsApp('${f.originalDriverPhone || ""}')">
-      WhatsApp
-    </button>
-
-  </div>
 
   <div class="fare-row">
     <span>Status:</span>
@@ -387,6 +407,10 @@ lastJobStates[id] = {
           <span>Price:</span>
           <b>${f.priceType || ""} ${f.price || "-"}</b>
         </div>
+
+${renderContactBar(d.id, f, displayStatus)}
+
+
 
         <div class="fare-row">
   <span>Original Driver:</span>
@@ -530,3 +554,7 @@ window.callWhatsApp = (phone) => {
   window.open(`https://wa.me/${phone}`, "_blank");
 };
 
+
+window.closeChat = () => {
+document.getElementById("chatModal").style.display="none";
+};
