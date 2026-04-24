@@ -290,7 +290,10 @@ const jobId = generateJobId();
     pickupLat,pickupLng,
     dropLat,dropLng,
 
-    time,price,notes,
+    time,
+    price,
+    priceType: document.getElementById("priceType").value, // ✅ ADD THIS
+    notes,
     passengerUID,passengerName,
 
     originalDriverUID: currentUser.uid,
