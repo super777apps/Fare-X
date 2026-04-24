@@ -14,14 +14,9 @@ import {
 
 import {
   onAuthStateChanged,
-  signOut
+  signOut, addDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-
-
-import {
-  addDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
 
@@ -854,51 +849,34 @@ function getChatRole(f) {
   return "none";
 }
 
-
-let chatUnsub = null;
-
-let chatUnsub = null;
-
-window.openChat = async (jobId, jobData) => {
-
+window.openChat = (jobId) => {
   activeJobId = jobId;
 
-  const modal = document.getElementById("chatModal");
+  document.getElementById("chatModal").style.display = "flex";
+
+  document.getElementById("chatInput").value = "";
+  document.getElementById("chatInput").focus();
+
   const box = document.getElementById("chatBox");
-  const input = document.getElementById("chatInput");
-
-  modal.style.display = "block";
-  input.value = "";
-  input.focus();
-
-  // stop old listener
-  if (chatUnsub) chatUnsub();
 
   const q = query(
     collection(db, "fares", jobId, "messages"),
     orderBy("timestamp")
   );
 
-  chatUnsub = onSnapshot(q, snap => {
+  onSnapshot(q, snap => {
 
     box.innerHTML = "";
 
-    snap.forEach(doc => {
-      const m = doc.data();
+    snap.forEach(d => {
+      const m = d.data();
 
-      const div = document.createElement("div");
-
-      div.style.margin = "5px 0";
-      div.style.padding = "6px";
-      div.style.borderRadius = "8px";
-      div.style.background = m.senderId === currentUser.uid ? "#222" : "#333";
-
-      div.innerHTML = `
-        <b>${m.senderName}</b><br>
-        ${m.text}
+      box.innerHTML += `
+        <div style="margin:6px 0;">
+          <b>${m.senderName}</b><br>
+          ${m.text}
+        </div>
       `;
-
-      box.appendChild(div);
     });
 
     box.scrollTop = box.scrollHeight;
@@ -914,33 +892,20 @@ window.sendChat = async () => {
 
   if (!text || !activeJobId) return;
 
-  try {
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  const name = userSnap.data()?.nickName || "User";
 
-    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-    const name = userSnap.data()?.nickName || currentUser.email;
+  await addDoc(collection(db, "fares", activeJobId, "messages"), {
+    text,
+    senderId: currentUser.uid,
+    senderName: name,
+    timestamp: serverTimestamp()
+  });
 
-    await addDoc(collection(db, "fares", activeJobId, "messages"), {
-      text,
-      senderId: currentUser.uid,
-      senderName: name,
-      timestamp: serverTimestamp()
-    });
-
-    input.value = "";
-
-  } catch (e) {
-    console.error("Chat error:", e);
-    alert("Chat failed");
-  }
+  input.value = "";
 };
-
 
 
 window.closeChat = () => {
   document.getElementById("chatModal").style.display = "none";
-
-  if (chatUnsub) {
-    chatUnsub();
-    chatUnsub = null;
-  }
 };
