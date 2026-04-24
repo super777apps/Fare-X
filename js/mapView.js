@@ -15,6 +15,7 @@ let routeLine;
 
 let pickup, drop;
 let driverUID;
+let currentJob = null;
 
 let lastRouteKey = null; // ✅ prevent duplicate API calls
 
@@ -29,6 +30,7 @@ async function init() {
   }
 
   const job = snap.data();
+currentJob = job;
 
   pickup = [job.pickupLat, job.pickupLng];
   drop = [job.dropLat || job.pickupLat, job.dropLng || job.pickupLng];
@@ -183,3 +185,30 @@ function updateDriverMarker(pos) {
 
 /* ---------- START ---------- */
 init();
+
+/* ---------- GOOGLE NAVIGATION ---------- */
+document.getElementById("googleNavBtn").onclick = () => {
+
+  if (!currentJob) return;
+
+  let target = pickup;
+
+  const status = (currentJob.status || "").toLowerCase();
+
+  // after pickup -> navigate to drop
+  if (
+    status === "arrived" ||
+    status === "in progress" ||
+    status === "started"
+  ) {
+    target = drop;
+  }
+
+  const lat = target[0];
+  const lng = target[1];
+
+  const url =
+    `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+  window.open(url, "_blank");
+};
