@@ -84,7 +84,12 @@ async function loadExistingJob(id){
 
   document.getElementById("datetime").value = f.time || "";
   document.getElementById("price").value = f.price || "";
-  document.getElementById("notes").value = f.notes || "";
+document.getElementById("notes").value = f.notes || "";
+
+/* ✅ ADD THIS */
+if (document.getElementById("priceType")) {
+  document.getElementById("priceType").value = f.priceType || "Fixed Price";
+}
 
   pickupLat = f.pickupLat;
   pickupLng = f.pickupLng;
