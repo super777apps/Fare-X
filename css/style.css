@@ -454,29 +454,3 @@ html, body {
   position:relative;
   z-index:99999;
 }
-
-.mini-bar {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-  justify-content: flex-start;
-}
-
-.mini-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  border: none;
-  font-size: 15px;
-  cursor: pointer;
-  background: #1a1a1a;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.mini-btn:active {
-  transform: scale(0.92);
-}
