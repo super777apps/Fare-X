@@ -18,9 +18,12 @@ import {
 /* --------------------------------------------------
    STATE
 -------------------------------------------------- */
+
+let activeJobId = null;
 let currentUser = null;
 let currentMode = "current"; // current / past
 let unsubscribe = null;
+let lastJobStates = {};
 
 /* --------------------------------------------------
    AUTH
@@ -186,6 +189,57 @@ function listenJobs() {
 
       const id = d.id;
       const f = d.data();
+      
+      const prev = lastJobStates[id] || {};
+
+const oldStatus = prev.status || "";
+const newStatus = f.status || "";
+
+const oldDriver = prev.driver || "";
+const newDriver = f.currentDriverName || "";
+
+/* ACCEPTED */
+if (
+  oldStatus !== newStatus &&
+  newStatus === "accepted"
+) {
+  try { new Audio("assets/accept.mp3").play(); } catch(e){}
+}
+
+/* CANCELLED */
+if (
+  oldStatus !== newStatus &&
+  (
+    newStatus === "deleted" ||
+    newStatus === "cancelled" ||
+    newStatus === "cancelled by passenger"
+  )
+) {
+  try { new Audio("assets/decline.mp3").play(); } catch(e){}
+}
+
+/* RETURNED */
+if (
+  oldStatus !== newStatus &&
+  newStatus === "returned"
+) {
+  try { new Audio("assets/decline.mp3").play(); } catch(e){}
+}
+
+/* DRIVER CHANGED */
+if (
+  oldDriver &&
+  newDriver &&
+  oldDriver !== newDriver
+) {
+  try { new Audio("assets/job.mp3").play(); } catch(e){}
+}
+
+/* SAVE LAST STATE */
+lastJobStates[id] = {
+  status: newStatus,
+  driver: newDriver
+};
 
       const status = (f.status || "requested").toLowerCase();
 
@@ -280,6 +334,7 @@ function listenJobs() {
       const div = document.createElement("div");
       div.className = "fare-card";
 
+
       div.innerHTML = `
         <div class="fare-row">
           <span>Job ID:</span>
@@ -295,6 +350,33 @@ function listenJobs() {
           <span>Drop:</span>
           <b>${f.dropSuburb || f.drop || "-"}</b>
         </div>
+
+
+ <!-- CONTACT BAR -->
+  <div class="fare-actions">
+
+    <button class="lux-btn"
+      onclick='openChat("${id}", ${JSON.stringify(f)})'>
+      Chat
+    </button>
+
+    <button class="lux-btn"
+      onclick="callPhone('${f.originalDriverPhone || ""}')">
+      Call Driver
+    </button>
+
+    <button class="lux-btn"
+      onclick="callWhatsApp('${f.originalDriverPhone || ""}')">
+      WhatsApp
+    </button>
+
+  </div>
+
+  <div class="fare-row">
+    <span>Status:</span>
+    <b>${displayStatus}</b>
+  </div>:
+
 
         <div class="fare-row">
           <span>Status:</span>
@@ -327,6 +409,9 @@ function listenJobs() {
         </div>
 
         ${cancelBtn}
+        
+     
+        
       `;
 
       box.appendChild(div);
@@ -338,3 +423,110 @@ function listenJobs() {
 
   });
 }
+
+
+
+function getChatRole(f) {
+
+  const isPassenger = f.passengerUID === currentUser.uid;
+
+  if (isPassenger) return "passenger";
+
+  return "none";
+}
+
+
+window.openChat = (jobId, jobData) => {
+
+  const status = (jobData.status || "").toLowerCase();
+
+  const pastStatuses = [
+    "completed",
+    "complete",
+    "deleted",
+    "cancelled",
+    "cancel",
+    "cancelled by passenger"
+  ];
+
+  if (pastStatuses.includes(status)) {
+    alert("Chat disabled for past jobs");
+    return;
+  }
+
+  activeJobId = jobId;
+
+  document.getElementById("chatModal").style.display = "block";
+
+  const q = query(
+    collection(db, "fares", jobId, "messages"),
+    orderBy("timestamp")
+  );
+
+  onSnapshot(q, snap => {
+
+    const box = document.getElementById("chatBox");
+    box.innerHTML = "";
+
+    snap.forEach(d => {
+      const m = d.data();
+
+      box.innerHTML += `
+        <div><b>${m.senderName}</b>: ${m.text}</div>
+      `;
+    });
+  });
+};
+
+
+window.sendChat = async () => {
+
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+
+  if (!text || !activeJobId) return;
+
+  const jobSnap = await getDoc(doc(db, "fares", activeJobId));
+  const job = jobSnap.data();
+
+  const status = (job.status || "").toLowerCase();
+
+  const pastStatuses = [
+    "completed",
+    "complete",
+    "deleted",
+    "cancelled",
+    "cancel",
+    "cancelled by passenger"
+  ];
+
+  if (pastStatuses.includes(status)) {
+    alert("Chat disabled");
+    return;
+  }
+
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  const name = userSnap.data()?.nickName || currentUser.email;
+
+  await addDoc(collection(db, "fares", activeJobId, "messages"), {
+    text,
+    senderId: currentUser.uid,
+    senderName: name,
+    role: "passenger",
+    timestamp: serverTimestamp()
+  });
+
+  input.value = "";
+};
+
+
+window.callPhone = (phone) => {
+  if (!phone) return alert("No number");
+  window.location.href = `tel:${phone}`;
+};
+
+window.callWhatsApp = (phone) => {
+  if (!phone) return alert("No number");
+  window.open(`https://wa.me/${phone}`, "_blank");
+};
+

@@ -17,6 +17,7 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+let activeJobId = null;
 let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
@@ -338,12 +339,39 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
   <b>${f.jobId || "N/A"}</b>
 </div>
 
+
+
+
+  <!-- CONTACT BAR -->
+  <div class="fare-actions">
+
+    <button class="lux-btn"
+      onclick='openChat("${d.id}", ${JSON.stringify(f)})'>
+      Chat
+    </button>
+
+    <button class="lux-btn"
+      onclick="callPhone('${f.passengerPhone || f.originalDriverPhone || ""}')">
+      Call
+    </button>
+
+    <button class="lux-btn"
+      onclick="callWhatsApp('${f.passengerPhone || f.originalDriverPhone || ""}')">
+      WhatsApp
+    </button>
+
+  </div>
+
+
+
   <div class="fare-row"><span>Status:</span><b class="status-text">${displayStatus}</b></div>
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
   <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
   <div class="fare-row"><span>Price:</span><b>${f.priceType || ""} ${f.price || "-"}</b></div>
- <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b></div>
+ <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b>
+ 
+ </div>
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
 `;
@@ -790,3 +818,114 @@ window.closePopup = function () {
   jobSound.pause();
   jobSound.currentTime = 0;
 };
+
+
+
+
+function getChatRole(f) {
+
+  const isOriginal = f.originalDriverUID === currentUser.uid;
+  const isCurrent = f.currentDriverUID === currentUser.uid;
+
+  if (isOriginal) return "original";
+  if (isCurrent) return "current";
+
+  return "none";
+}
+
+
+window.openChat = (jobId, jobData) => {
+
+  const status = (jobData.status || "").toLowerCase();
+
+  const pastStatuses = [
+    "completed",
+    "complete",
+    "deleted",
+    "cancelled",
+    "cancel",
+    "cancelled by passenger"
+  ];
+
+  if (pastStatuses.includes(status)) {
+    alert("Chat disabled for past jobs");
+    return;
+  }
+
+  activeJobId = jobId;
+
+  document.getElementById("chatModal").style.display = "block";
+
+  const q = query(
+    collection(db, "fares", jobId, "messages"),
+    orderBy("timestamp")
+  );
+
+  onSnapshot(q, snap => {
+
+    const box = document.getElementById("chatBox");
+    box.innerHTML = "";
+
+    snap.forEach(d => {
+      const m = d.data();
+
+      box.innerHTML += `
+        <div><b>${m.senderName}</b>: ${m.text}</div>
+      `;
+    });
+  });
+};
+
+
+window.sendChat = async () => {
+
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+
+  if (!text || !activeJobId) return;
+
+  const jobSnap = await getDoc(doc(db, "fares", activeJobId));
+  const job = jobSnap.data();
+
+  const status = (job.status || "").toLowerCase();
+
+  const pastStatuses = [
+    "completed",
+    "complete",
+    "deleted",
+    "cancelled",
+    "cancel",
+    "cancelled by passenger"
+  ];
+
+  if (pastStatuses.includes(status)) {
+    alert("Chat disabled");
+    return;
+  }
+
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  const name = userSnap.data()?.nickName || currentUser.email;
+
+  await addDoc(collection(db, "fares", activeJobId, "messages"), {
+    text,
+    senderId: currentUser.uid,
+    senderName: name,
+    role: getChatRole(job),
+    timestamp: serverTimestamp()
+  });
+
+  input.value = "";
+};
+
+
+window.callPhone = (phone) => {
+  if (!phone) return alert("No number");
+  window.location.href = `tel:${phone}`;
+};
+
+window.callWhatsApp = (phone) => {
+  if (!phone) return alert("No number");
+  window.open(`https://wa.me/${phone}`, "_blank");
+};
+
+
