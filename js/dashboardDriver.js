@@ -17,6 +17,14 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+
+
+import {
+  addDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+
+
 let activeJobId = null;
 let currentUser = null;
 let currentMode = "current";
@@ -849,22 +857,22 @@ function getChatRole(f) {
 
 let chatUnsub = null;
 
+let chatUnsub = null;
+
 window.openChat = async (jobId, jobData) => {
 
   activeJobId = jobId;
 
   const modal = document.getElementById("chatModal");
   const box = document.getElementById("chatBox");
+  const input = document.getElementById("chatInput");
 
   modal.style.display = "block";
-  document.getElementById("chatInput").value = "";
-  document.getElementById("chatInput").focus();
+  input.value = "";
+  input.focus();
 
-  // ❌ STOP old listener (VERY IMPORTANT)
-  if (chatUnsub) {
-    chatUnsub();
-    chatUnsub = null;
-  }
+  // stop old listener
+  if (chatUnsub) chatUnsub();
 
   const q = query(
     collection(db, "fares", jobId, "messages"),
@@ -875,20 +883,29 @@ window.openChat = async (jobId, jobData) => {
 
     box.innerHTML = "";
 
-    snap.forEach(d => {
-      const m = d.data();
+    snap.forEach(doc => {
+      const m = doc.data();
 
-      box.innerHTML += `
-        <div style="margin:5px 0;">
-          <b>${m.senderName}:</b> ${m.text}
-        </div>
+      const div = document.createElement("div");
+
+      div.style.margin = "5px 0";
+      div.style.padding = "6px";
+      div.style.borderRadius = "8px";
+      div.style.background = m.senderId === currentUser.uid ? "#222" : "#333";
+
+      div.innerHTML = `
+        <b>${m.senderName}</b><br>
+        ${m.text}
       `;
+
+      box.appendChild(div);
     });
 
-    // auto scroll
     box.scrollTop = box.scrollHeight;
   });
 };
+
+
 
 window.sendChat = async () => {
 
@@ -897,29 +914,27 @@ window.sendChat = async () => {
 
   if (!text || !activeJobId) return;
 
-  input.value = "";
-
   try {
+
+    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+    const name = userSnap.data()?.nickName || currentUser.email;
+
     await addDoc(collection(db, "fares", activeJobId, "messages"), {
       text,
       senderId: currentUser.uid,
-      senderName: currentUser.email,
+      senderName: name,
       timestamp: serverTimestamp()
     });
+
+    input.value = "";
+
   } catch (e) {
-    alert("Chat error");
+    console.error("Chat error:", e);
+    alert("Chat failed");
   }
 };
 
-window.callPhone = (phone) => {
-  if (!phone) return alert("No number");
-  window.location.href = `tel:${phone}`;
-};
 
-window.callWhatsApp = (phone) => {
-  if (!phone) return alert("No number");
-  window.open(`https://wa.me/${phone}`, "_blank");
-};
 
 window.closeChat = () => {
   document.getElementById("chatModal").style.display = "none";
