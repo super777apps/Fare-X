@@ -342,7 +342,7 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
   <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
-  <div class="fare-row"><span>Price:</span><b>${f.price || "-"}</b></div>
+  <div class="fare-row"><span>Price:</span><b>${f.priceType || ""} ${f.price || "-"}</b></div>
  <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b></div>
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
