@@ -361,7 +361,6 @@ ${renderContactBar(d.id, f, displayStatus)}
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
   
-  ${renderMiniContactBar(f)}
 `;
 
       box.appendChild(div);
