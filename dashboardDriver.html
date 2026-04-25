@@ -52,9 +52,9 @@
       Profile
     </button>
 
-    <button onclick="location.href='helpDriver.html'" class="lux-btn full">
-      Help
-    </button>
+    <<button onclick="goHelp()" class="lux-btn full">
+  Help
+</button>
 
     <button id="poolJobsBtn" class="lux-btn full">Broadcast Pool Jobs</button>
 
@@ -83,6 +83,12 @@
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/Fare-X/service-worker.js");
+}
+</script>
+
+<script>
+function goHelp(){
+  window.location.href = "helpDriver.html";
 }
 </script>
 
