@@ -842,7 +842,7 @@ function renderMiniContactBar(f) {
 
   let phone = "";
 
-  // ORIGINAL DRIVER can contact passenger/current driver
+  // Original driver
   if (f.originalDriverUID === currentUser.uid) {
     phone =
       f.passengerPhone ||
@@ -850,7 +850,7 @@ function renderMiniContactBar(f) {
       "";
   }
 
-  // CURRENT DRIVER only accepted/arrived
+  // Current driver
   else if (
     f.currentDriverUID === currentUser.uid &&
     ["accepted", "arrived"].includes(f.status)
@@ -866,7 +866,7 @@ function renderMiniContactBar(f) {
     <div style="margin-top:8px;text-align:center;">
 
       <a href="tel:${phone}"
-         style="font-size:22px;text-decoration:none;margin-right:16px;">
+         style="font-size:22px;text-decoration:none;margin-right:18px;">
          📞
       </a>
 
@@ -879,7 +879,6 @@ function renderMiniContactBar(f) {
     </div>
   `;
 }
-
 
 
 
