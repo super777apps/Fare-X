@@ -1,29 +1,21 @@
-import { auth } from "./firebase.js";
+// WhatsApp button logic
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+document.addEventListener("DOMContentLoaded", () => {
 
-/* ---------- AUTH CHECK ---------- */
-onAuthStateChanged(auth, (user) => {
+  const btn = document.getElementById("whatsappBtn");
 
-  if (!user) {
-    location.href = "index.html";
-    return;
+  if (btn) {
+    btn.onclick = () => {
+
+      const phone = "61431859673"; // remove + and spaces
+      const message = encodeURIComponent(
+        "Hello Fare-X Support, I need help with my driver account."
+      );
+
+      const url = `https://wa.me/${phone}?text=${message}`;
+
+      window.open(url, "_blank");
+    };
   }
 
 });
-
-/* ---------- BACK BUTTON (FIXED) ---------- */
-document.getElementById("backBtn").onclick = () => {
-  window.location.href = "dashboardDriver.html";
-};
-
-/* ---------- WHATSAPP BUTTON ---------- */
-document.getElementById("whatsappBtn").onclick = () => {
-
-  const phone = "61431859673"; // no + sign
-  const message = encodeURIComponent("Hello Fare-X Support, I need help with...");
-
-  window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
-};
