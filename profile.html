@@ -101,16 +101,12 @@
 <script type="module" src="js/profile.js?v=photo"></script>
 
 <script>
-function goBack(){
-  const role = localStorage.getItem("role");
-
-  if(role === "passenger"){
-    location.href = "dashboardPassenger.html";
-  } else {
-    location.href = "dashboardDriver.html";
-  }
+function goBack() {
+  window.location.href = "dashboardDriver.html";
 }
 </script>
+
+
 
 <script>
   if ("serviceWorker" in navigator) {
