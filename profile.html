@@ -103,18 +103,47 @@
 
 <script type="module" src="js/profile.js?v=photo"></script>
 
-<script>
 
-function goBack(){
-  const role = localStorage.getItem("role");
+<script type="module">
+import { auth, db } from "./js/firebase.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  if(role === "passenger"){
-    location.href = "dashboardPassenger.html";
-  } else {
+window.goBack = async function () {
+
+  const user = auth.currentUser;
+
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
+
+  const snap = await getDoc(doc(db, "users", user.uid));
+
+  if (!snap.exists()) {
+    location.href = "index.html";
+    return;
+  }
+
+  const role = snap.data().role;
+
+  if (role === "driver") {
     location.href = "dashboardDriver.html";
   }
-}
+
+  else if (role === "passenger") {
+    location.href = "dashboardPassenger.html";
+  }
+
+  else if (role === "admin") {
+    location.href = "admin.html";
+  }
+
+  else {
+    location.href = "index.html";
+  }
+};
 </script>
+
 
 <script>
   if ("serviceWorker" in navigator) {
