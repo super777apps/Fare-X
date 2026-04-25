@@ -92,6 +92,9 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
       email: document.getElementById("email").value,
       firstName: document.getElementById("firstName").value,
       middleName: document.getElementById("middleName").value,
+      
+      mobileNumber: document.getElementById("mobileNumber").value,
+      
       dob: document.getElementById("dob").value,
       resAddress: document.getElementById("resAddress").value,
       postalAddress: document.getElementById("postalAddress").value,
@@ -134,6 +137,10 @@ async function loadProfile() {
     document.getElementById("email").value = data.email || "";
     document.getElementById("firstName").value = data.firstName || "";
     document.getElementById("middleName").value = data.middleName || "";
+    
+    document.getElementById("mobileNumber").value = data.mobileNumber || "";
+    
+    
     document.getElementById("dob").value = data.dob || "";
     document.getElementById("resAddress").value = data.resAddress || "";
     document.getElementById("postalAddress").value = data.postalAddress || "";
