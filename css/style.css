@@ -454,23 +454,3 @@ html, body {
   position:relative;
   z-index:99999;
 }
-
-.mini-bar{
-  display:flex;
-  gap:6px;
-  margin-top:8px;
-}
-
-.mini-bar button{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  border:none;
-  font-size:16px;
-  background:#222;
-  color:#fff;
-}
-
-.mini-btn:active {
-  transform: scale(0.92);
-}
