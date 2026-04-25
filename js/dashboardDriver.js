@@ -218,6 +218,25 @@ unsubscribe = onSnapshot(q, snap => {
 
       const f = d.data();
       
+      
+      // get phone from users collection
+f.originalDriverPhone = "";
+f.currentDriverPhone = "";
+
+getDoc(doc(db, "users", f.originalDriverUID)).then(snap => {
+  if (snap.exists()) {
+    f.originalDriverPhone = snap.data().phone || "";
+  }
+});
+
+getDoc(doc(db, "users", f.currentDriverUID)).then(snap => {
+  if (snap.exists()) {
+    f.currentDriverPhone = snap.data().phone || "";
+  }
+});
+
+      
+      
       if (
   f.status === "waiting response" &&
   f.assignedTo === currentUser.uid &&
