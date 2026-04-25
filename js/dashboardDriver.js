@@ -838,6 +838,50 @@ window.closePopup = function () {
 };
 
 
+function renderMiniContactBar(f) {
+
+  let phone = "";
+
+  // ORIGINAL DRIVER can contact passenger/current driver
+  if (f.originalDriverUID === currentUser.uid) {
+    phone =
+      f.passengerPhone ||
+      f.currentDriverPhone ||
+      "";
+  }
+
+  // CURRENT DRIVER only accepted/arrived
+  else if (
+    f.currentDriverUID === currentUser.uid &&
+    ["accepted", "arrived"].includes(f.status)
+  ) {
+    phone =
+      f.originalDriverPhone ||
+      "";
+  }
+
+  if (!phone) return "";
+
+  return `
+    <div style="margin-top:8px;text-align:center;">
+
+      <a href="tel:${phone}"
+         style="font-size:22px;text-decoration:none;margin-right:16px;">
+         📞
+      </a>
+
+      <a href="https://wa.me/${phone.replace('+','')}"
+         target="_blank"
+         style="font-size:22px;text-decoration:none;">
+         🟢
+      </a>
+
+    </div>
+  `;
+}
+
+
+
 /*
 
 function getChatRole(f) {
@@ -915,70 +959,3 @@ window.closeChat = () => {
 */
 
 
-function renderMiniContactBar(f) {
-
-  const status = (f.status || "").toLowerCase();
-
-  const phonePassenger = f.passengerPhone || "";
-  const phoneOriginal = f.originalDriverPhone || "";
-  const phoneCurrent = f.currentDriverPhone || "";
-
-  const isOriginal = f.originalDriverUID === currentUser.uid;
-  const isCurrent = f.currentDriverUID === currentUser.uid;
-
-  let html = "";
-
-  // =========================
-  // 👤 ORIGINAL DRIVER
-  // =========================
-  if (isOriginal) {
-
-    html += `
-      <div class="mini-bar">
-        <button onclick="callPhone('${phonePassenger}')">📞</button>
-        <button onclick="callWhatsApp('${phonePassenger}')">🟢</button>
-
-        <button onclick="callPhone('${phoneCurrent}')">🚗📞</button>
-        <button onclick="callWhatsApp('${phoneCurrent}')">🚗🟢</button>
-      </div>
-    `;
-  }
-
-  // =========================
-  // 🚗 CURRENT DRIVER
-  // =========================
-  else if (isCurrent && (status === "accepted" || status === "arrived")) {
-
-    html += `
-      <div class="mini-bar">
-        <button onclick="callPhone('${phonePassenger}')">📞</button>
-        <button onclick="callWhatsApp('${phonePassenger}')">🟢</button>
-      </div>
-    `;
-  }
-
-  // =========================
-  // 👤 PASSENGER VIEW
-  // =========================
-  else if (f.passengerUID === currentUser.uid) {
-
-    html += `
-      <div class="mini-bar">
-        <button onclick="callPhone('${phoneOriginal}')">📞</button>
-        <button onclick="callWhatsApp('${phoneOriginal}')">🟢</button>
-      </div>
-    `;
-  }
-
-  return html;
-}
-
-window.callPhone = (phone) => {
-  if (!phone) return alert("No number");
-  window.location.href = `tel:${phone}`;
-};
-
-window.callWhatsApp = (phone) => {
-  if (!phone) return alert("No number");
-  window.open(`https://wa.me/${phone}`, "_blank");
-};
