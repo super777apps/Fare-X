@@ -90,10 +90,6 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
     await setDoc(ref, {
       nickName: document.getElementById("nickName").value,
       email: document.getElementById("email").value,
-      
-      
-      phone: document.getElementById("phone").value.trim(),
-      
       firstName: document.getElementById("firstName").value,
       middleName: document.getElementById("middleName").value,
       dob: document.getElementById("dob").value,
@@ -136,11 +132,6 @@ async function loadProfile() {
 
     document.getElementById("nickName").value = data.nickName || "";
     document.getElementById("email").value = data.email || "";
-    
-    
-    document.getElementById("phone").value = data.phone || "";
-    
-    
     document.getElementById("firstName").value = data.firstName || "";
     document.getElementById("middleName").value = data.middleName || "";
     document.getElementById("dob").value = data.dob || "";
