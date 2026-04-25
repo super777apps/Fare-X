@@ -345,6 +345,10 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
   <div class="fare-row"><span>Price:</span><b>${f.priceType || ""} ${f.price || "-"}</b></div>
  <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b></div>
 
+
+${renderMiniContactBar(f)}
+
+
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
 `;
 
@@ -457,6 +461,60 @@ if (
 
   return viewBtn;
 }
+
+
+function renderMiniContactBar(f) {
+
+  let phone = "";
+
+  // ORIGINAL DRIVER
+  if (f.originalDriverUID === currentUser.uid) {
+
+    phone =
+      f.passengerPhone ||
+      f.currentDriverPhone ||
+      "";
+  }
+
+  // CURRENT DRIVER
+  else if (
+    f.currentDriverUID === currentUser.uid &&
+    ["accepted", "arrived"].includes(f.status)
+  ) {
+
+    phone =
+      f.originalDriverPhone || "";
+  }
+
+  if (!phone) return "";
+
+  phone = phone.replace(/\s/g, "");
+
+  return `
+    <div style="
+      text-align:center;
+      margin:8px 0;
+      font-size:24px;
+    ">
+
+      <a href="tel:${phone}"
+         style="text-decoration:none;margin-right:18px;">
+         📞
+      </a>
+
+      <a href="https://wa.me/${phone.replace('+','')}"
+         target="_blank"
+         style="text-decoration:none;">
+         🟢
+      </a>
+
+    </div>
+  `;
+}
+
+
+
+
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
 
