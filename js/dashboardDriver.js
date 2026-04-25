@@ -14,13 +14,9 @@ import {
 
 import {
   onAuthStateChanged,
-  signOut, addDoc
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-
-
-
-let activeJobId = null;
 let currentUser = null;
 let currentMode = "current";
 let isOnline = false;
@@ -342,25 +338,14 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
   <b>${f.jobId || "N/A"}</b>
 </div>
 
-
-
-
-
-
   <div class="fare-row"><span>Status:</span><b class="status-text">${displayStatus}</b></div>
   <div class="fare-row"><span>Passenger:</span><b>${f.passengerName || "-"}</b></div>
   <div class="fare-row"><span>Original Driver:</span><b>${f.originalDriverName || "-"}</b></div>
   <div class="fare-row"><span>Current Driver:</span><b>${f.currentDriverName || "-"}</b></div>
   <div class="fare-row"><span>Price:</span><b>${f.priceType || ""} ${f.price || "-"}</b></div>
- <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b>
- 
- </div>
-
-
-${renderContactBar(d.id, f, displayStatus)}
+ <div class="fare-row"><span>Notes:</span><b>${(f.notes || "").toString()}</b></div>
 
   ${renderActions(d.id, f, isMine, isAssigned, isCreator)}
-  
 `;
 
       box.appendChild(div);
@@ -382,36 +367,6 @@ if (statusEl) {
     });
 
   });
-}
-
-function renderContactBar(id, f, displayStatus) {
-
-  const s = (displayStatus || "").toLowerCase();
-
-  const allow =
-    s.includes("accepted") ||
-    s.includes("arrived") ||
-    s.includes("trip started") ||
-    s.includes("in progress");
-
-  if (!allow) return "";
-
-  const phone = f.passengerPhone || f.originalDriverPhone || "";
-
-  return `
-    <div class="mini-bar">
-
-      <button class="mini-btn" title="Chat"
-        onclick='openChat("${id}", ${JSON.stringify(f)})'>💬</button>
-
-      <button class="mini-btn" title="Call"
-        onclick="callPhone('${phone}')">📞</button>
-
-      <button class="mini-btn" title="WhatsApp"
-        onclick="callWhatsApp('${phone}')">🟢</button>
-
-    </div>
-  `;
 }
 
 /* ---------- ACTION BUTTONS ---------- */
@@ -835,50 +790,3 @@ window.closePopup = function () {
   jobSound.pause();
   jobSound.currentTime = 0;
 };
-
-
-function renderMiniContactBar(f) {
-
-  let phone = "";
-
-  // Original driver
-  if (f.originalDriverUID === currentUser.uid) {
-    phone =
-      f.passengerPhone ||
-      f.currentDriverPhone ||
-      "";
-  }
-
-  // Current driver
-  else if (
-    f.currentDriverUID === currentUser.uid &&
-    ["accepted", "arrived"].includes(f.status)
-  ) {
-    phone =
-      f.originalDriverPhone ||
-      "";
-  }
-
-  if (!phone) return "";
-
-  return `
-    <div style="margin-top:8px;text-align:center;">
-
-      <a href="tel:${phone}"
-         style="font-size:22px;text-decoration:none;margin-right:18px;">
-         📞
-      </a>
-
-      <a href="https://wa.me/${phone.replace('+','')}"
-         target="_blank"
-         style="font-size:22px;text-decoration:none;">
-         🟢
-      </a>
-
-    </div>
-  `;
-}
-
-
-
-
