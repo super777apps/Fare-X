@@ -8,84 +8,37 @@
 <link rel="stylesheet" href="css/style.css">
 
 <style>
-body {
-  background: #000;
-  color: #fff;
+body{
+  background:#000;
+  color:#fff;
 }
 
-/* HEADER SAME STYLE */
-.lux-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:15px;
-  background:#0a0a0a;
-  border-bottom:1px solid #222;
-}
-
-.logo {
-  font-size:18px;
-  font-weight:bold;
-}
-
-.gold {
-  color:#d4af37;
-}
-
-/* MAIN BOX */
-.lux-main {
-  padding:15px;
-}
-
-.section-title {
-  font-size:20px;
-  margin:15px 0;
-  color:#d4af37;
-}
-
-/* HELP BOX */
-.help-box {
+.help-box{
   margin-top:20px;
   padding:15px;
-  border-radius:12px;
+  border-radius:14px;
   background:#111;
-  border:1px solid #222;
+  border:1px solid #d4af37;
 }
 
-.help-title {
+.help-title{
   font-size:18px;
   margin-bottom:10px;
   color:#d4af37;
 }
 
-.help-text {
+.help-text{
   font-size:14px;
   margin-bottom:10px;
   line-height:1.5;
-  color:#ddd;
 }
 
-.contact-link {
+.contact-link{
   color:#d4af37;
+  font-weight:bold;
 }
 
-/* BUTTONS */
-.lux-btn {
-  padding:8px 15px;
-  border-radius:20px;
-  border:1px solid #d4af37;
-  background:transparent;
-  color:#d4af37;
-  cursor:pointer;
-}
-
-.lux-btn:hover {
-  background:#d4af37;
-  color:#000;
-}
-
-/* WHATSAPP BUTTON */
-.whatsapp-btn {
+.gold-btn{
   margin-top:10px;
   background:#d4af37;
   color:#000;
@@ -97,14 +50,13 @@ body {
   cursor:pointer;
 }
 
-.whatsapp-btn:hover {
-  opacity:0.85;
+.gold-btn:active{
+  transform:scale(0.98);
 }
 </style>
 
 <link rel="manifest" href="/Fare-X/manifest.json">
 <meta name="theme-color" content="#000000">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 
 <body>
@@ -123,44 +75,39 @@ body {
 
   <h2 class="section-title">Help & Support (Driver)</h2>
 
-  <!-- CONTACT BOX -->
   <div class="help-box">
 
     <div class="help-title">Contact Us</div>
 
     <div class="help-text">
-      If you are facing any issue while using Fare-X, please contact us with full details of your problem.
+      If you are facing any issue while using Fare-X, please contact us with full details.
     </div>
 
     <div class="help-text">
-      📧 Email:
-      <br>
-      <b class="contact-link">faxe7x@gmail.com</b>
+      📧 Email:<br>
+      <span class="contact-link">faxe7x@gmail.com</span>
     </div>
 
     <div class="help-text">
       Please include:
       <ul>
         <li>Your account email</li>
-        <li>Description of the issue</li>
-        <li>Screenshots (if possible)</li>
+        <li>Description of issue</li>
+        <li>Screenshots</li>
       </ul>
     </div>
 
   </div>
 
-  <!-- WHATSAPP BOX -->
   <div class="help-box">
 
     <div class="help-title">WhatsApp Support</div>
 
     <div class="help-text">
-      📱 WhatsApp:
-      <br>
-      <b class="contact-link">+61 431 859 673</b>
+      📱 +61 431 859 673
     </div>
 
-    <button id="whatsappBtn" class="whatsapp-btn">
+    <button id="whatsappBtn" class="gold-btn">
       Chat on WhatsApp
     </button>
 
@@ -168,13 +115,16 @@ body {
 
 </div>
 
-<script src="js/helpDriver.js"></script>
-
-<!-- BACK FUNCTION (SAME AS FRIENDS.HTML) -->
 <script>
-function goDashboard() {
+/* ✅ SAME STYLE AS FRIENDS.HTML */
+function goDashboard(){
   window.location.href = "dashboardDriver.html";
 }
+
+/* WhatsApp */
+document.getElementById("whatsappBtn").onclick = function(){
+  window.open("https://wa.me/61431859673", "_blank");
+};
 </script>
 
 <script>
