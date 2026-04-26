@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fare-X | Help Driver</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+body{
+  background:#000;
+  color:#fff;
+}
+
+.help-box{
+  margin-top:20px;
+  padding:15px;
+  border-radius:14px;
+  background:#111;
+  border:1px solid #d4af37;
+}
+
+.help-title{
+  font-size:18px;
+  margin-bottom:10px;
+  color:#d4af37;
+}
+
+.help-text{
+  font-size:14px;
+  margin-bottom:10px;
+  line-height:1.5;
+}
+
+.contact-link{
+  color:#d4af37;
+  font-weight:bold;
+}
+
+.gold-btn{
+  margin-top:10px;
+  background:#d4af37;
+  color:#000;
+  border:none;
+  padding:12px;
+  border-radius:25px;
+  width:100%;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.gold-btn:active{
+  transform:scale(0.98);
+}
+
+.tip-list{
+  padding-left:18px;
+  margin:0;
+}
+
+.tip-list li{
+  margin-bottom:8px;
+  line-height:1.5;
+}
+</style>
+
+<link rel="manifest" href="/Fare-X/manifest.json">
+<meta name="theme-color" content="#000000">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="lux-header">
+  <div class="logo">Fare<span class="gold">-X</span></div>
+
+  <button onclick="goDashboard()" class="lux-btn">
+    ← Back
+  </button>
+</div>
+
+<div class="lux-main">
+
+  <h2 class="section-title">Help & Support (Driver)</h2>
+
+  <!-- CONTACT -->
+  <div class="help-box">
+
+    <div class="help-title">Contact Us</div>
+
+    <div class="help-text">
+      If you are facing any issue while using Fare-X, please contact us with full details.
+    </div>
+
+    <div class="help-text">
+      📧 Email:<br>
+      <span class="contact-link">faxe7x@gmail.com</span>
+    </div>
+
+    <div class="help-text">
+      Please include:
+      <ul class="tip-list">
+        <li>Your account email</li>
+        <li>Description of issue</li>
+        <li>Screenshots</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- WHATSAPP -->
+  <div class="help-box">
+
+    <div class="help-title">WhatsApp Support</div>
+
+    <div class="help-text">
+      📱 +61 431 859 673
+    </div>
+
+    <button id="whatsappBtn" class="gold-btn">
+      Chat on WhatsApp
+    </button>
+
+  </div>
+
+  <!-- HOW TO USE -->
+  <div class="help-box">
+
+    <div class="help-title">Useful Instructions</div>
+
+    <div class="help-text">
+      Follow these tips to use Fare-X smoothly:
+    </div>
+
+    <ul class="tip-list">
+      <li>1-- After login as Driver, make sure have your update Mobile phone in profile and also Add a.. Nick Name..
+      </li>
+      <li>2-- First of all, ask your passenger to create account as Passenger.  add their phone number in profile ask them to add a.. Nick Name.. </li>
+      <li>3-- As a driver, click on
+      ..PASENGERS.. button
+      on dashboard.  Add your passenger's ..Nick Name..,  write passenger name in search area and click,
+      ..add..
+      to add in the system.  This way job information will be update with your customer and your customer / passenger , information will be secured with you.
+      </li>
+      
+      <li>
+      4-- click on
+      ..Drivers / Friends..
+      on dashboard, write your friend drivers nick name and search.  Related Names will show, then select your friend and click
+      ..Add..
+      This way you can add your friends drivers to make personalised job communication network.
+       </li>
+      
+      <li>
+      5-- Now as a Driver, if your customer calls or sms you woth their pickup details, you can enter in this system by creating a fare, as a dispatcher, click on
+      ...Create Fare..
+      button, in dashboard, fill all fields.  
+      
+      Use pin drop on pickup and drop off or write address in bar and search and select.
+      From dropdown menu, select passenger, for which fare is to be created.
+      Select time and date, from dropdown menu.
+      From dropdown menu, click on Fixed price or meter + extra.
+      write total fixed fare in next area.. like 90,  or write like 10 for meter plus.
+      write any important notes for this fare like, on time, VIP, drive slow, aged person etc.
+      
+      Next Important dropdown is to select., 
+      ..send to driver / friend..
+      this selection will enable to send this created fare only to selected driver friend of your.  Then click on 
+      ..Send Fare..
+      
+      othe option in drop menu is ...BROADCAST POOL..  if you select this option, then this fare will be shown to broadcast jobs screen of all drivers and anyone can click on accept to accept this job. 
+    </li>
+    
+      <li>6--Jon status will be updated as soon as some accepts a job.  same will with driver arrived on address, started job etc.  Same way passenger will also see updated job status on passenger dashboard.</li>
+      <li>Driver who accept job will be xurrent driver but driver who send job, will be original driver and will be main reaponsible for job.</li>
+      <li>If current driver cancel the job, ot will be send back tooriginal driver screen and original driver will be notofied. then original driver can resend it.</li>
+      <li>when other driver a cepts job, then original driver can call or whatsapp that driver till the fare has accepted and arrived.
+      original driver can call other driver or Passenger, current driver cannot call or get number of passenger.</li>
+      <li>Keep your mobile number updated in Profile for call / WhatsApp buttons.</li>
+      <li>Keep your GPS/location enabled for best dispatch results.</li>
+      <li>If app seems slow, close and reopen the app.</li>
+    </ul>
+
+  </div>
+
+  <!-- SAFETY -->
+  <div class="help-box">
+
+    <div class="help-title">Safety Reminder</div>
+
+    <ul class="tip-list">
+      <li>Always verify passenger name before trip.</li>
+      <li>Do not use phone while driving.</li>
+      <li>Follow all local transport laws.</li>
+      <li>Report suspicious activity immediately.</li>
+    </ul>
+
+  </div>
+
+</div>
+
+<script>
+function goDashboard(){
+  window.location.href = "dashboardDriver.html";
+}
+
+document.getElementById("whatsappBtn").onclick = function(){
+  window.open("https://wa.me/61431859673", "_blank");
+};
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/Fare-X/service-worker.js");
+}
+</script>
+
+</body>
+</html>
