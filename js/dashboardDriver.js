@@ -408,8 +408,9 @@ if (f.broadcast === true && f.status === "waiting response") {
   // 🔹 CREATOR (A)
   if (f.originalDriverUID === currentUser.uid) {
     return `
-      ${viewBtn}
-      <div class="fare-actions">
+    ${viewBtn}
+${contactBtns}
+<div class="fare-actions">
         <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
       </div>
     `;
@@ -418,8 +419,10 @@ if (f.broadcast === true && f.status === "waiting response") {
   // 🔹 OTHER DRIVERS (B, C...)
   else {
     return `
-      ${viewBtn}
-      <div class="fare-actions">
+     ${viewBtn}
+${contactBtns}
+<div class="fare-actions">
+
         <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
       </div>
     `;
@@ -429,8 +432,10 @@ if (f.broadcast === true && f.status === "waiting response") {
   // DRIVER RECEIVING
   if (isAssigned && f.status === "waiting response") {
     return `
-      ${viewBtn}
-      <div class="fare-actions">
+    ${viewBtn}
+${contactBtns}
+<div class="fare-actions">
+
         <button class="accept-btn" onclick="acceptJob('${id}')">Accept</button>
         <button class="cancel-btn" onclick="rejectJob('${id}')">Reject</button>
       </div>
@@ -454,8 +459,10 @@ if (
   }
 
   return `
-    ${viewBtn}
-    <div class="fare-actions">
+ ${viewBtn}
+${contactBtns}
+<div class="fare-actions">
+
       ${extraBtns}
       <button class="lux-btn" onclick="markArrived('${id}')">Arrived</button>
       <button class="lux-btn" onclick="markStarted('${id}')">Start</button>
@@ -474,15 +481,19 @@ if (
     }
 
     return `
-      ${viewBtn}
-      <div class="fare-actions">
+   ${viewBtn}
+${contactBtns}
+<div class="fare-actions">
         ${extraBtn}
         <button class="lux-btn danger" onclick="deleteJob('${id}')">Cancel</button>
       </div>
     `;
   }
 
-  return viewBtn;
+  return `
+  ${viewBtn}
+  ${contactBtns}
+`;
 }
 
 
