@@ -455,3 +455,8 @@ html, body {
   position:relative;
   z-index:99999;
 }
+
+.fare-actions .lux-btn{
+  padding:10px;
+  font-size:14px;
+}
