@@ -5,62 +5,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fare-X | Help</title>
 
-<link rel="manifest" href="/Fare-X/manifest.json">
+<link rel="stylesheet" href="css/style.css">
+
 <style>
 .help-box {
   margin-top:20px;
   padding:15px;
-  border-radius:10px;
-  background:#111;
+  border-radius:16px;
+  background: linear-gradient(145deg,#050505,#111);
+  border:1.5px solid rgba(212,175,55,.5);
+  box-shadow: 0 0 18px rgba(212,175,55,.25);
 }
 
 .help-title {
   font-size:18px;
   margin-bottom:10px;
   color:#d4af37;
+  font-weight:700;
 }
 
 .help-text {
   font-size:14px;
   margin-bottom:10px;
   line-height:1.5;
+  color:#fff;
 }
 
 .contact-link {
-  color:#00e5ff;
+  color:#d4af37;
+  font-weight:600;
   word-break: break-all;
 }
 
+/* WhatsApp button (gold style match) */
 .whatsapp-btn {
   margin-top:10px;
-  background:#25D366;
-  color:#fff;
+  background: linear-gradient(135deg,#b18c2c,#f5d76e,#b18c2c);
+  color:#000;
   border:none;
-  padding:10px;
-  border-radius:8px;
+  padding:12px;
+  border-radius:25px;
   width:100%;
   cursor:pointer;
+  font-weight:700;
+  box-shadow: 0 0 15px rgba(212,175,55,.5);
+}
+
+/* Back button override */
+.back-btn {
+  background: linear-gradient(135deg,#b18c2c,#f5d76e,#b18c2c);
+  color:#000;
+  border:none;
+  padding:10px 18px;
+  border-radius:25px;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow: 0 0 12px rgba(212,175,55,.5);
 }
 </style>
 
-<link rel="manifest" href="manifest.json">
-
+<link rel="manifest" href="/Fare-X/manifest.json">
 <meta name="theme-color" content="#000000">
-
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="lux-header">
   <div class="logo">Fare<span class="gold">-X</span></div>
 
-  <!-- ✅ BACK BUTTON -->
-<a href="dashboardPassenger.html" class="lux-btn">← Back</a>
+  <!-- ✅ FIXED BACK BUTTON -->
+  <a href="dashboardPassenger.html" class="back-btn">
+    ← Back
+  </a>
 </div>
 
 <div class="lux-main">
@@ -76,17 +94,16 @@
     </div>
 
     <div class="help-text">
-      📧 Email:
-      <br>
-      <b class="contact-link">faxe7x@gmail.com</b>
+      📧 Email:<br>
+      <span class="contact-link">faxe7x@gmail.com</span>
     </div>
 
     <div class="help-text">
       Please include:
       <ul>
         <li>Your account email</li>
-        <li>Description of the issue</li>
-        <li>Screenshots (if possible)</li>
+        <li>Description of issue</li>
+        <li>Screenshots</li>
       </ul>
     </div>
 
@@ -97,12 +114,9 @@
     <div class="help-title">WhatsApp Support</div>
 
     <div class="help-text">
-      📱 WhatsApp:
-      <br>
-      <b class="contact-link">+61 431 859 673</b>
+      📱 +61 431 859 673
     </div>
 
-    <!-- ✅ WHATSAPP BUTTON -->
     <button id="whatsappBtn" class="whatsapp-btn">
       Chat on WhatsApp
     </button>
@@ -111,14 +125,13 @@
 
 </div>
 
-<script type="module" src="js/help.js"></script>
+<script src="js/help.js"></script>
 
 <script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/Fare-X/service-worker.js");
 }
 </script>
-
 
 </body>
 </html>
