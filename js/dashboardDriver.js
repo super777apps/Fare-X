@@ -374,8 +374,33 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
+  let contactBtns = "";
 
-// ✅ POOL JOB LOGIC (ADD THIS BLOCK HERE)
+  /* ORIGINAL DRIVER */
+  if (
+    f.originalDriverUID === currentUser.uid &&
+    ["accepted","arrived"].includes(f.status) &&
+    f.currentDriverMobile
+  ){
+    contactBtns += `
+      <a href="tel:${f.currentDriverMobile}" class="mini-btn">📞</a>
+      <a href="https://wa.me/${f.currentDriverMobile.replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
+    `;
+  }
+
+  /* CURRENT DRIVER */
+  if (
+    f.currentDriverUID === currentUser.uid &&
+    ["accepted","arrived"].includes(f.status) &&
+    f.originalDriverMobile
+  ){
+    contactBtns += `
+      <a href="tel:${f.originalDriverMobile}" class="mini-btn">📞</a>
+      <a href="https://wa.me/${f.originalDriverMobile.replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
+    `;
+  }
+
+  // ✅ POOL JOB LOGIC (ADD THIS BLOCK HERE)
 if (f.broadcast === true && f.status === "waiting response") {
 
   // 🔹 CREATOR (A)
@@ -457,6 +482,8 @@ if (
 
   return viewBtn;
 }
+
+
 /* ---------- HANDLERS ---------- */
 window.acceptJob = async (id) => {
 
@@ -474,14 +501,20 @@ window.acceptJob = async (id) => {
   }
 
   const userSnap = await getDoc(doc(db,"users",currentUser.uid));
-  const myName = userSnap.data().nickName || currentUser.email;
+const myData = userSnap.data() || {};
+
+const myName = myData.nickName || currentUser.email;
+const myMobile = myData.mobileNumber || "";
+
+
 
   await updateDoc(jobRef,{
-    status: "accepted",
-    currentDriverUID: currentUser.uid,
-    currentDriverName: myName,
-    assignedTo: null
-  });
+  status: "accepted",
+  currentDriverUID: currentUser.uid,
+  currentDriverName: myName,
+  currentDriverMobile: myMobile,
+  assignedTo: null
+});
 
   acceptSound.play();
 };

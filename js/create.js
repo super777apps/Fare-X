@@ -279,7 +279,11 @@ btn?.addEventListener("click", async()=>{
     });
   }
 
-const jobId = generateJobId();
+const userSnap = await getDoc(doc(db,"users", currentUser.uid));
+const myData = userSnap.data() || {};
+const myMobile = myData.mobileNumber || "";
+ 
+ 
   // ✅ CREATE NEW JOB
   await addDoc(collection(db,"fares"),{
     jobId,   // ✅ ADD THIS
@@ -297,7 +301,8 @@ const jobId = generateJobId();
     passengerUID,passengerName,
 
     originalDriverUID: currentUser.uid,
-    originalDriverName: myName,
+originalDriverName: myName,
+originalDriverMobile: myMobile,
 
     currentDriverUID:null,
     currentDriverName:null,
