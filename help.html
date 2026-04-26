@@ -37,7 +37,6 @@
   word-break: break-all;
 }
 
-/* WhatsApp button (gold style match) */
 .whatsapp-btn {
   margin-top:10px;
   background: linear-gradient(135deg,#b18c2c,#f5d76e,#b18c2c);
@@ -51,7 +50,7 @@
   box-shadow: 0 0 15px rgba(212,175,55,.5);
 }
 
-/* Back button override */
+/* Back button */
 .back-btn {
   background: linear-gradient(135deg,#b18c2c,#f5d76e,#b18c2c);
   color:#000;
@@ -75,7 +74,7 @@
 <div class="lux-header">
   <div class="logo">Fare<span class="gold">-X</span></div>
 
-  <!-- ✅ FIXED BACK BUTTON -->
+  <!-- BACK BUTTON -->
   <a href="dashboardPassenger.html" class="back-btn">
     ← Back
   </a>
@@ -85,6 +84,7 @@
 
   <h2 class="section-title">Help & Support</h2>
 
+  <!-- CONTACT BOX -->
   <div class="help-box">
 
     <div class="help-title">Contact Us</div>
@@ -109,6 +109,7 @@
 
   </div>
 
+  <!-- WHATSAPP -->
   <div class="help-box">
 
     <div class="help-title">WhatsApp Support</div>
@@ -123,9 +124,50 @@
 
   </div>
 
+  <!-- HOW TO USE APP (NEW SECTION) -->
+  <div class="help-box">
+
+    <div class="help-title">How to Use Fare-X (Passenger)</div>
+
+    <div class="help-text">
+      1. After login as Driver, make sure have your update Mobile phone in profile and also Add a.. Nick Name..</b><br>
+      2. As a passenger, in Dashboard, first of all click on ..DRIVERS..button
+      write the nick mame of driver or drivers you like to add. search and select your driver from the list.
+      <br>
+      3. Use pin drop on pickup and drop off or write address in bar and search and select.
+  
+      Select time and date, from dropdown menu.
+      From dropdown menu, click on Fixed price or meter + extra.
+      write total fixed fare in next area.. like 90,  or write like 10 for meter plus.
+      write any important notes for this fare like, on time, VIP, drive slow, aged person etc.
+      
+      Next Important dropdown is to select., 
+      ..send to driver ..
+      this selection will enable to send this created fare only to selected driver friend of your.  Then click on 
+      ..Send Fare..<br>
+      4. your selected driver will either complete job, or will assing someother driver amd you will be notified in app<br>
+      5. This is just a premier job exchange system for drivers with permanent customer.  it removes need of manual sms hastles.  please note that Fare-X is not antaxi company.  But its a helpful tool for Luxury taxi driver.  Drivers should abide byvall the laws and requirements of taxis amd passenger transports.  We are not responsible for any type of damages because this tool just help the current system.  Original driver is responsible for customer to be picked up so oroginal driver will keep teack of cirrent driver.<br>
+      6. Any problem, contact your priginal driver as Farex-X is just assisting driver to pickup.
+    </div>
+
+    <div class="help-text">
+      💡 Tips:
+      <ul>
+        <li>Always check driver details before starting trip</li>
+        <li>Use WhatsApp or call if needed</li>
+        <li>Keep pickup location accurat.  Fare-X is not responsible for any lossas its just replacing sms hastles etc.</li>
+      </ul>
+    </div>
+
+  </div>
+
 </div>
 
-<script src="js/help.js"></script>
+<script>
+document.getElementById("whatsappBtn").onclick = function () {
+  window.open("https://wa.me/61431859673", "_blank");
+};
+</script>
 
 <script>
 if ("serviceWorker" in navigator) {
