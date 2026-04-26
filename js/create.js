@@ -282,6 +282,7 @@ btn?.addEventListener("click", async()=>{
 const userSnap = await getDoc(doc(db,"users", currentUser.uid));
 const myData = userSnap.data() || {};
 const myMobile = myData.mobileNumber || "";
+const jobId = generateJobId();
  
  
   // ✅ CREATE NEW JOB
