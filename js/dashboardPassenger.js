@@ -338,15 +338,15 @@ lastJobStates[id] = {
           <b>${f.jobId || "N/A"}</b>
         </div>
 
-        <div class="fare-row">
-          <span>Pickup:</span>
-          <b>${f.pickupSuburb || f.pickup || "-"}</b>
-        </div>
+        <<div class="fare-row">
+  <span>Pickup:</span>
+  <b>${f.pickup || "-"}</b>
+</div>
 
-        <div class="fare-row">
-          <span>Drop:</span>
-          <b>${f.dropSuburb || f.drop || "-"}</b>
-        </div>
+<div class="fare-row">
+  <span>Drop:</span>
+  <b>${f.drop || "-"}</b>
+</div>
 
         <div class="fare-row">
           <span>Status:</span>
