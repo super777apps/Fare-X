@@ -330,9 +330,18 @@ else if (f.status === "accepted" && f.originalDriverUID === currentUser.uid) {
 }
 
       div.innerHTML = `
-  <div class="fare-row"><span>Pickup:</span><b>${f.pickupSuburb || f.pickup}</b></div>
-  <div class="fare-row"><span>Drop:</span><b>${f.dropSuburb || f.drop}</b></div>
-  
+<div class="fare-row"><span>Pickup:</span><b>${
+  ["accepted","arrived","in progress","completed"].includes(f.status)
+    ? (f.pickup || f.pickupSuburb || "-")
+    : (f.pickupSuburb || "-")
+}</b></div>
+
+<div class="fare-row"><span>Drop:</span><b>${
+  ["accepted","arrived","in progress","completed"].includes(f.status)
+    ? (f.drop || f.dropSuburb || "-")
+    : (f.dropSuburb || "-")
+}</b></div>
+
   <div class="fare-row">
   <span>Job ID:</span>
   <b>${f.jobId || "N/A"}</b>
