@@ -374,31 +374,33 @@ function renderActions(id, f, isMine, isAssigned, isCreator) {
 
   const viewBtn = `<button class="lux-btn" onclick="viewRoute('${id}')">View Route</button>`;
 
-  let contactBtns = "";
 
-  /* ORIGINAL DRIVER */
-  if (
-    f.originalDriverUID === currentUser.uid &&
-    ["accepted","arrived"].includes(f.status) &&
-    f.currentDriverMobile
-  ){
-    contactBtns += `
-      <a href="tel:${f.currentDriverMobile}" class="mini-btn">📞</a>
-      <a href="https://wa.me/${f.currentDriverMobile.replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
-    `;
-  }
 
-  /* CURRENT DRIVER */
-  if (
-    f.currentDriverUID === currentUser.uid &&
-    ["accepted","arrived"].includes(f.status) &&
-    f.originalDriverMobile
-  ){
-    contactBtns += `
-      <a href="tel:${f.originalDriverMobile}" class="mini-btn">📞</a>
-      <a href="https://wa.me/${f.originalDriverMobile.replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
-    `;
-  }
+let contactBtns = "";
+
+/* ORIGINAL DRIVER sees CURRENT DRIVER */
+if (
+  f.originalDriverUID === currentUser.uid &&
+  ["accepted","arrived"].includes(f.status)
+) {
+  contactBtns += `
+    <a href="tel:${f.currentDriverMobile || ''}" class="mini-btn">📞</a>
+    <a href="https://wa.me/${(f.currentDriverMobile || '').replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
+  `;
+}
+
+/* CURRENT DRIVER sees ORIGINAL DRIVER */
+if (
+  f.currentDriverUID === currentUser.uid &&
+  ["accepted","arrived"].includes(f.status)
+) {
+  contactBtns += `
+    <a href="tel:${f.originalDriverMobile || ''}" class="mini-btn">📞</a>
+    <a href="https://wa.me/${(f.originalDriverMobile || '').replace(/\+/g,'')}" target="_blank" class="mini-btn">🟢</a>
+  `;
+}
+
+
 
   // ✅ POOL JOB LOGIC (ADD THIS BLOCK HERE)
 if (f.broadcast === true && f.status === "waiting response") {
@@ -462,7 +464,7 @@ if (
     </div>
   `;
 }
-  // ✅ ORIGINAL DRIVER (FIXED: RETURNED NOW HAS RESEND + CANCEL TOGETHER)
+  // ✅ ORIGINAL DRIVER (FIXED: RETURNED NOW HAS RESEND + CANCEL TOGETHER) 
   if (isCreator && ["waiting response","accepted","returned"].includes(f.status)) {
 
     let extraBtn = "";
