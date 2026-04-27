@@ -27,6 +27,8 @@
       Luxury Dispatch <br>
       - Driver's Own -
     </div>
+    
+<br>
 
     <input id="emailInput" type="email" placeholder="Email">
     <input id="passwordInput" type="password" placeholder="Password">
@@ -50,8 +52,15 @@
     <button id="registerPassengerBtn" class="lux-btn full">
       Create Passenger Account
     </button>
+    
+      <button id="shareBtn" class="lux-btn small-share">
+  Share App
+</button>
+
+    
 
   </div>
+  
 </div>
 
 <script type="module" src="js/firebase.js"></script>
@@ -134,6 +143,31 @@ function installFareX() {
   }
 }
 </script>
+
+<script>
+document.getElementById("shareBtn").onclick = async function () {
+
+  const shareData = {
+    title: "Fare-X App",
+    text: "Join Fare-X dispatch app for drivers and passengers.",
+    url: "https://tinyurl.com/Fare-X7"
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch(err){}
+  } else {
+    window.open(
+      "https://wa.me/?text=" +
+      encodeURIComponent("Join Fare-X App https://tinyurl.com/Fare-X7"),
+      "_blank"
+    );
+  }
+
+};
+</script>
+
 
 </body>
 </html>
