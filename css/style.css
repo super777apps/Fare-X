@@ -476,3 +476,12 @@ html, body {
   margin:0 !important;
   min-height:40px;
 }
+
+.small-share{
+  width:auto;
+  padding:10px 18px;
+  font-size:14px;
+  border-radius:22px;
+  display:block;
+  margin:12px auto;
+}
