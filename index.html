@@ -57,7 +57,10 @@
   Share App
 </button>
 
-    
+
+<button id="installBtn" class="lux-btn small-share">
+  Install App
+</button>
 
   </div>
   
@@ -163,6 +166,28 @@ document.getElementById("shareBtn").onclick = async function () {
       encodeURIComponent("Join Fare-X App https://tinyurl.com/Fare-X7"),
       "_blank"
     );
+  }
+
+};
+</script>
+
+
+<script>
+document.getElementById("installBtn").onclick = function () {
+
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+    });
+
+  } else {
+
+    alert(
+      "To install Fare-X:\n\nAndroid Chrome:\nMenu ⋮ > Add to Home Screen / Install App\n\niPhone Safari:\nShare icon > Add to Home Screen"
+    );
+
   }
 
 };
